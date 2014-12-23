@@ -1,0 +1,24 @@
+{
+    "name": "template",
+    "description": "Template for new applications",
+    "copyright": "Copyright © 2014, Joakim Brännström",
+    "authors": ["Joakim Brännström"],
+    "license": "MIT",
+    "dependencies": {
+        "tested": {"version": ">=0.9.4", "path": "tested"},
+        "docopt": {"version": ">=0.6.1-b.1", "path": "docopt"},
+        "logger": {"version": ">=0.3.3", "path": "logger"}
+    },
+
+    "targetPath": "build",
+    "mainSourceFile": "source/app.d",
+
+    "configurations": [
+    {
+        "name": "unittest",
+        "targetName": "unittest",
+        "targetType": "executable",
+        "buildRequirements": ["requireBoundsCheck", "requireContracts"]
+    },
+    ]
+}
