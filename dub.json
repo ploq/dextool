@@ -1,13 +1,13 @@
 {
-    "name": "template",
-    "description": "Template for new applications",
+    "name": "fun_with_clang",
+    "description": "Fun with LLVM/Clang",
     "copyright": "Copyright © 2014, Joakim Brännström",
     "authors": ["Joakim Brännström"],
     "license": "MIT",
     "dependencies": {
-        "tested": {"version": ">=0.9.4", "path": "tested"},
-        "docopt": {"version": ">=0.6.1-b.1", "path": "docopt"},
-        "logger": {"version": ">=0.3.3", "path": "logger"}
+        "tested": {"version": ">=0.9.4"},
+        "docopt": {"version": ">=0.6.1-b.1"},
+        "logger": {"version": ">=0.3.3"}
     },
 
     "targetPath": "build",

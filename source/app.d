@@ -1,3 +1,7 @@
+/// Written in the D programming language.
+/// @date 2015, Joakim Brännström
+/// @copyright MIT License
+/// @author Joakim Brännström (joakim.brannstrom@gmx.com)
 module app;
 import tested;
 import std.stdio;
