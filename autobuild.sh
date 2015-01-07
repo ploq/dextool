@@ -11,62 +11,107 @@ C_GREEN='\e[1;32m'
 test ! -e $ROOT/dub.json && echo "Missing dub.json" && exit 1
 
 # create build if missing
-# test ! -d build && mkdir build
+test ! -d build && mkdir build
 
 # trap "build_release" INT
 
-# 0 = failed, 1 = ok
-BUILD_PASSED=0
+# init
+# wait
+# ut_build_run
+# ut_check_status
+# release_build
+# release_check_status
+STATE="init"
+CHECK_STATUS_RVAL=1
 
 function check_status() {
-    RVAL=$?
+    CHECK_STATUS_RVAL=$?
     MSG=$1
-    if [[ $RVAL -eq 0 ]]; then
+    if [[ $CHECK_STATUS_RVAL -eq 0 ]]; then
         echo -e "${C_GREEN}=== $MSG OK ===${C_NONE}"
-        return 0
+    else
+        echo -e "${C_RED}=== $MSG ERROR ===${C_NONE}"
     fi
-    echo -e "${C_RED}=== $MSG ERROR ===${C_NONE}"
-    return 1
 }
 
-function builder() {
-    BUILD_PASSED=0
+function state_init() {
+    echo "Started watching path: "
+    echo $INOTIFY_PATH | tr "[:blank:]" "\n"
+}
+
+function state_wait() {
+    echo -e "${C_YELLOW}================================${C_NONE}"
+    IFILES=$(inotifywait -q -r -e MOVE_SELF -e MODIFY -e ATTRIB -e CREATE --format %w $INOTIFY_PATH)
+    echo "Change detected in: $IFILES"
+    sleep 1
+}
+
+function state_ut_build_run() {
     dub build -c unittest -b unittest
-    check_status "COMPILE"
-    if [[ $? -eq 0 ]]; then
-        BUILD_PASSED=1
+    check_status "Compile UnitTest"
+
+    if [[ $CHECK_STATUS_RVAL -eq 0 ]]; then
+        dub run -b unittest
+        check_status "Run UnitTest"
     fi
 }
 
-function builder_release() {
+function state_release_build() {
     dub build
-    check_status "RELEASE"
+    check_status "Compile Release"
+}
+
+function play_sound() {
+    # mplayer /usr/share/sounds/KDE-Sys-App-Error.ogg 2>/dev/null >/dev/null
+    if [[ "$1" = "ok" ]]; then
+        mplayer /usr/share/sounds/KDE-Sys-App-Positive.ogg 2>/dev/null >/dev/null
+    else
+        mplayer /usr/share/sounds/KDE-Sys-App-Negative.ogg 2>/dev/null >/dev/null
+    fi
 }
 
 function watch_tests() {
 while :
 do
-    echo -e "${C_YELLOW}================================${C_NONE}"
-    builder
-    if [[ $BUILD_PASSED -eq 1 ]]; then
-        $ROOT/build/unittest
-        check_status "TEST"
-        if [[ $? -eq 0 ]]; then
-            builder_release
-            mplayer /usr/share/sounds/KDE-Sys-App-Positive.ogg 2>/dev/null >/dev/null
-        else
-            mplayer /usr/share/sounds/KDE-Sys-App-Negative.ogg 2>/dev/null >/dev/null
-        fi
-    else
-        mplayer /usr/share/sounds/KDE-Sys-App-Error.ogg 2>/dev/null >/dev/null
-    fi
-
-    IFILES=$(inotifywait -q -r -e MODIFY -e ATTRIB -e CREATE --format %w $INOTIFY_PATH)
-    echo "Change detected in: $IFILES"
-    sleep 1
+    echo "State $STATE"
+    case "$STATE" in
+        "init")
+            state_init
+            STATE="wait"
+            ;;
+        "wait")
+            state_wait
+            STATE="ut_build_run"
+            ;;
+        "ut_build_run")
+            state_ut_build_run
+            STATE="ut_check_status"
+            ;;
+        "ut_check_status")
+            if [[ $CHECK_STATUS_RVAL -eq 0 ]]; then
+                STATE="release_build"
+            else
+                play_sound "fail"
+                STATE="wait"
+            fi
+            ;;
+        "release_build")
+            state_release_build
+            STATE="release_check_status"
+            ;;
+        "release_check_status")
+            STATE="wait"
+            if [[ $CHECK_STATUS_RVAL -eq 0 ]]; then
+                play_sound "ok"
+            else
+                play_sound "fail"
+            fi
+            ;;
+        *) echo "Unknown state $STATE"
+            exit 1
+            ;;
+    esac
 done
 }
 
-echo "Started watching path: "
-echo $INOTIFY_PATH | tr "[:blank:]" "\n"
 watch_tests
