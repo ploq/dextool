@@ -15,6 +15,12 @@
 
     "configurations": [
     {
+        "name": "release",
+        "targetName": "fun_with_clang",
+        "targetType": "executable",
+        "buildRequirements": ["requireBoundsCheck", "requireContracts"]
+    },
+    {
         "name": "unittest",
         "targetName": "unittest",
         "targetType": "executable",
