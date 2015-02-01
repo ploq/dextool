@@ -12,6 +12,10 @@
 
     "targetPath": "build",
     "mainSourceFile": "source/app.d",
+	"sourcePaths": ["source", "clang"],
+	"importPaths": ["source", "clang"],
+
+	"lflags-posix": ["-lclang", "-rpath", ".", "-L."],
 
     "configurations": [
     {

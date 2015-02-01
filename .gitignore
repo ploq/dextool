@@ -9,3 +9,4 @@ tags
 results.json
 *.dub
 build/
+*.so

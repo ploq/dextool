@@ -1,6 +1,6 @@
 #!/bin/bash
 ROOT=$PWD
-INOTIFY_PATH="$ROOT/source $ROOT/dub.json"
+INOTIFY_PATH="$ROOT/source $ROOT/clang $ROOT/dub.json"
 
 C_NONE='\e[m'
 C_RED='\e[1;31m'
@@ -37,6 +37,8 @@ function check_status() {
 function state_init() {
     echo "Started watching path: "
     echo $INOTIFY_PATH | tr "[:blank:]" "\n"
+    cp /home/joker/sync/src/extern/llvm/Release+Asserts/lib/libclang.so build/
+    cp /home/joker/sync/src/extern/llvm/Release+Asserts/lib/libclang.so ./
 }
 
 function state_wait() {
