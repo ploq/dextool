@@ -11,6 +11,10 @@ alias logger = std.experimental.logger;
 import docopt;
 import tested;
 
+import clang.c.index;
+import clang.Index;
+import clang.TranslationUnit;
+
 static string doc = "
 usage: autobuilder [options]
 
@@ -19,9 +23,51 @@ options:
  -d, --debug    turn on debug output for tracing of program flow
 ";
 
+// Holds the context of the file.
+class Context {
+    static immutable flags = ["-xc++"];
+}
+
 @name("Test a test")
 unittest {
     writeln("app_main unit test running");
+}
+
+@name("Test creating clang types")
+unittest {
+    Index index;
+    TranslationUnit translationUnit;
+    DiagnosticVisitor diagnostics;
+}
+
+@name("Test using clang types")
+unittest {
+    string[] args;
+    args ~= "-xc++";
+
+    auto index = Index(false, false);
+    auto translationUnit = TranslationUnit.parse(index, "test_files/arrays.h", args);
+    scope(exit) translationUnit.dispose;
+    scope(exit) index.dispose;
+
+    if (!translationUnit.isValid) {
+        writeln("An unknown error occurred");
+        //assert(false);
+    }
+
+    auto diagnostics = translationUnit.diagnostics;
+    if (diagnostics.length > 0) {
+	    bool translate = true;
+        foreach (diag ; diagnostics)
+        {
+            auto severity = diag.severity;
+
+            with (CXDiagnosticSeverity)
+                if (translate)
+                    translate = !(severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal);
+            writeln(stderr, diag.format);
+        }
+    }
 }
 
 shared static this() {
@@ -54,4 +100,3 @@ int rmain(string[] args) {
 
     return exit_status;
 }
-

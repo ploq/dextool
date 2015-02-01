@@ -13,6 +13,8 @@ test ! -e $ROOT/dub.json && echo "Missing dub.json" && exit 1
 # create build if missing
 test ! -d build && mkdir build
 
+export LD_LIBRARY_PATH=$ROOT:$LD_LIBRARY_PATH
+
 # trap "build_release" INT
 
 # init
@@ -37,8 +39,8 @@ function check_status() {
 function state_init() {
     echo "Started watching path: "
     echo $INOTIFY_PATH | tr "[:blank:]" "\n"
-    cp /home/joker/sync/src/extern/llvm/Release+Asserts/lib/libclang.so build/
-    cp /home/joker/sync/src/extern/llvm/Release+Asserts/lib/libclang.so ./
+    ln -sf $(readlink -f $ROOT/test_files/) $ROOT/build/test_files
+    cp $HOME/sync/src/extern/llvm/Release+Asserts/lib/libclang.so $ROOT
 }
 
 function state_wait() {
