@@ -11,120 +11,120 @@ import clang.Cursor;
 
 struct Visitor
 {
-	alias int delegate (ref Cursor, ref Cursor) Delegate;
-	alias int delegate (Delegate dg) OpApply;
-	
-	private CXCursor cursor;
-	
-	this (CXCursor cursor)
-	{
-		this.cursor = cursor;
-	}
-	
-	this (Cursor cursor)
-	{
-		this.cursor = cursor.cx;
-	}
+    alias int delegate (ref Cursor, ref Cursor) Delegate;
+    alias int delegate (Delegate dg) OpApply;
 
-	int opApply (Delegate dg)
-	{
-		auto data = OpApplyData(dg);
-		clang_visitChildren(cursor, &visitorFunction, cast(CXClientData) &data);
+    private CXCursor cursor;
 
-		return data.returnCode;
-	}
+    this (CXCursor cursor)
+    {
+        this.cursor = cursor;
+    }
+
+    this (Cursor cursor)
+    {
+        this.cursor = cursor.cx;
+    }
+
+    int opApply (Delegate dg)
+    {
+        auto data = OpApplyData(dg);
+        clang_visitChildren(cursor, &visitorFunction, cast(CXClientData) &data);
+
+        return data.returnCode;
+    }
 
 private:
 
-	extern (C) static CXChildVisitResult visitorFunction (CXCursor cursor, CXCursor parent, CXClientData data)
-	{
-		auto tmp = cast(OpApplyData*) data;
+    extern (C) static CXChildVisitResult visitorFunction (CXCursor cursor, CXCursor parent, CXClientData data)
+    {
+        auto tmp = cast(OpApplyData*) data;
 
-		with (CXChildVisitResult)
-		{
-			auto dCursor = Cursor(cursor);
-			auto dParent = Cursor(parent);
-			auto r = tmp.dg(dCursor, dParent);
-			tmp.returnCode = r;
-			return r ? CXChildVisit_Break : CXChildVisit_Continue;
-		}
-	}
+        with (CXChildVisitResult)
+        {
+            auto dCursor = Cursor(cursor);
+            auto dParent = Cursor(parent);
+            auto r = tmp.dg(dCursor, dParent);
+            tmp.returnCode = r;
+            return r ? CXChildVisit_Break : CXChildVisit_Continue;
+        }
+    }
 
-	static struct OpApplyData
-	{
-		int returnCode;
-		Delegate dg;
+    static struct OpApplyData
+    {
+        int returnCode;
+        Delegate dg;
 
-		this (Delegate dg)
-		{
-			this.dg = dg;
-		}
-	}
-	
-	template Constructors ()
-	{
-		private Visitor visitor;
+        this (Delegate dg)
+        {
+            this.dg = dg;
+        }
+    }
 
-		this (Visitor visitor)
-		{
-			this.visitor = visitor;
-		}
+    template Constructors ()
+    {
+        private Visitor visitor;
 
-		this (CXCursor cursor)
-		{
-			visitor = Visitor(cursor);
-		}
-		
-		this (Cursor cursor)
-		{
-			visitor = Visitor(cursor);
-		}
-	}
+        this (Visitor visitor)
+        {
+            this.visitor = visitor;
+        }
+
+        this (CXCursor cursor)
+        {
+            visitor = Visitor(cursor);
+        }
+
+        this (Cursor cursor)
+        {
+            visitor = Visitor(cursor);
+        }
+    }
 }
 
 struct DeclarationVisitor
 {
-	mixin Visitor.Constructors;
+    mixin Visitor.Constructors;
 
-	int opApply (Visitor.Delegate dg)
-	{
-		foreach (cursor, parent ; visitor)
-			if (cursor.isDeclaration)
-				if (auto result = dg(cursor, parent))
-					return result;
-				
-		return 0;
-	}
+    int opApply (Visitor.Delegate dg)
+    {
+        foreach (cursor, parent ; visitor)
+            if (cursor.isDeclaration)
+                if (auto result = dg(cursor, parent))
+                    return result;
+
+        return 0;
+    }
 }
 
 struct TypedVisitor (CXCursorKind kind)
 {
-	private Visitor visitor;
-	
-	this (Visitor visitor)
-	{
-		this.visitor = visitor;
-	}
+    private Visitor visitor;
 
-	this (CXCursor cursor)
-	{
-		this(Visitor(cursor));
-	}
-	
-	this (Cursor cursor)
-	{
-		this(cursor.cx);
-	}
+    this (Visitor visitor)
+    {
+        this.visitor = visitor;
+    }
 
-	int opApply (Visitor.Delegate dg)
-	{
-		foreach (cursor, parent ; visitor)
-			if (cursor.kind == kind)
-				if (auto result = dg(cursor, parent))
-					return result;
-				
-		return 0;
-	}
+    this (CXCursor cursor)
+    {
+        this(Visitor(cursor));
+    }
+
+    this (Cursor cursor)
+    {
+        this(cursor.cx);
+    }
+
+    int opApply (Visitor.Delegate dg)
+    {
+        foreach (cursor, parent ; visitor)
+            if (cursor.kind == kind)
+                if (auto result = dg(cursor, parent))
+                    return result;
+
+        return 0;
+    }
 }
 
 alias TypedVisitor!(CXCursorKind.CXCursor_ObjCInstanceMethodDecl) ObjCInstanceMethodVisitor;
@@ -134,57 +134,57 @@ alias TypedVisitor!(CXCursorKind.CXCursor_ObjCProtocolRef) ObjCProtocolVisitor;
 
 struct ParamVisitor
 {
-	mixin Visitor.Constructors;
-	
-	int opApply (int delegate (ref ParamCursor) dg)
-	{
-		foreach (cursor, parent ; visitor)
-			if (cursor.kind == CXCursorKind.CXCursor_ParmDecl)
-			{
-				auto paramCursor = ParamCursor(cursor);
+    mixin Visitor.Constructors;
 
-				if (auto result = dg(paramCursor))
-					return result;
-			}
+    int opApply (int delegate (ref ParamCursor) dg)
+    {
+        foreach (cursor, parent ; visitor)
+            if (cursor.kind == CXCursorKind.CXCursor_ParmDecl)
+            {
+                auto paramCursor = ParamCursor(cursor);
 
-		return 0;
-	}
+                if (auto result = dg(paramCursor))
+                    return result;
+            }
 
-	@property size_t length ()
-	{
-		auto type = Cursor(visitor.cursor).type;
+        return 0;
+    }
 
-		if (type.isValid)
-			return type.func.arguments.length;
+    @property size_t length ()
+    {
+        auto type = Cursor(visitor.cursor).type;
 
-		else
-		{
-			size_t i;
+        if (type.isValid)
+            return type.func.arguments.length;
 
-			foreach (_ ; this)
-				i++;
+        else
+        {
+            size_t i;
 
-			return i;
-		}
-	}
+            foreach (_ ; this)
+                i++;
 
-	@property bool any ()
-	{
-	    return length > 0;
-	}
+            return i;
+        }
+    }
 
-	@property bool isEmpty ()
-	{
-		return !any;
-	}
+    @property bool any ()
+    {
+        return length > 0;
+    }
 
-	@property ParamCursor first ()
-	{
-		assert(any, "Cannot get the first parameter of an empty parameter list");
+    @property bool isEmpty ()
+    {
+        return !any;
+    }
 
-		foreach (c ; this)
-			return c;
+    @property ParamCursor first ()
+    {
+        assert(any, "Cannot get the first parameter of an empty parameter list");
 
-		assert(0, "Cannot get the first parameter of an empty parameter list");
-	}
+        foreach (c ; this)
+            return c;
+
+        assert(0, "Cannot get the first parameter of an empty parameter list");
+    }
 }
