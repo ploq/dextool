@@ -67,7 +67,7 @@ class Comment: CppElement {
     }
 
     override string render() {
-        return "// " ~ contents;
+        return "// " ~ contents ~ "\n";
     }
 }
 
@@ -89,10 +89,6 @@ class CppBase: CppElement {
 
     override string render() {
         string s = content;
-        //foreach(k, v; attrs) {
-        //    s ~= k ~ "=\"" ~ v ~ "\" ";
-        //}
-        //s ~= ">\n";
         foreach(e; children) {
             s ~= e.render();
         }
@@ -138,7 +134,7 @@ class CppBase: CppElement {
     //    children ~= e;
     //    return e;
     //}
-    //
+
     //auto _append(string content, string content) {
     //    auto e = new CppBase(content);
     //    e.text(content);
@@ -176,8 +172,8 @@ class CppSuite : CppBase {
 
     override string render() {
         string s = super.content;
-        string begin = " {";
-        string end = "}";
+        string begin = " {\n";
+        string end = "}\n";
 
         if ("begin" in attrs) {
             begin = attrs["begin"];
@@ -200,24 +196,25 @@ class CppSuite : CppBase {
 unittest {
     auto x = new CppSuite("test");
     writeln(x.render());
-    assert(x.render() == "test {}");
+    assert(x.render() == "test {\n}\n");
 }
 
 @name("Test of CppSuite with formatting")
 unittest {
     auto x = new CppSuite("if (%s)", "x > 5");
     writeln(x.render());
-    assert(x.render() == "if (x > 5) {}");
+    assert(x.render() == "if (x > 5) {\n}\n");
 }
 
 @name("Test of CppSuite with simple text")
 unittest {
+    // also test that text(..) do NOT add a linebreak
     auto x = new CppSuite("foo");
     with (x) {
         text("bar");
     }
     writeln(x.render());
-    assert(x.render() == "foo {bar}");
+    assert(x.render() == "foo {\nbar}\n");
 }
 
 @name("Test of CppSuite with simple text and changed begin")
@@ -227,7 +224,7 @@ unittest {
         text("bar");
     }
     writeln(x.render());
-    assert(x.render() == "foo_:_bar}");
+    assert(x.render() == "foo_:_bar}\n");
 }
 
 @name("Test of CppSuite with simple text and changed end")
@@ -237,7 +234,7 @@ unittest {
         text("bar");
     }
     writeln(x.render());
-    assert(x.render() == "foo {bar_:_");
+    assert(x.render() == "foo {\nbar_:_");
 }
 
 @name("Test of nested CppSuite")
@@ -250,27 +247,57 @@ unittest {
         }
     }
     writeln(x.render());
-    assert(x.render() == "foo {bar smurf {bar}}");
+    assert(x.render() == "foo {\nbar smurf {\nbar}\n}\n");
 }
 
-class CppHdr : CppBase {
-    this() {
-        super();
+/// Code generation for C++ header.
+struct CppHdr {
+    string ifdef_guard;
+    CppBase header;
+    CppBase content;
+    CppBase footer;
+
+    this(string ifdef_guard) {
+        this.ifdef_guard = ifdef_guard;
+        header = new CppBase();
+        content = new CppBase();
+        footer = new CppBase();
     }
 
-    override string render() {
-        return super.render();
+    string render() {
+        string s = header.render();
+
+        if (ifdef_guard.length > 0) {
+            s ~= format("#ifndef %s\n#define %s\n%s\n#endif // %s",
+                       ifdef_guard,
+                       ifdef_guard,
+                       content.render(),
+                       ifdef_guard);
+        } else {
+            s ~= content.render();
+        }
+        s ~= footer.render();
+
+        return s;
     }
 }
 
-@name("Test of text in CppBase")
+@name("Test of text in CppBase with guard")
 unittest {
-    CppHdr cpp_hdr = new CppHdr;
+    auto hdr = CppHdr("somefile_hpp");
 
-    with (cpp_hdr) {
-        text("foo");
-        comment("some stuff");
+    with (hdr.header) {
+        text("header text");
+        comment("header comment");
+    }
+    with (hdr.content) {
+        text("content text");
+        comment("content comment");
+    }
+    with (hdr.footer) {
+        text("footer text");
+        comment("footer comment");
     }
 
-    writeln(cpp_hdr.render);
+    writeln(hdr.render);
 }
