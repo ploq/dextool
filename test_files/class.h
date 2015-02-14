@@ -1,3 +1,6 @@
+class Foo;
+struct FooBar;
+
 class Simple {
 public:
     Simple();
