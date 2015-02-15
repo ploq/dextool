@@ -196,35 +196,30 @@ class CppModule: BaseModule {
     }
 
     // Statements
-    auto stmt(string stmt_) {
-        auto e = new CppStmt(stmt_);
+    auto stmt(T)(T stmt_) {
+        auto e = new CppStmt(to!string(stmt_));
         _append(e);
         return e;
     }
 
     auto break_() {
-        auto e = stmt("break");
-        return e;
+        return stmt("break");
     }
 
     auto continue_() {
-        auto e = stmt("continue");
-        return e;
+        return stmt("continue");
     }
 
-    auto return_(string expr) {
-        auto e = stmt(format("return %s", expr));
-        return e;
+    auto return_(T)(T expr) {
+        return stmt(format("return %s", to!string(expr)));
     }
 
     auto goto_(string name) {
-        auto e = stmt(format("goto %s", name));
-        return e;
+        return stmt(format("goto %s", name));
     }
 
     auto label(string name) {
-        auto e = stmt(format("%s:", name));
-        return e;
+        return stmt(format("%s:", name));
     }
 
     auto define(string name) {
@@ -233,9 +228,9 @@ class CppModule: BaseModule {
         return e;
     }
 
-    auto define(string name, string value) {
+    auto define(T)(string name, T value) {
         // may need to replace \n with \\\n
-        auto e = stmt(format("#define %s %s", name, value));
+        auto e = stmt(format("#define %s %s", name, to!string(value)));
         e[$.end = ""];
         return e;
     }
@@ -245,6 +240,63 @@ class CppModule: BaseModule {
         auto e = new CppSuite(headline);
         _append(e);
         sep();
+        return e;
+    }
+
+    auto if_(string cond) {
+        return suite(format("if (%s)", cond));
+    }
+
+    auto elseif(string cond) {
+        return suite(format("else if (%s)", cond));
+    }
+
+    auto else_() {
+        return suite("else");
+    }
+
+    auto for_(string init, string cond, string next) {
+        return suite(format("for (%s; %s; %s)", init, cond, next));
+    }
+
+    auto while_(string cond) {
+        return suite(format("while (%s)", cond));
+    }
+
+    auto do_while(string cond) {
+        auto e = suite("do");
+        e[$.end = format("} while(%s);", cond)];
+        return e;
+    }
+
+    auto switch_(string cond) {
+        return suite(format("switch (%s)", cond));
+    }
+
+    auto case_(string val) {
+        auto e = suite(format("case %s:", val));
+        e[$.begin = newline, $.end = ""];
+        return e;
+    }
+
+    auto default_() {
+        auto e = suite("default:");
+        e[$.begin = newline, $.end = ""];
+        return e;
+    }
+
+    auto func(T...)(string return_type, string name, auto ref T args) {
+        string params;
+        if (args.length >= 1) {
+            params = to!string(args[0]);
+        }
+        if (args.length >= 2) {
+            foreach(v; args[1 .. $]) {
+                params ~= ", " ~ to!string(v);
+            }
+        }
+
+        auto e = suite(format("%s %s(%s)", return_type, name, params));
         return e;
     }
 
@@ -285,6 +337,35 @@ class CppModule: BaseModule {
     //mixin(_makeSubelems!("head", "title", "meta", "style", "link", "script",
     //        "body_", "div", "span", "h1", "h2", "h3", "h4", "h5", "h6", "p", "table", "tr", "td",
     //        "a", "li", "ul", "ol", "img", "br", "em", "strong", "input", "pre", "label", "iframe", ));
+}
+
+@name("Test of statements")
+unittest {
+    auto x = new CppModule();
+
+    with (x) {
+        stmt(77);
+        break_;
+        continue_;
+        return_(5);
+        return_("long_value");
+        goto_("foo");
+        label("bar");
+        define("foobar");
+        define("smurf", 1);
+    }
+
+    auto rval = x.render();
+    assert(rval == """77;
+break;
+continue;
+return 5;
+return long_value;
+goto foo;
+bar:
+#define foobar
+#define smurf 1
+""", rval);
 }
 
 string stmt_append_end(string s, in ref string[string] attrs) pure nothrow @safe {
