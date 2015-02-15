@@ -189,34 +189,68 @@ class CppModule: BaseModule {
         return this;
     }
 
-    auto suite(T...)(auto ref T args) {
-        auto e = new CppSuite(args);
-        _append(e);
-        sep();
-        return e;
-    }
-
     auto base() {
         auto e = new CppModule;
         super._append(e);
         return e;
     }
 
-    auto stmt(T...)(auto ref T args) {
-        auto e = new CppStmt(args);
+    // Statements
+    auto stmt(string stmt_) {
+        auto e = new CppStmt(stmt_);
         _append(e);
         return e;
     }
 
-    auto IFNDEF(T...)(auto ref T args) {
-        auto e = suite("#ifndef %s", args);
-        e[$.begin = newline, $.end = format("#endif // %s", args)];
+    auto break_() {
+        auto e = stmt("break");
         return e;
     }
 
-    auto DEFINE(T...)(auto ref T args) {
-        auto e = stmt("#define %s", args);
+    auto continue_() {
+        auto e = stmt("continue");
+        return e;
+    }
+
+    auto return_(string expr) {
+        auto e = stmt(format("return %s", expr));
+        return e;
+    }
+
+    auto goto_(string name) {
+        auto e = stmt(format("goto %s", name));
+        return e;
+    }
+
+    auto label(string name) {
+        auto e = stmt(format("%s:", name));
+        return e;
+    }
+
+    auto define(string name) {
+        auto e = stmt(format("#define %s", name));
         e[$.end = ""];
+        return e;
+    }
+
+    auto define(string name, string value) {
+        // may need to replace \n with \\\n
+        auto e = stmt(format("#define %s %s", name, value));
+        e[$.end = ""];
+        return e;
+    }
+
+    // Suites
+    auto suite(string headline) {
+        auto e = new CppSuite(headline);
+        _append(e);
+        sep();
+        return e;
+    }
+
+    auto IFNDEF(string name) {
+        auto e = suite(format("#ifndef %s", name));
+        e[$.begin = newline, $.end = format("#endif // %s", name)];
         return e;
     }
 
@@ -288,10 +322,7 @@ unittest {
 class CppStmt : CppModule {
     string stmt;
 
-    this(T...)(string stmt, auto ref T args) {
-        if (args.length > 0) {
-            stmt = format(stmt, args);
-        }
+    this(string stmt) {
         this.stmt = stmt;
         sep();
     }
@@ -304,10 +335,7 @@ class CppStmt : CppModule {
 class CppSuite : CppModule {
     string headline;
 
-    this(T...)(string headline, auto ref T args) {
-        if (args.length > 0) {
-            headline = format(headline, args);
-        }
+    this(string headline) {
         this.headline = headline;
     }
 
@@ -336,7 +364,7 @@ unittest {
 
 @name("Test of CppSuite with formatting")
 unittest {
-    auto x = new CppSuite("if (%s)", "x > 5");
+    auto x = new CppSuite("if (x > 5)");
     assert(x.render() == "if (x > 5) {\n}", x.render);
 }
 
@@ -404,7 +432,7 @@ struct CppHdr {
             header.suppress_indent(1);
             with (IFNDEF(ifdef_guard)) {
                 suppress_indent(1);
-                DEFINE(ifdef_guard);
+                define(ifdef_guard);
                 content = base;
                 content.suppress_indent(1);
             }
