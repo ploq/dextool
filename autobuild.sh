@@ -61,8 +61,9 @@ function state_ut_build_run() {
 }
 
 function state_release_build() {
-    dub build
-    check_status "Compile Release"
+    # dub build
+    # check_status "Compile Release"
+    return
 }
 
 function play_sound() {

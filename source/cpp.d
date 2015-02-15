@@ -2,10 +2,13 @@
 /// @date 2015, Joakim Brännström
 /// @copyright MIT License
 /// @author Joakim Brännström (joakim.brannstrom@gmx.com)
-import std.stdio;
+import std.algorithm;
+import std.ascii;
 import std.conv;
-import std.typetuple;
+import std.stdio;
 import std.string;
+import std.typetuple;
+
 import std.experimental.logger;
 alias logger = std.experimental.logger;
 
@@ -45,41 +48,29 @@ struct AttrSetter {
     }
 }
 
-interface CppElement {
+interface BaseElement {
     abstract string render();
+    abstract string _render_indent(int level);
+    abstract string _render_recursive(int level);
+    abstract string _render_post_recursive(int level);
 }
 
-class Text: CppElement {
-    string contents;
-    this(string contents) {
-        this.contents = contents;
-    }
+class BaseModule : BaseElement {
+    static int indent_width = 4;
 
-    override string render() {
-        return contents;
-    }
-}
-
-class Comment: CppElement {
-    string contents;
-    this(string contents) {
-        this.contents = contents;
-    }
-
-    override string render() {
-        return "// " ~ contents ~ "\n";
-    }
-}
-
-class CppBase: CppElement {
-    string content;
-    string[string] attrs;
-    CppElement[] children;
+    BaseElement[] children;
+    int sep_lines;
+    int suppress_indent_;
 
     this() {}
 
-    this(string content) {
-        this.content = content;
+    this(int indent_width) {
+        this.indent_width = indent_width;
+    }
+
+    /// Number of levels to suppress indent
+    void suppress_indent(int levels) {
+        this.suppress_indent_ = levels;
     }
 
     auto reset() {
@@ -87,13 +78,88 @@ class CppBase: CppElement {
         return this;
     }
 
-    override string render() {
-        string s = content;
-        foreach(e; children) {
-            s ~= e.render();
+    /// Separate with at most count empty lines.
+    void sep(int count = 1) {
+        count -= sep_lines;
+        if (count <= 0)
+            return;
+        foreach(i; 0 .. count) {
+            children ~= new Text(newline);
         }
+
+        sep_lines += count;
+    }
+
+    string indent(string s, int level) {
+        level = max(0, level);
+        char[] indent;
+        indent.length = indent_width*level;
+        indent[] = ' ';
+
+        return to!string(indent) ~ s;
+    }
+
+    void _append(BaseElement e) {
+        children ~= e;
+        sep_lines = 0;
+    }
+
+    override string _render_indent(int level) {
+        return "";
+    }
+
+    override string _render_recursive(int level) {
+        level -= suppress_indent_;
+        string s = _render_indent(level);
+
+        foreach(e; children) {
+            s ~= e._render_recursive(level+1);
+        }
+        s ~= _render_post_recursive(level);
+
         return s;
     }
+
+    override string _render_post_recursive(int level) {
+        return "";
+    }
+
+    override string render() {
+        string s = _render_indent(0);
+        foreach(e; children) {
+            s ~= e._render_recursive(0 - suppress_indent_);
+        }
+        s ~= _render_post_recursive(0);
+
+        return _render_recursive(0);
+    }
+}
+
+class Text: BaseModule {
+    string contents;
+    this(string contents) {
+        this.contents = contents;
+    }
+
+    override string _render_indent(int level) {
+        return contents;
+    }
+}
+
+class Comment: BaseModule {
+    string contents;
+    this(string contents) {
+        this.contents = contents;
+        sep();
+    }
+
+    override string _render_indent(int level) {
+        return indent("// " ~ contents, level);
+    }
+}
+
+class CppModule: BaseModule {
+    string[string] attrs;
 
     @property auto _() {
         return this;
@@ -112,31 +178,56 @@ class CppBase: CppElement {
 
     auto text(T)(T content) {
         auto e = new Text(to!string(content));
-        children ~= e;
+        _append(e);
         return this;
     }
     alias opCall = text;
 
     auto comment(string comment) {
         auto e = new Comment(comment);
-        children ~= e;
+        _append(e);
         return this;
     }
 
     auto suite(T...)(auto ref T args) {
         auto e = new CppSuite(args);
-        children ~=e;
+        _append(e);
+        sep();
+        return e;
+    }
+
+    auto base() {
+        auto e = new CppModule;
+        super._append(e);
+        return e;
+    }
+
+    auto stmt(T...)(auto ref T args) {
+        auto e = new CppStmt(args);
+        _append(e);
+        return e;
+    }
+
+    auto IFNDEF(T...)(auto ref T args) {
+        auto e = suite("#ifndef %s", args);
+        e[$.begin = newline, $.end = format("#endif // %s", args)];
+        return e;
+    }
+
+    auto DEFINE(T...)(auto ref T args) {
+        auto e = stmt("#define %s", args);
+        e[$.end = ""];
         return e;
     }
 
     //auto _append(string content) {
-    //    auto e = new CppBase(content);
+    //    auto e = new CppModule(content);
     //    children ~= e;
     //    return e;
     //}
 
     //auto _append(string content, string content) {
-    //    auto e = new CppBase(content);
+    //    auto e = new CppModule(content);
     //    e.text(content);
     //    children ~= e;
     //    return e;
@@ -162,48 +253,91 @@ class CppBase: CppElement {
     //        "a", "li", "ul", "ol", "img", "br", "em", "strong", "input", "pre", "label", "iframe", ));
 }
 
-class CppSuite : CppBase {
+string stmt_append_end(string s, in ref string[string] attrs) pure nothrow @safe {
+    bool in_pattern = false;
+    try {
+        in_pattern = inPattern(s[$-1], ";:,{");
+    } catch (Exception e) {}
+
+    if (!in_pattern && s[0] != '#') {
+        string end = ";";
+        if ("end" in attrs) {
+            end = attrs["end"];
+        }
+        s ~= end;
+    }
+
+    return s;
+}
+
+@name("Test of stmt_append_end")
+unittest {
+    string[string] attrs;
+    string stmt = "some_line";
+    string result = stmt_append_end(stmt, attrs);
+    assert(stmt ~ ";" == result, result);
+
+    result = stmt_append_end(stmt ~ ";", attrs);
+    assert(stmt ~ ";" == result, result);
+
+    attrs["end"] = "{";
+    result = stmt_append_end(stmt, attrs);
+    assert(stmt ~ "{" == result, result);
+}
+
+class CppStmt : CppModule {
+    string stmt;
+
+    this(T...)(string stmt, auto ref T args) {
+        if (args.length > 0) {
+            stmt = format(stmt, args);
+        }
+        this.stmt = stmt;
+        sep();
+    }
+
+    override string _render_indent(int level) {
+        return stmt_append_end(stmt, attrs);
+    }
+}
+
+class CppSuite : CppModule {
+    string headline;
+
     this(T...)(string headline, auto ref T args) {
         if (args.length > 0) {
             headline = format(headline, args);
         }
-        super(headline);
+        this.headline = headline;
     }
 
-    override string render() {
-        string s = super.content;
-        string begin = " {\n";
-        string end = "}\n";
-
+    override string _render_indent(int level) {
+        string r = headline ~ " {" ~ newline;
         if ("begin" in attrs) {
-            begin = attrs["begin"];
+            r = headline ~ attrs["begin"];
         }
+        return indent(r, level);
+    }
+
+    override string _render_post_recursive(int level) {
+        string r = "}";
         if ("end" in attrs) {
-            end = attrs["end"];
+            r = attrs["end"];
         }
-
-        s ~= begin;
-        foreach(e; children) {
-            s ~= e.render();
-        }
-        s ~= end;
-
-        return s;
+        return indent(r, level);
     }
 }
 
 @name("Test of empty CppSuite")
 unittest {
     auto x = new CppSuite("test");
-    writeln(x.render());
-    assert(x.render() == "test {\n}\n");
+    assert(x.render == "test {\n}", x.render);
 }
 
 @name("Test of CppSuite with formatting")
 unittest {
     auto x = new CppSuite("if (%s)", "x > 5");
-    writeln(x.render());
-    assert(x.render() == "if (x > 5) {\n}\n");
+    assert(x.render() == "if (x > 5) {\n}", x.render);
 }
 
 @name("Test of CppSuite with simple text")
@@ -213,8 +347,7 @@ unittest {
     with (x) {
         text("bar");
     }
-    writeln(x.render());
-    assert(x.render() == "foo {\nbar}\n");
+    assert(x.render() == "foo {\nbar}", x.render);
 }
 
 @name("Test of CppSuite with simple text and changed begin")
@@ -223,8 +356,7 @@ unittest {
     with (x[$.begin = "_:_"]) {
         text("bar");
     }
-    writeln(x.render());
-    assert(x.render() == "foo_:_bar}\n");
+    assert(x.render() == "foo_:_bar}", x.render);
 }
 
 @name("Test of CppSuite with simple text and changed end")
@@ -233,71 +365,87 @@ unittest {
     with (x[$.end = "_:_"]) {
         text("bar");
     }
-    writeln(x.render());
-    assert(x.render() == "foo {\nbar_:_");
+    assert(x.render() == "foo {\nbar_:_", x.render);
 }
 
 @name("Test of nested CppSuite")
 unittest {
     auto x = new CppSuite("foo");
     with (x) {
-        text("bar ");
+        text("bar");
+        sep();
         with (suite("smurf")) {
-            text("bar");
+            comment("bar");
         }
     }
-    writeln(x.render());
-    assert(x.render() == "foo {\nbar smurf {\nbar}\n}\n");
+    assert(x.render() == """foo {
+bar
+    smurf {
+        // bar
+    }
+}""", x.render);
 }
 
 /// Code generation for C++ header.
 struct CppHdr {
     string ifdef_guard;
-    CppBase header;
-    CppBase content;
-    CppBase footer;
+    CppModule doc;
+    CppModule header;
+    CppModule content;
+    CppModule footer;
 
     this(string ifdef_guard) {
+        // Must suppress indentation to generate what is expected by the user.
         this.ifdef_guard = ifdef_guard;
-        header = new CppBase();
-        content = new CppBase();
-        footer = new CppBase();
+        doc = new CppModule;
+        with (doc) {
+            suppress_indent(1);
+            header = base;
+            header.suppress_indent(1);
+            with (IFNDEF(ifdef_guard)) {
+                suppress_indent(1);
+                DEFINE(ifdef_guard);
+                content = base;
+                content.suppress_indent(1);
+            }
+            footer = base;
+            footer.suppress_indent(1);
+        }
     }
 
-    string render() {
-        string s = header.render();
-
-        if (ifdef_guard.length > 0) {
-            s ~= format("#ifndef %s\n#define %s\n%s\n#endif // %s",
-                       ifdef_guard,
-                       ifdef_guard,
-                       content.render(),
-                       ifdef_guard);
-        } else {
-            s ~= content.render();
-        }
-        s ~= footer.render();
-
-        return s;
+    auto render() {
+        return doc.render();
     }
 }
 
-@name("Test of text in CppBase with guard")
+@name("Test of text in CppModule with guard")
 unittest {
     auto hdr = CppHdr("somefile_hpp");
 
     with (hdr.header) {
         text("header text");
+        sep();
         comment("header comment");
     }
     with (hdr.content) {
         text("content text");
+        sep();
         comment("content comment");
     }
     with (hdr.footer) {
         text("footer text");
+        sep();
         comment("footer comment");
     }
 
-    writeln(hdr.render);
+    assert(hdr.render == """header text
+// header comment
+#ifndef somefile_hpp
+#define somefile_hpp
+content text
+// content comment
+#endif // somefile_hpp
+footer text
+// footer comment
+""", hdr.render);
 }
