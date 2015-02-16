@@ -191,7 +191,7 @@ class CppModule: BaseModule {
 
     auto base() {
         auto e = new CppModule;
-        super._append(e);
+        _append(e);
         return e;
     }
 
@@ -199,6 +199,7 @@ class CppModule: BaseModule {
     auto stmt(T)(T stmt_) {
         auto e = new CppStmt(to!string(stmt_));
         _append(e);
+        sep();
         return e;
     }
 
@@ -239,15 +240,14 @@ class CppModule: BaseModule {
     auto suite(T)(T headline) {
         auto e = new CppSuite(to!string(headline));
         _append(e);
-        sep();
         return e;
     }
 
-    auto if_(string cond) {
+    auto if_(T)(T cond) {
         return suite(format("if (%s)", cond));
     }
 
-    auto else_if(string cond) {
+    auto else_if(T)(T cond) {
         return suite(format("else if (%s)", cond));
     }
 
@@ -255,26 +255,29 @@ class CppModule: BaseModule {
         return suite("else");
     }
 
-    auto for_(string init, string cond, string next) {
-        return suite(format("for (%s; %s; %s)", init, cond, next));
+    auto for_(T0, T1, T2)(T0 init, T1 cond, T2 next) {
+        return suite(format("for (%s; %s; %s)",
+                            to!string(init),
+                            to!string(cond),
+                            to!string(next)));
     }
 
-    auto while_(string cond) {
-        return suite(format("while (%s)", cond));
+    auto while_(T)(T cond) {
+        return suite(format("while (%s)", to!string(cond)));
     }
 
-    auto do_while(string cond) {
+    auto do_while(T)(T cond) {
         auto e = suite("do");
-        e[$.end = format("} while (%s);", cond)];
+        e[$.end = format("} while (%s);%s", to!string(cond), newline)];
         return e;
     }
 
-    auto switch_(string cond) {
-        return suite(format("switch (%s)", cond));
+    auto switch_(T)(T cond) {
+        return suite(format("switch (%s)", to!string(cond)));
     }
 
-    auto case_(string val) {
-        auto e = suite(format("case %s:", val));
+    auto case_(T)(T val) {
+        auto e = suite(format("case %s:", to!string(val)));
         e[$.begin = newline, $.end = ""];
         return e;
     }
@@ -285,7 +288,7 @@ class CppModule: BaseModule {
         return e;
     }
 
-    auto func(T...)(string return_type, string name, auto ref T args) {
+    auto func(T0, T1, T...)(T0 return_type, T1 name, auto ref T args) {
         string params;
         if (args.length >= 1) {
             params = to!string(args[0]);
@@ -296,13 +299,16 @@ class CppModule: BaseModule {
             }
         }
 
-        auto e = suite(format("%s %s(%s)", return_type, name, params));
+        auto e = suite(format("%s %s(%s)",
+                              to!string(return_type),
+                              to!string(name),
+                              params));
         return e;
     }
 
     auto IFNDEF(string name) {
         auto e = suite(format("#ifndef %s", name));
-        e[$.begin = newline, $.end = format("#endif // %s", name)];
+        e[$.begin = newline, $.end = format("#endif // %s%s", name, newline)];
         return e;
     }
 
@@ -341,6 +347,17 @@ class CppModule: BaseModule {
 
 @name("Test of statements")
 unittest {
+    string expect = """    77;
+    break;
+    continue;
+    return 5;
+    return long_value;
+    goto foo;
+    bar:
+    #define foobar
+    #define smurf 1
+""";
+
     auto x = new CppModule();
 
     with (x) {
@@ -356,20 +373,36 @@ unittest {
     }
 
     auto rval = x.render();
-    assert(rval == """    77;
-    break;
-    continue;
-    return 5;
-    return long_value;
-    goto foo;
-    bar:
-    #define foobar
-    #define smurf 1
-""", rval);
+    assert(rval == expect, rval);
 }
 
 @name("Test of suites")
 unittest {
+    string expect = """
+    foo {
+    }
+    if (foo) {
+    }
+    else if (bar) {
+    }
+    else {
+    }
+    for (x; y; z) {
+    }
+    while (x) {
+    }
+    do {
+    } while (x);
+    switch (x) {
+    }
+    case y:
+        foo;
+    default:
+        foobar;
+    int foobar(x) {
+    }
+""";
+
     auto x = new CppModule();
     with (x) {
         sep();
@@ -391,32 +424,43 @@ unittest {
     }
 
     auto rval = x.render;
-    assert(rval == """
-    foo {
-    }
-    if (foo) {
-    }
-    else if (bar) {
-    }
-    else {
-    }
-    for (x; y; z) {
-    }
-    while (x) {
-    }
-    do {
-    } while (x);
+    assert(rval == expect, rval);
+}
+@name("Test of complicated switch")
+unittest {
+    string expect = """
     switch (x) {
+        case 0:
+            return 5;
+            break;
+        case 1:
+            return 3;
+            break;
+        default:
+            return -1;
     }
-    case y:
-        foo;
+""";
 
-    default:
-        foobar;
-
-    int foobar(x) {
+    auto x = new CppModule();
+    with (x) {
+        sep();
+        with(switch_("x")) {
+            with(case_(0)) {
+                return_(5);
+                break_;
+            }
+            with(case_(1)) {
+                return_(3);
+                break_;
+            }
+            with(default_) {
+                return_(-1);
+            }
+        }
     }
-""", rval);
+
+    auto rval = x.render;
+    assert(rval == expect, rval);
 }
 
 string stmt_append_end(string s, in ref string[string] attrs) pure nothrow @safe {
@@ -456,7 +500,6 @@ class CppStmt : CppModule {
 
     this(string stmt) {
         this.stmt = stmt;
-        sep();
     }
 
     override string _render_indent(int level) {
@@ -484,7 +527,7 @@ class CppSuite : CppModule {
     }
 
     override string _render_post_recursive(int level) {
-        string r = "}";
+        string r = "}" ~ newline;
         if ("end" in attrs) {
             r = attrs["end"];
         }
@@ -498,13 +541,13 @@ class CppSuite : CppModule {
 @name("Test of empty CppSuite")
 unittest {
     auto x = new CppSuite("test");
-    assert(x.render == "test {\n}", x.render);
+    assert(x.render == "test {\n}\n", x.render);
 }
 
 @name("Test of CppSuite with formatting")
 unittest {
     auto x = new CppSuite("if (x > 5)");
-    assert(x.render() == "if (x > 5) {\n}", x.render);
+    assert(x.render() == "if (x > 5) {\n}\n", x.render);
 }
 
 @name("Test of CppSuite with simple text")
@@ -514,7 +557,7 @@ unittest {
     with (x) {
         text("bar");
     }
-    assert(x.render() == "foo {\nbar}", x.render);
+    assert(x.render() == "foo {\nbar}\n", x.render);
 }
 
 @name("Test of CppSuite with simple text and changed begin")
@@ -523,7 +566,7 @@ unittest {
     with (x[$.begin = "_:_"]) {
         text("bar");
     }
-    assert(x.render() == "foo_:_bar}", x.render);
+    assert(x.render() == "foo_:_bar}\n", x.render);
 }
 
 @name("Test of CppSuite with simple text and changed end")
@@ -550,7 +593,8 @@ bar
     smurf {
         // bar
     }
-}""", x.render);
+}
+""", x.render);
 }
 
 /// Code generation for C++ header.
