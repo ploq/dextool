@@ -20,6 +20,7 @@ shared static this() {
     }
 }
 
+///@todo change to c-comment and make a separate for c++.
 class Comment: BaseModule {
     string contents;
     this(string contents) {
@@ -32,7 +33,7 @@ class Comment: BaseModule {
     }
 }
 
-class CppModule: BaseModule {
+class CModule: BaseModule {
     string[string] attrs;
 
     @property auto _() {
@@ -64,14 +65,14 @@ class CppModule: BaseModule {
     }
 
     auto base() {
-        auto e = new CppModule;
+        auto e = new CModule;
         _append(e);
         return e;
     }
 
     // Statements
     auto stmt(T)(T stmt_) {
-        auto e = new CppStmt(to!string(stmt_));
+        auto e = new CStmt(to!string(stmt_));
         _append(e);
         sep();
         return e;
@@ -112,7 +113,7 @@ class CppModule: BaseModule {
 
     // Suites
     auto suite(T)(T headline) {
-        auto e = new CppSuite(to!string(headline));
+        auto e = new CSuite(to!string(headline));
         _append(e);
         return e;
     }
@@ -220,7 +221,7 @@ unittest {
     #define smurf 1
 """;
 
-    auto x = new CppModule();
+    auto x = new CModule();
 
     with (x) {
         stmt(77);
@@ -265,7 +266,7 @@ unittest {
     }
 """;
 
-    auto x = new CppModule();
+    auto x = new CModule();
     with (x) {
         sep();
         suite("foo");
@@ -304,7 +305,7 @@ unittest {
     }
 """;
 
-    auto x = new CppModule();
+    auto x = new CModule();
     with (x) {
         sep();
         with(switch_("x")) {
@@ -358,7 +359,7 @@ unittest {
     assert(stmt ~ "{" == result, result);
 }
 
-class CppStmt : CppModule {
+class CStmt : CModule {
     string stmt;
 
     this(string stmt) {
@@ -371,7 +372,7 @@ class CppStmt : CppModule {
     }
 }
 
-class CppSuite : CppModule {
+class CSuite : CModule {
     string headline;
 
     this(string headline) {
@@ -401,49 +402,49 @@ class CppSuite : CppModule {
     }
 }
 
-@name("Test of empty CppSuite")
+@name("Test of empty CSuite")
 unittest {
-    auto x = new CppSuite("test");
+    auto x = new CSuite("test");
     assert(x.render == "test {\n}\n", x.render);
 }
 
-@name("Test of CppSuite with formatting")
+@name("Test of CSuite with formatting")
 unittest {
-    auto x = new CppSuite("if (x > 5)");
+    auto x = new CSuite("if (x > 5)");
     assert(x.render() == "if (x > 5) {\n}\n", x.render);
 }
 
-@name("Test of CppSuite with simple text")
+@name("Test of CSuite with simple text")
 unittest {
     // also test that text(..) do NOT add a linebreak
-    auto x = new CppSuite("foo");
+    auto x = new CSuite("foo");
     with (x) {
         text("bar");
     }
     assert(x.render() == "foo {\nbar}\n", x.render);
 }
 
-@name("Test of CppSuite with simple text and changed begin")
+@name("Test of CSuite with simple text and changed begin")
 unittest {
-    auto x = new CppSuite("foo");
+    auto x = new CSuite("foo");
     with (x[$.begin = "_:_"]) {
         text("bar");
     }
     assert(x.render() == "foo_:_bar}\n", x.render);
 }
 
-@name("Test of CppSuite with simple text and changed end")
+@name("Test of CSuite with simple text and changed end")
 unittest {
-    auto x = new CppSuite("foo");
+    auto x = new CSuite("foo");
     with (x[$.end = "_:_"]) {
         text("bar");
     }
     assert(x.render() == "foo {\nbar_:_", x.render);
 }
 
-@name("Test of nested CppSuite")
+@name("Test of nested CSuite")
 unittest {
-    auto x = new CppSuite("foo");
+    auto x = new CSuite("foo");
     with (x) {
         text("bar");
         sep();
@@ -463,15 +464,15 @@ bar
 /// Code generation for C++ header.
 struct CppHModule {
     string ifdef_guard;
-    CppModule doc;
-    CppModule header;
-    CppModule content;
-    CppModule footer;
+    CModule doc;
+    CModule header;
+    CModule content;
+    CModule footer;
 
     this(string ifdef_guard) {
         // Must suppress indentation to generate what is expected by the user.
         this.ifdef_guard = ifdef_guard;
-        doc = new CppModule;
+        doc = new CModule;
         with (doc) {
             suppress_indent(1);
             header = base;
@@ -492,7 +493,7 @@ struct CppHModule {
     }
 }
 
-@name("Test of text in CppModule with guard")
+@name("Test of text in CModule with guard")
 unittest {
     auto hdr = CppHModule("somefile_hpp");
 
