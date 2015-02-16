@@ -306,43 +306,31 @@ class CppModule: BaseModule {
         return e;
     }
 
-    auto IFNDEF(string name) {
-        auto e = suite(format("#ifndef %s", name));
+    auto IF(T)(T name) {
+        auto e = suite(format("#if %s", to!string(name)));
         e[$.begin = newline, $.end = format("#endif // %s%s", name, newline)];
         return e;
     }
 
-    //auto _append(string content) {
-    //    auto e = new CppModule(content);
-    //    children ~= e;
-    //    return e;
-    //}
+    auto IFDEF(T)(T name) {
+        auto e = suite(format("#ifdef %s", to!string(name)));
+        e[$.begin = newline, $.end = format("#endif // %s%s", name, newline)];
+        return e;
+    }
 
-    //auto _append(string content, string content) {
-    //    auto e = new CppModule(content);
-    //    e.text(content);
-    //    children ~= e;
-    //    return e;
-    //}
+    auto IFNDEF(T)(T name) {
+        auto e = suite(format("#ifndef %s", to!string(name)));
+        e[$.begin = newline, $.end = format("#endif // %s%s", name, newline)];
+        return e;
+    }
 
-    //protected static string _makeSubelems(E...)() {
-    //    string s = "";
-    //    foreach(name; E) {
-    //        s ~= "auto " ~ name ~ "(T...)(auto ref T args) {\n";
-    //        static if (name[$-1] == '_') {
-    //            s ~= "    return _append(\"" ~ name[0 .. $-1] ~ "\", args);";
-    //        }
-    //        else {
-    //            s ~= "    return _append(\"" ~ name ~ "\", args);";
-    //        }
-    //        s ~= "}\n";
-    //    }
-    //    return s;
-    //}
+    auto ELIF(T)(T cond) {
+        return stmt(format("#elif %s", to!string(cond)));
+    }
 
-    //mixin(_makeSubelems!("head", "title", "meta", "style", "link", "script",
-    //        "body_", "div", "span", "h1", "h2", "h3", "h4", "h5", "h6", "p", "table", "tr", "td",
-    //        "a", "li", "ul", "ol", "img", "br", "em", "strong", "input", "pre", "label", "iframe", ));
+    auto ELSE(T)(T cond) {
+        return stmt(format("#else %s", to!string(cond)));
+    }
 }
 
 @name("Test of statements")
@@ -598,7 +586,7 @@ bar
 }
 
 /// Code generation for C++ header.
-struct CppHdr {
+struct CppHModule {
     string ifdef_guard;
     CppModule doc;
     CppModule header;
@@ -631,7 +619,7 @@ struct CppHdr {
 
 @name("Test of text in CppModule with guard")
 unittest {
-    auto hdr = CppHdr("somefile_hpp");
+    auto hdr = CppHModule("somefile_hpp");
 
     with (hdr.header) {
         text("header text");
