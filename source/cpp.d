@@ -236,8 +236,8 @@ class CppModule: BaseModule {
     }
 
     // Suites
-    auto suite(string headline) {
-        auto e = new CppSuite(headline);
+    auto suite(T)(T headline) {
+        auto e = new CppSuite(to!string(headline));
         _append(e);
         sep();
         return e;
@@ -247,7 +247,7 @@ class CppModule: BaseModule {
         return suite(format("if (%s)", cond));
     }
 
-    auto elseif(string cond) {
+    auto else_if(string cond) {
         return suite(format("else if (%s)", cond));
     }
 
@@ -265,7 +265,7 @@ class CppModule: BaseModule {
 
     auto do_while(string cond) {
         auto e = suite("do");
-        e[$.end = format("} while(%s);", cond)];
+        e[$.end = format("} while (%s);", cond)];
         return e;
     }
 
@@ -356,15 +356,66 @@ unittest {
     }
 
     auto rval = x.render();
-    assert(rval == """77;
-break;
-continue;
-return 5;
-return long_value;
-goto foo;
-bar:
-#define foobar
-#define smurf 1
+    assert(rval == """    77;
+    break;
+    continue;
+    return 5;
+    return long_value;
+    goto foo;
+    bar:
+    #define foobar
+    #define smurf 1
+""", rval);
+}
+
+@name("Test of suites")
+unittest {
+    auto x = new CppModule();
+    with (x) {
+        sep();
+        suite("foo");
+        if_("foo");
+        else_if("bar");
+        else_;
+        for_("x", "y", "z");
+        while_("x");
+        do_while("x");
+        switch_("x");
+        with(case_("y")) {
+            stmt("foo");
+        }
+        with(default_) {
+            stmt("foobar");
+        }
+        func("int", "foobar", "x");
+    }
+
+    auto rval = x.render;
+    assert(rval == """
+    foo {
+    }
+    if (foo) {
+    }
+    else if (bar) {
+    }
+    else {
+    }
+    for (x; y; z) {
+    }
+    while (x) {
+    }
+    do {
+    } while (x);
+    switch (x) {
+    }
+    case y:
+        foo;
+
+    default:
+        foobar;
+
+    int foobar(x) {
+    }
 """, rval);
 }
 
@@ -409,7 +460,8 @@ class CppStmt : CppModule {
     }
 
     override string _render_indent(int level) {
-        return stmt_append_end(stmt, attrs);
+        string s = stmt_append_end(stmt, attrs);
+        return indent(s, level);
     }
 }
 
@@ -425,7 +477,10 @@ class CppSuite : CppModule {
         if ("begin" in attrs) {
             r = headline ~ attrs["begin"];
         }
-        return indent(r, level);
+        if (r.length > 0) {
+            r = indent(r, level);
+        }
+        return r;
     }
 
     override string _render_post_recursive(int level) {
@@ -433,7 +488,10 @@ class CppSuite : CppModule {
         if ("end" in attrs) {
             r = attrs["end"];
         }
-        return indent(r, level);
+        if (r.length > 0) {
+            r = indent(r, level);
+        }
+        return r;
     }
 }
 
