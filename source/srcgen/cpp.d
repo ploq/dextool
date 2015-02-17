@@ -2,6 +2,7 @@
 /// @date 2015, Joakim Brännström
 /// @copyright MIT License
 /// @author Joakim Brännström (joakim.brannstrom@gmx.com)
+module cpp;
 import std.algorithm;
 import std.ascii;
 import std.conv;

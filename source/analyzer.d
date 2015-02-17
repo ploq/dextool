@@ -16,6 +16,8 @@ import clang.Visitor;
 import clang.Cursor;
 import clang.UnsavedFile;
 
+import cpp;
+
 shared static this() {
     version (unittest) {
         import core.runtime;
