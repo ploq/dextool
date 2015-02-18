@@ -102,17 +102,18 @@ void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
     }
 }
 
-void log_node(ref Cursor c, int level,) {
+void log_node(T)(in ref T parent, ref Cursor c, int level,) {
     auto indent_str = new char[level*2];
     foreach (ref ch ; indent_str) ch = ' ';
 
-    logf("%s|visiting %s [%s line=%d, col=%d, def=%d]",
+    logf("%s|visiting %s [%s line=%d, col=%d, def=%d] %s",
          indent_str,
          c.spelling,
          c.kind,
          c.location.spelling.line,
          c.location.spelling.column,
-         c.isDefinition);
+         c.isDefinition,
+         typeid(parent));
 }
 
 @name("Test visit_ast with VisitorFoo")
@@ -130,7 +131,7 @@ unittest {
         }
 
         bool apply(ref Cursor c) {
-            log_node(c, this.indent);
+            log_node(this, c, this.indent);
             count++;
             return true;
         }
@@ -158,7 +159,7 @@ struct TranslateContext {
     }
 
     bool apply(Cursor c) {
-        log_node(c, this.indent);
+        log_node(this, c, this.indent);
         bool decend = true;
 
         with (CXCursorKind) {
@@ -239,7 +240,7 @@ struct ClassTranslatorHdr {
     }
 
     bool apply(Cursor c) {
-        log_node(c, level);
+        log_node(this, c, level);
         with (CXCursorKind)
             switch (c.kind) {
                 case CXCursor_ClassDecl:
@@ -266,7 +267,6 @@ struct ClassTranslatorHdr {
     }
 
     void push(T)(T c) {
-        CppModule cx = c;
         stack ~= cast(CppModule)(c);
         if (stack.length > 0)
             logger.log(cast(void*)(stack[$-1]), " ", to!string(c));
