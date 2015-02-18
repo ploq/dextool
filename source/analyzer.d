@@ -213,6 +213,8 @@ struct ClassTranslatorHdr {
     }
     void decr() {
         level--;
+        if (stack.length > 0)
+            logger.log(cast(void*)(stack[$-1]), " ", to!string(stack[$-1]));
         if (stack.length > 1)
             stack.length = stack.length - 1;
     }
@@ -246,12 +248,11 @@ struct ClassTranslatorHdr {
                         sep();
                     }
                     break;
-                //case CXCursor_CXXAccessSpecifier:
-                    //logger.log(to!string(c));
-                    //with(current) {
-                    //    push(public_);
-                    //}
-                    //break;
+                case CXCursor_CXXAccessSpecifier:
+                    with(current) {
+                        push(public_);
+                    }
+                    break;
 
                 default: break;
             }
@@ -259,11 +260,16 @@ struct ClassTranslatorHdr {
     }
 
     ref CppModule current() {
+        if (stack.length > 0)
+            logger.log(cast(void*)(stack[$-1]), " ", to!string(stack[$-1]));
         return stack[$-1];
     }
 
     void push(T)(T c) {
+        CppModule cx = c;
         stack ~= cast(CppModule)(c);
+        if (stack.length > 0)
+            logger.log(cast(void*)(stack[$-1]), " ", to!string(c));
     }
 }
 

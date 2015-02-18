@@ -16,11 +16,11 @@ import c;
 version (unittest) {
     shared static this() {
         import std.exception;
-        //enforce(runUnitTests!cpp(new ConsoleTestResultWriter), "Unit tests failed.");
+        enforce(runUnitTests!cpp(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 
-class CppModule: CModule {
+mixin template CppModuleX() {
     // Suites
     auto namespace(T)(T name) {
         string n = to!string(name);
@@ -65,6 +65,11 @@ class CppModule: CModule {
         e[$.begin = newline, $.end = ""];
         return e;
     }
+}
+
+class CppModule: BaseModule {
+    mixin CModuleX;
+    mixin CppModuleX;
 }
 
 @name("Test of C++ suits")

@@ -33,12 +33,8 @@ class Comment: BaseModule {
     }
 }
 
-class CModule: BaseModule {
+mixin template CModuleX() {
     string[string] attrs;
-
-    @property auto _() {
-        return this;
-    }
 
     auto opIndex(T...)(T kvs) {
         foreach(kv; kvs) {
@@ -51,18 +47,18 @@ class CModule: BaseModule {
         return AttrSetter.instance;
     }
 
+    auto comment(string comment) {
+        auto e = new Comment(comment);
+        _append(e);
+        return this;
+    }
+
     auto text(T)(T content) {
         auto e = new Text(to!string(content));
         _append(e);
         return this;
     }
     alias opCall = text;
-
-    auto comment(string comment) {
-        auto e = new Comment(comment);
-        _append(e);
-        return this;
-    }
 
     auto base() {
         auto e = new CModule;
@@ -72,7 +68,7 @@ class CModule: BaseModule {
 
     // Statements
     auto stmt(T)(T stmt_) {
-        auto e = new CStmt(to!string(stmt_));
+        auto e = new Stmt!(typeof(this))(to!string(stmt_));
         _append(e);
         sep();
         return e;
@@ -113,7 +109,7 @@ class CModule: BaseModule {
 
     // Suites
     auto suite(T)(T headline) {
-        auto e = new CSuite(to!string(headline));
+        auto e = new Suite!(typeof(this))(to!string(headline));
         _append(e);
         return e;
     }
@@ -206,6 +202,10 @@ class CModule: BaseModule {
     auto ELSE(T)(T cond) {
         return stmt(format("#else %s", to!string(cond)));
     }
+}
+
+class CModule: BaseModule {
+    mixin CModuleX;
 }
 
 @name("Test of statements")
@@ -359,7 +359,7 @@ unittest {
     assert(stmt ~ "{" == result, result);
 }
 
-class CStmt : CModule {
+class Stmt(T) : T {
     string stmt;
 
     this(string stmt) {
@@ -372,7 +372,7 @@ class CStmt : CModule {
     }
 }
 
-class CSuite : CModule {
+class Suite(T) : T {
     string headline;
 
     this(string headline) {
@@ -404,20 +404,20 @@ class CSuite : CModule {
 
 @name("Test of empty CSuite")
 unittest {
-    auto x = new CSuite("test");
+    auto x = new Suite!CModule("test");
     assert(x.render == "test {\n}\n", x.render);
 }
 
 @name("Test of CSuite with formatting")
 unittest {
-    auto x = new CSuite("if (x > 5)");
+    auto x = new Suite!CModule("if (x > 5)");
     assert(x.render() == "if (x > 5) {\n}\n", x.render);
 }
 
 @name("Test of CSuite with simple text")
 unittest {
     // also test that text(..) do NOT add a linebreak
-    auto x = new CSuite("foo");
+    auto x = new Suite!CModule("foo");
     with (x) {
         text("bar");
     }
@@ -426,7 +426,7 @@ unittest {
 
 @name("Test of CSuite with simple text and changed begin")
 unittest {
-    auto x = new CSuite("foo");
+    auto x = new Suite!CModule("foo");
     with (x[$.begin = "_:_"]) {
         text("bar");
     }
@@ -435,7 +435,7 @@ unittest {
 
 @name("Test of CSuite with simple text and changed end")
 unittest {
-    auto x = new CSuite("foo");
+    auto x = new Suite!CModule("foo");
     with (x[$.end = "_:_"]) {
         text("bar");
     }
@@ -444,7 +444,7 @@ unittest {
 
 @name("Test of nested CSuite")
 unittest {
-    auto x = new CSuite("foo");
+    auto x = new Suite!CModule("foo");
     with (x) {
         text("bar");
         sep();
