@@ -8,15 +8,13 @@ import std.stdio;
 
 import app_main : rmain;
 
-//shared static this()
-//{
-//    version (unittest) {
-//        import core.runtime;
-//        Runtime.moduleUnitTester = () => true;
-//        //runUnitTests!app(new JsonTestResultWriter("results.json"));
-//        assert(runUnitTests!app(new ConsoleTestResultWriter), "Unit tests failed.");
-//    }
-//}
+version (unittest) {
+    shared static this()
+    {
+        import core.runtime;
+        Runtime.moduleUnitTester = () => true;
+    }
+}
 
 int main(string[] args) {
     version (unittest) {
@@ -27,4 +25,3 @@ int main(string[] args) {
         return rmain(args);
     }
 }
-

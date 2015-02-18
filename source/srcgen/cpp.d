@@ -13,12 +13,10 @@ import tested;
 import base;
 import c;
 
-shared static this() {
-    version (unittest) {
-        import core.runtime;
-        Runtime.moduleUnitTester = () => true;
-        //runUnitTests!app(new JsonTestResultWriter("results.json"));
-        assert(runUnitTests!cpp(new ConsoleTestResultWriter), "Unit tests failed.");
+version (unittest) {
+    shared static this() {
+        import std.exception;
+        //enforce(runUnitTests!cpp(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 

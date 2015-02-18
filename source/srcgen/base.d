@@ -9,12 +9,10 @@ import std.conv;
 
 import tested;
 
-shared static this() {
-    version (unittest) {
-        import core.runtime;
-        Runtime.moduleUnitTester = () => true;
-        //runUnitTests!app(new JsonTestResultWriter("results.json"));
-        assert(runUnitTests!base(new ConsoleTestResultWriter), "Unit tests failed.");
+version (unittest) {
+    shared static this() {
+        import std.exception;
+        enforce(runUnitTests!base(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 

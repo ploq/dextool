@@ -12,12 +12,11 @@ import tested;
 
 import base;
 
-shared static this() {
-    version (unittest) {
-        import core.runtime;
-        Runtime.moduleUnitTester = () => true;
+version (unittest) {
+    shared static this() {
+        import std.exception;
         //runUnitTests!app(new JsonTestResultWriter("results.json"));
-        assert(runUnitTests!c(new ConsoleTestResultWriter), "Unit tests failed.");
+        enforce(runUnitTests!c(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 

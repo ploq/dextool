@@ -16,19 +16,16 @@
 	"importPaths": ["source", "clang"],
 
 	"lflags-posix": ["-lclang", "-rpath", ".", "-L."],
+    "targetType": "executable",
+    "buildRequirements": ["requireBoundsCheck", "requireContracts"],
 
     "configurations": [
-    {
-        "name": "release",
-        "targetName": "fun_with_clang",
-        "targetType": "executable",
-        "buildRequirements": ["requireBoundsCheck", "requireContracts"]
-    },
-    {
-        "name": "unittest",
-        "targetName": "unittest",
-        "targetType": "executable",
-        "buildRequirements": ["requireBoundsCheck", "requireContracts"]
-    },
+        {"name": "release",
+            "targetName": "fun_with_clang",
+        },
+        {"name": "unittest",
+            "targetName": "unittest",
+            "buildType": "debugInfo"
+        }
     ]
 }

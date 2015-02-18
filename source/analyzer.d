@@ -2,6 +2,7 @@
 /// @date 2015, Joakim Brännström
 /// @copyright MIT License
 /// @author Joakim Brännström (joakim.brannstrom@gmx.com)
+import std.container;
 import std.conv;
 import std.stdio;
 import std.experimental.logger;
@@ -18,12 +19,10 @@ import clang.UnsavedFile;
 
 import cpp;
 
-shared static this() {
-    version (unittest) {
-        import core.runtime;
-        Runtime.moduleUnitTester = () => true;
-        //runUnitTests!app(new JsonTestResultWriter("results.json"));
-        //assert(runUnitTests!analyzer(new ConsoleTestResultWriter), "Unit tests failed.");
+version (unittest) {
+    shared static this() {
+        import std.exception;
+        enforce(runUnitTests!analyzer(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 
@@ -199,45 +198,72 @@ unittest {
     TranslateContext ctx;
     auto cursor = x.translation_unit.cursor;
     visit_ast!TranslateContext(cursor, ctx);
-    assert(ctx.output.length > 0);
+    //assert(ctx.output.length > 0);
 }
 
 struct ClassTranslatorHdr {
     private CXCursor cursor;
 
-    public string name;
-    public string[] pub_;
-    public string[] prot_;
-    public string[] priv_;
+    CppModule code; // top code generator node
+    CppModule[] stack; // stack of cpp nodes
+    int level;
 
-    void incr() {}
-    void decr() {}
+    void incr() {
+        level++;
+    }
+    void decr() {
+        level--;
+        if (stack.length > 1)
+            stack.length = stack.length - 1;
+    }
 
     this(CXCursor cursor) {
         this.cursor = cursor;
+        code = new CppModule;
+        push(code);
     }
 
     this(Cursor cursor) {
         this.cursor = cursor.cx;
+        code = new CppModule;
+        push(code);
     }
 
     string translate() {
         auto c = Cursor(this.cursor);
         visit_ast!ClassTranslatorHdr(c, this);
 
-        return "class " ~ this.name ~";";
+        return code.render;
     }
 
     bool apply(Cursor c) {
+        log_node(c, level);
         with (CXCursorKind)
             switch (c.kind) {
                 case CXCursor_ClassDecl:
-                    this.name = c.spelling;
+                    with(current) {
+                        push(class_(c.spelling));
+                        sep();
+                    }
                     break;
+                //case CXCursor_CXXAccessSpecifier:
+                    //logger.log(to!string(c));
+                    //with(current) {
+                    //    push(public_);
+                    //}
+                    //break;
 
                 default: break;
             }
-        return false;
+        return true;
+    }
+
+    ref CppModule current() {
+        return stack[$-1];
+    }
+
+    void push(T)(T c) {
+        stack ~= cast(CppModule)(c);
     }
 }
 
