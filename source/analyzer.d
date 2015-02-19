@@ -107,10 +107,11 @@ void log_node(T)(in ref T parent, ref Cursor c, int level,) {
     auto indent_str = new char[level*2];
     foreach (ref ch ; indent_str) ch = ' ';
 
-    logf("%s|visiting %s [%s line=%d, col=%d, def=%d] %s",
+    logf("%s|%s [%s %s line=%d, col=%d, def=%d] %s",
          indent_str,
          c.spelling,
          c.kind,
+         c.type,
          c.location.spelling.line,
          c.location.spelling.column,
          c.isDefinition,
@@ -213,13 +214,13 @@ struct ClassTranslatorHdr {
 
     void incr() {
         level++;
-        logger.log(level, " ", stack.length);
+        //logger.log(level, " ", stack.length);
     }
 
     void decr() {
         // remove node leaving the level
         if (stack.length > 1 && stack[$-1].level == level) {
-            logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]), level);
+            //logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]), level);
             stack.length = stack.length - 1;
         }
         level--;
@@ -256,7 +257,16 @@ struct ClassTranslatorHdr {
                     break;
                 case CXCursor_CXXAccessSpecifier:
                     with(current) {
-                        push(public_);
+                        final switch (c.access.accessSpecifier) {
+                            case CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier:
+                                logger.log(c.access.accessSpecifier); break;
+                            case CX_CXXAccessSpecifier.CX_CXXPublic:
+                                push(public_); break;
+                            case CX_CXXAccessSpecifier.CX_CXXProtected:
+                                push(protected_); break;
+                            case CX_CXXAccessSpecifier.CX_CXXPrivate:
+                                push(private_); break;
+                        }
                     }
                     break;
 
@@ -266,15 +276,15 @@ struct ClassTranslatorHdr {
     }
 
     ref CppModule current() {
-        if (stack.length > 0)
-            logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
+        //if (stack.length > 0)
+        //    logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
         return stack[$-1].node;
     }
 
     void push(T)(T c) {
         stack ~= Entry(cast(CppModule)(c), level);
-        if (stack.length > 0)
-            logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
+        //if (stack.length > 0)
+        //    logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
     }
 }
 

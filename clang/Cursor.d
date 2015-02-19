@@ -70,6 +70,11 @@ struct Cursor
         return EnumCursor(this);
     }
 
+    @property AccessCursor access()
+    {
+        return AccessCursor(this);
+    }
+
     @property bool isValid ()
     {
         return !clang_isInvalid(cx.kind);
@@ -169,6 +174,16 @@ struct FunctionCursor
     @property ParamVisitor parameters ()
     {
         return ParamVisitor(cx);
+    }
+}
+
+struct AccessCursor
+{
+    Cursor cursor;
+    alias cursor this;
+
+    @property auto accessSpecifier() {
+        return clang_getCXXAccessSpecifier(cx);
     }
 }
 
