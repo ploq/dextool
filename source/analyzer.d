@@ -5,6 +5,7 @@
 import std.container;
 import std.conv;
 import std.stdio;
+import std.typecons;
 import std.experimental.logger;
 alias logger = std.experimental.logger;
 
@@ -91,15 +92,15 @@ unittest {
 
 // If apply returns true visit_ast will decend into the node if it contains children.
 void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
+    v.incr();
     bool decend = v.apply(cursor);
 
     if (!cursor.isEmpty && decend) {
-        v.incr();
         foreach (c, p; Visitor(cursor)) {
             visit_ast(c, v);
         }
-        v.decr();
     }
+    v.decr();
 }
 
 void log_node(T)(in ref T parent, ref Cursor c, int level,) {
@@ -205,19 +206,23 @@ unittest {
 struct ClassTranslatorHdr {
     private CXCursor cursor;
 
+    alias Entry = Tuple!(CppModule, "node", int, "level");
     CppModule code; // top code generator node
-    CppModule[] stack; // stack of cpp nodes
+    Entry[] stack; // stack of cpp nodes
     int level;
 
     void incr() {
         level++;
+        logger.log(level, " ", stack.length);
     }
+
     void decr() {
-        level--;
-        if (stack.length > 0)
-            logger.log(cast(void*)(stack[$-1]), " ", to!string(stack[$-1]));
-        if (stack.length > 1)
+        // remove node leaving the level
+        if (stack.length > 1 && stack[$-1].level == level) {
+            logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]), level);
             stack.length = stack.length - 1;
+        }
+        level--;
     }
 
     this(CXCursor cursor) {
@@ -262,14 +267,14 @@ struct ClassTranslatorHdr {
 
     ref CppModule current() {
         if (stack.length > 0)
-            logger.log(cast(void*)(stack[$-1]), " ", to!string(stack[$-1]));
-        return stack[$-1];
+            logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
+        return stack[$-1].node;
     }
 
     void push(T)(T c) {
-        stack ~= cast(CppModule)(c);
+        stack ~= Entry(cast(CppModule)(c), level);
         if (stack.length > 0)
-            logger.log(cast(void*)(stack[$-1]), " ", to!string(c));
+            logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
     }
 }
 
