@@ -118,6 +118,39 @@ void log_node(T)(in ref T parent, ref Cursor c, int level,) {
          typeid(parent));
 }
 
+/// T is module type.
+mixin template VisitNodeModule(Tmodule) {
+    alias Entry = Tuple!(Tmodule, "node", int, "level");
+    Entry[] stack; // stack of cpp nodes
+    int level;
+
+    void incr() {
+        level++;
+        //logger.log(level, " ", stack.length);
+    }
+
+    void decr() {
+        // remove node leaving the level
+        if (stack.length > 1 && stack[$-1].level == level) {
+            //logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]), level);
+            stack.length = stack.length - 1;
+        }
+        level--;
+    }
+
+    ref Tmodule current() {
+        //if (stack.length > 0)
+        //    logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
+        return stack[$-1].node;
+    }
+
+    void push(T)(T c) {
+        stack ~= Entry(cast(Tmodule)(c), level);
+        //if (stack.length > 0)
+        //    logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
+    }
+}
+
 @name("Test visit_ast with VisitorFoo")
 unittest {
     struct VisitorFoo {
@@ -205,26 +238,10 @@ unittest {
 }
 
 struct ClassTranslatorHdr {
+    mixin VisitNodeModule!CppModule;
+
     private CXCursor cursor;
-
-    alias Entry = Tuple!(CppModule, "node", int, "level");
-    CppModule code; // top code generator node
-    Entry[] stack; // stack of cpp nodes
-    int level;
-
-    void incr() {
-        level++;
-        //logger.log(level, " ", stack.length);
-    }
-
-    void decr() {
-        // remove node leaving the level
-        if (stack.length > 1 && stack[$-1].level == level) {
-            //logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]), level);
-            stack.length = stack.length - 1;
-        }
-        level--;
-    }
+    private CppModule code; // top code generator node
 
     this(CXCursor cursor) {
         this.cursor = cursor;
@@ -255,17 +272,21 @@ struct ClassTranslatorHdr {
                         sep();
                     }
                     break;
+                case CXCursor_Constructor:
+                    break;
                 case CXCursor_CXXAccessSpecifier:
                     with(current) {
                         final switch (c.access.accessSpecifier) {
-                            case CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier:
-                                logger.log(c.access.accessSpecifier); break;
-                            case CX_CXXAccessSpecifier.CX_CXXPublic:
-                                push(public_); break;
-                            case CX_CXXAccessSpecifier.CX_CXXProtected:
-                                push(protected_); break;
-                            case CX_CXXAccessSpecifier.CX_CXXPrivate:
-                                push(private_); break;
+                            with(CX_CXXAccessSpecifier) {
+                                case CX_CXXInvalidAccessSpecifier:
+                                    logger.log(c.access.accessSpecifier); break;
+                                case CX_CXXPublic:
+                                    push(public_); break;
+                                case CX_CXXProtected:
+                                    push(protected_); break;
+                                case CX_CXXPrivate:
+                                    push(private_); break;
+                            }
                         }
                     }
                     break;
@@ -274,23 +295,47 @@ struct ClassTranslatorHdr {
             }
         return true;
     }
-
-    ref CppModule current() {
-        //if (stack.length > 0)
-        //    logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
-        return stack[$-1].node;
-    }
-
-    void push(T)(T c) {
-        stack ~= Entry(cast(CppModule)(c), level);
-        //if (stack.length > 0)
-        //    logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
-    }
 }
 
-@name("Test of ClassTranslatorHdr")
+@name("Test of ClassTranslatorHdr, class_simple.hpp")
 unittest {
-    auto x = new Context("test_files/class.h");
+    auto x = new Context("test_files/class_simple.hpp");
+    x.diagnostic();
+
+    TranslateContext ctx;
+    auto cursor = x.translation_unit.cursor;
+    visit_ast!TranslateContext(cursor, ctx);
+    //assert(ctx.output == "");
+    writeln(ctx.output);
+}
+
+@name("Test of ClassTranslatorHdr, class_simple2.hpp")
+unittest {
+    auto x = new Context("test_files/class_simple2.hpp");
+    x.diagnostic();
+
+    TranslateContext ctx;
+    auto cursor = x.translation_unit.cursor;
+    visit_ast!TranslateContext(cursor, ctx);
+    //assert(ctx.output == "");
+    writeln(ctx.output);
+}
+
+@name("Test of ClassTranslatorHdr, class_nested.hpp")
+unittest {
+    auto x = new Context("test_files/class_nested.hpp");
+    x.diagnostic();
+
+    TranslateContext ctx;
+    auto cursor = x.translation_unit.cursor;
+    visit_ast!TranslateContext(cursor, ctx);
+    //assert(ctx.output == "");
+    writeln(ctx.output);
+}
+
+@name("Test of ClassTranslatorHdr, class_impl.hpp")
+unittest {
+    auto x = new Context("test_files/class_impl.hpp");
     x.diagnostic();
 
     TranslateContext ctx;
