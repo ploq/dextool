@@ -61,7 +61,7 @@ mixin template CModuleX() {
     alias opCall = text;
 
     auto base() {
-        auto e = new CModule;
+        auto e = new typeof(this);
         _append(e);
         return e;
     }
@@ -269,8 +269,9 @@ unittest {
         foo;
     default:
         foobar;
-    int foobar(x) {
+    int foobar(int x) {
     }
+    int fun(int y);
 """;
 
     auto x = new CModule();
@@ -290,7 +291,9 @@ unittest {
         with(default_) {
             stmt("foobar");
         }
-        func("int", "foobar", "x");
+        func("int", "foobar", "int x");
+        auto y = func("int", "fun", "int y");
+        y[$.begin = ";", $.end = newline, $.noindent = true];
     }
 
     auto rval = x.render;
@@ -386,6 +389,7 @@ class Stmt(T) : T {
 /// headline ~ begin
 ///     <recursive>
 /// end
+/// noindent affects post_recursive. If set no indention there.
 /// r.length > 0 catches the case when begin or end is empty string. Used in switch/case.
 class Suite(T) : T {
     string headline;

@@ -22,6 +22,8 @@ version (unittest) {
 
 mixin template CppModuleX() {
     // Statements
+
+    // Suites
     auto ctor(T0, T...)(T0 class_name, auto ref T args) {
         string params;
         if (args.length >= 1) {
@@ -33,22 +35,17 @@ mixin template CppModuleX() {
             }
         }
 
-        auto e = stmt(format("%s(%s);", to!string(class_name), params));
+        auto e = suite(format("%s(%s)", to!string(class_name), params));
+        return e;
+    }
+
+    auto ctor(T)(T class_name) {
+        auto e = suite(format("%s()", to!string(class_name)));
         return e;
     }
 
     auto dtor(T)(T class_name) {
-        auto e = stmt(format("%s();", to!string(class_name)));
-        return e;
-    }
-
-    // Suites
-    auto ctor(T)(T class_name) {
-        auto e = suite(to!string(class_name));
-        e[$.begin = "(", $.end = ");" ~ newline, $.noindent = true];
-        //e.suppress_child_indent(100);
-        //e.set_indentation(0);
-        //e.suppress_indent(100); //todo ugly hack. add total suppression instead.
+        auto e = suite(format("~%s()", to!string(class_name)));
         return e;
     }
 
@@ -110,6 +107,7 @@ unittest {
     class Foo {
         Foo();
         Foo(int y);
+        ~Foo();
     };
     class Foo : Bar {
     };
@@ -125,8 +123,12 @@ unittest {
         sep;
         namespace("foo");
         with(class_("Foo")) {
-            ctor("Foo");
-            ctor("Foo", "int y");
+            auto ctor0 = ctor("Foo");
+            ctor0[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
+            auto ctor1 = ctor("Foo", "int y");
+            ctor1[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
+            auto dtor0 = dtor("Foo");
+            dtor0[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
         }
         class_("Foo", "Bar");
         with(public_) {
