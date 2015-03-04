@@ -21,7 +21,37 @@ version (unittest) {
 }
 
 mixin template CppModuleX() {
+    // Statements
+    auto ctor(T0, T...)(T0 class_name, auto ref T args) {
+        string params;
+        if (args.length >= 1) {
+            params = to!string(args[0]);
+        }
+        if (args.length >= 2) {
+            foreach(v; args[1 .. $]) {
+                params ~= ", " ~ to!string(v);
+            }
+        }
+
+        auto e = stmt(format("%s(%s);", to!string(class_name), params));
+        return e;
+    }
+
+    auto dtor(T)(T class_name) {
+        auto e = stmt(format("%s();", to!string(class_name)));
+        return e;
+    }
+
     // Suites
+    auto ctor(T)(T class_name) {
+        auto e = suite(to!string(class_name));
+        e[$.begin = "(", $.end = ");" ~ newline, $.noindent = true];
+        //e.suppress_child_indent(100);
+        //e.set_indentation(0);
+        //e.suppress_indent(100); //todo ugly hack. add total suppression instead.
+        return e;
+    }
+
     auto namespace(T)(T name) {
         string n = to!string(name);
         auto e = suite(format("namespace %s", n));
@@ -78,6 +108,8 @@ unittest {
     namespace foo {
     } //NS:foo
     class Foo {
+        Foo();
+        Foo(int y);
     };
     class Foo : Bar {
     };
@@ -92,7 +124,10 @@ unittest {
     with(x) {
         sep;
         namespace("foo");
-        class_("Foo");
+        with(class_("Foo")) {
+            ctor("Foo");
+            ctor("Foo", "int y");
+        }
         class_("Foo", "Bar");
         with(public_) {
             return_(5);

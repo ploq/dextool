@@ -60,7 +60,7 @@ class Text: BaseModule {
 }
 
 class BaseModule : BaseElement {
-    static int indent_width = 4;
+    int indent_width = 4;
 
     BaseElement[] children;
     int sep_lines;
@@ -75,6 +75,10 @@ class BaseModule : BaseElement {
     /// Number of levels to suppress indent
     void suppress_indent(int levels) {
         this.suppress_indent_ = levels;
+    }
+
+    void set_indentation(int ind) {
+        this.indent_width = ind;
     }
 
     auto reset() {

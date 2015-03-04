@@ -159,6 +159,13 @@ mixin template CModuleX() {
         return e;
     }
 
+    auto func(T0, T1)(T0 return_type, T1 name) {
+        auto e = suite(format("%s %s()",
+                              to!string(return_type),
+                              to!string(name)));
+        return e;
+    }
+
     auto func(T0, T1, T...)(T0 return_type, T1 name, auto ref T args) {
         string params;
         if (args.length >= 1) {
@@ -359,6 +366,9 @@ unittest {
     assert(stmt ~ "{" == result, result);
 }
 
+/// Affected by attribute end.
+/// stmt ~ end
+///     <recursive>
 class Stmt(T) : T {
     string stmt;
 
@@ -372,6 +382,11 @@ class Stmt(T) : T {
     }
 }
 
+/// Affected by attribute begin, end, noindent.
+/// headline ~ begin
+///     <recursive>
+/// end
+/// r.length > 0 catches the case when begin or end is empty string. Used in switch/case.
 class Suite(T) : T {
     string headline;
 
@@ -395,7 +410,7 @@ class Suite(T) : T {
         if ("end" in attrs) {
             r = attrs["end"];
         }
-        if (r.length > 0) {
+        if (r.length > 0 && !("noindent" in attrs)) {
             r = indent(r, level);
         }
         return r;

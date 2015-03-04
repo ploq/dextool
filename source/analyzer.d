@@ -241,30 +241,31 @@ struct ClassTranslatorHdr {
     mixin VisitNodeModule!CppModule;
 
     private CXCursor cursor;
-    private CppModule code; // top code generator node
+    private CppModule top; // top code generator node
 
     this(CXCursor cursor) {
         this.cursor = cursor;
-        code = new CppModule;
-        push(code);
+        top = new CppModule;
+        push(top);
     }
 
     this(Cursor cursor) {
         this.cursor = cursor.cx;
-        code = new CppModule;
-        push(code);
+        top = new CppModule;
+        push(top);
     }
 
     string translate() {
         auto c = Cursor(this.cursor);
         visit_ast!ClassTranslatorHdr(c, this);
 
-        return code.render;
+        return top.render;
     }
 
     bool apply(Cursor c) {
+        bool descend = true;
         log_node(this, c, level);
-        with (CXCursorKind)
+        with (CXCursorKind) {
             switch (c.kind) {
                 case CXCursor_ClassDecl:
                     with(current) {
@@ -273,6 +274,10 @@ struct ClassTranslatorHdr {
                     }
                     break;
                 case CXCursor_Constructor:
+                    CtorTranslator(c, current).translate;
+                    descend = false;
+                    break;
+                case CXCursor_CXXMethod:
                     break;
                 case CXCursor_CXXAccessSpecifier:
                     with(current) {
@@ -281,11 +286,17 @@ struct ClassTranslatorHdr {
                                 case CX_CXXInvalidAccessSpecifier:
                                     logger.log(c.access.accessSpecifier); break;
                                 case CX_CXXPublic:
-                                    push(public_); break;
+                                    push(public_);
+                                    current.suppress_indent(1);
+                                    break;
                                 case CX_CXXProtected:
-                                    push(protected_); break;
+                                    push(protected_);
+                                    current.suppress_indent(1);
+                                    break;
                                 case CX_CXXPrivate:
-                                    push(private_); break;
+                                    push(private_);
+                                    current.suppress_indent(1);
+                                    break;
                             }
                         }
                     }
@@ -293,25 +304,53 @@ struct ClassTranslatorHdr {
 
                 default: break;
             }
-        return true;
+        }
+        return descend;
+    }
+}
+
+struct CtorTranslator {
+    mixin VisitNodeModule!CppModule;
+
+    private CXCursor cursor;
+    private CppModule top; // top code generator node
+
+    this(CXCursor cursor, ref CppModule top) {
+        this.cursor = cursor;
+        this.top = top;
+        push(top);
+    }
+
+    this(Cursor cursor, ref CppModule top) {
+        this.cursor = cursor.cx;
+        this.top = top;
+        push(top);
+    }
+
+    void translate() {
+        auto c = Cursor(this.cursor);
+        visit_ast!CtorTranslator(c, this);
+    }
+
+    bool apply(Cursor c) {
+        bool descend = true;
+        log_node(this, c, level);
+        switch(c.kind) {
+            case CXCursorKind.CXCursor_Constructor:
+                push(current.ctor(c.spelling));
+                break;
+            case CXCursorKind.CXCursor_ParmDecl:
+                break;
+            default: break;
+        }
+
+        return descend;
     }
 }
 
 @name("Test of ClassTranslatorHdr, class_simple.hpp")
 unittest {
     auto x = new Context("test_files/class_simple.hpp");
-    x.diagnostic();
-
-    TranslateContext ctx;
-    auto cursor = x.translation_unit.cursor;
-    visit_ast!TranslateContext(cursor, ctx);
-    //assert(ctx.output == "");
-    writeln(ctx.output);
-}
-
-@name("Test of ClassTranslatorHdr, class_simple2.hpp")
-unittest {
-    auto x = new Context("test_files/class_simple2.hpp");
     x.diagnostic();
 
     TranslateContext ctx;
@@ -336,6 +375,18 @@ unittest {
 @name("Test of ClassTranslatorHdr, class_impl.hpp")
 unittest {
     auto x = new Context("test_files/class_impl.hpp");
+    x.diagnostic();
+
+    TranslateContext ctx;
+    auto cursor = x.translation_unit.cursor;
+    visit_ast!TranslateContext(cursor, ctx);
+    //assert(ctx.output == "");
+    writeln(ctx.output);
+}
+
+@name("Test of ClassTranslatorHdr, class_simple2.hpp")
+unittest {
+    auto x = new Context("test_files/class_simple2.hpp");
     x.diagnostic();
 
     TranslateContext ctx;
