@@ -144,10 +144,11 @@ mixin template VisitNodeModule(Tmodule) {
         return stack[$-1].node;
     }
 
-    void push(T)(T c) {
+    T push(T)(T c) {
         stack ~= Entry(cast(Tmodule)(c), level);
         //if (stack.length > 0)
         //    logger.log(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
+        return c;
     }
 }
 
@@ -280,26 +281,7 @@ struct ClassTranslatorHdr {
                 case CXCursor_CXXMethod:
                     break;
                 case CXCursor_CXXAccessSpecifier:
-                    with(current) {
-                        final switch (c.access.accessSpecifier) {
-                            with(CX_CXXAccessSpecifier) {
-                                case CX_CXXInvalidAccessSpecifier:
-                                    logger.log(c.access.accessSpecifier); break;
-                                case CX_CXXPublic:
-                                    push(public_);
-                                    current.suppress_indent(1);
-                                    break;
-                                case CX_CXXProtected:
-                                    push(protected_);
-                                    current.suppress_indent(1);
-                                    break;
-                                case CX_CXXPrivate:
-                                    push(private_);
-                                    current.suppress_indent(1);
-                                    break;
-                            }
-                        }
-                    }
+                    AccessSpecifierTranslator!CppModule(c, current, &push!CppModule);
                     break;
 
                 default: break;
@@ -307,6 +289,34 @@ struct ClassTranslatorHdr {
         }
         return descend;
     }
+}
+
+/// Translate an access specifier to code suitable for a c++ header.
+/// @param cursor Cursor to translate
+/// @param top Top module to append the translation to.
+/// @param push Function used to push the created node to the indent queue.
+void AccessSpecifierTranslator(T)(Cursor cursor, ref T top, T delegate(T c) push) {
+    T current;
+
+    with (CXCursorKind) {
+        final switch (cursor.access.accessSpecifier) {
+            with(CX_CXXAccessSpecifier) {
+                case CX_CXXInvalidAccessSpecifier:
+                    logger.log(cursor.access.accessSpecifier); break;
+                case CX_CXXPublic:
+                    current = push(top.public_);
+                    break;
+                case CX_CXXProtected:
+                    current = push(top.protected_);
+                    break;
+                case CX_CXXPrivate:
+                    current = push(top.private_);
+                    break;
+            }
+        }
+    }
+
+    current.suppress_indent(1);
 }
 
 struct CtorTranslator {
