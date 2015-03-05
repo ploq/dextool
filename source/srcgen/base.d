@@ -2,7 +2,7 @@
 /// @date 2015, Joakim Brännström
 /// @copyright MIT License
 /// @author Joakim Brännström (joakim.brannstrom@gmx.com)
-module base;
+module srcgen.base;
 import std.algorithm;
 import std.ascii;
 import std.conv;
@@ -12,7 +12,7 @@ import tested;
 version (unittest) {
     shared static this() {
         import std.exception;
-        enforce(runUnitTests!base(new ConsoleTestResultWriter), "Unit tests failed.");
+        enforce(runUnitTests!(srcgen.base)(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 

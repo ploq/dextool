@@ -2,9 +2,13 @@
 /// @date 2015, Joakim Brännström
 /// @copyright MIT License
 /// @author Joakim Brännström (joakim.brannstrom@gmx.com)
-import std.container;
+module analyzer;
+
+import std.ascii;
+import std.array;
 import std.conv;
 import std.stdio;
+import std.string;
 import std.typecons;
 import std.experimental.logger;
 alias logger = std.experimental.logger;
@@ -18,7 +22,9 @@ import clang.Visitor;
 import clang.Cursor;
 import clang.UnsavedFile;
 
-import cpp;
+import srcgen.cpp;
+
+import translator.Type;
 
 version (unittest) {
     shared static this() {
@@ -48,11 +54,6 @@ private:
     TranslationUnit translation_unit;
 }
 
-@name("Test creating a Context instance")
-unittest {
-    auto x = new Context("test_files/arrays.h");
-}
-
 // No errors occured during translation.
 bool isValid(Context context) {
     return context.translation_unit.isValid;
@@ -78,44 +79,32 @@ void diagnostic(Context context) {
     }
 }
 
-@name("Test diagnostic on a Context, file exist")
-unittest {
-    auto x = new Context("test_files/arrays.h");
-    x.diagnostic();
-}
-
-@name("Test diagnostic on a Context, no file")
-unittest {
-    auto x = new Context("foobarfailnofile.h");
-    x.diagnostic();
-}
-
 // If apply returns true visit_ast will decend into the node if it contains children.
 void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
     v.incr();
     bool decend = v.apply(cursor);
 
     if (!cursor.isEmpty && decend) {
-        foreach (c, p; Visitor(cursor)) {
-            visit_ast(c, v);
+        foreach (child, parent; Visitor(cursor)) {
+            visit_ast(child, v);
         }
     }
     v.decr();
 }
 
-void log_node(T)(in ref T parent, ref Cursor c, int level,) {
+void log_node(int line = __LINE__, string file = __FILE__, string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__, string moduleName = __MODULE__)(ref Cursor c, int level) {
     auto indent_str = new char[level*2];
     foreach (ref ch ; indent_str) ch = ' ';
 
-    logf("%s|%s [%s %s line=%d, col=%d, def=%d] %s",
+    logf!(line, file, funcName, prettyFuncName, moduleName)(
+         "%s|%s [%s %s line=%d, col=%d, def=%d]",
          indent_str,
          c.spelling,
          c.kind,
          c.type,
          c.location.spelling.line,
          c.location.spelling.column,
-         c.isDefinition,
-         typeid(parent));
+         c.isDefinition);
 }
 
 /// T is module type.
@@ -152,36 +141,6 @@ mixin template VisitNodeModule(Tmodule) {
     }
 }
 
-@name("Test visit_ast with VisitorFoo")
-unittest {
-    struct VisitorFoo {
-        public int count;
-        private int indent;
-
-        void incr() {
-            this.indent += 1;
-        }
-
-        void decr() {
-            this.indent -= 1;
-        }
-
-        bool apply(ref Cursor c) {
-            log_node(this, c, this.indent);
-            count++;
-            return true;
-        }
-    }
-
-    auto x = new Context("test_files/class.h");
-    x.diagnostic();
-
-    VisitorFoo v;
-    auto c = x.translation_unit.cursor;
-    visit_ast!VisitorFoo(c, v);
-    assert(v.count == 40);
-}
-
 struct TranslateContext {
     private int indent = 0;
     private string output_;
@@ -195,7 +154,7 @@ struct TranslateContext {
     }
 
     bool apply(Cursor c) {
-        log_node(this, c, this.indent);
+        log_node(c, this.indent);
         bool decend = true;
 
         with (CXCursorKind) {
@@ -227,17 +186,6 @@ struct TranslateContext {
     }
 }
 
-@name("Test of TranslateContext")
-unittest {
-    auto x = new Context("test_files/class.h");
-    x.diagnostic();
-
-    TranslateContext ctx;
-    auto cursor = x.translation_unit.cursor;
-    visit_ast!TranslateContext(cursor, ctx);
-    //assert(ctx.output.length > 0);
-}
-
 struct ClassTranslatorHdr {
     mixin VisitNodeModule!CppModule;
 
@@ -265,7 +213,7 @@ struct ClassTranslatorHdr {
 
     bool apply(Cursor c) {
         bool descend = true;
-        log_node(this, c, level);
+        log_node(c, level);
         with (CXCursorKind) {
             switch (c.kind) {
                 case CXCursor_ClassDecl:
@@ -275,13 +223,14 @@ struct ClassTranslatorHdr {
                     }
                     break;
                 case CXCursor_Constructor:
-                    CtorTranslator(c, current).translate;
+                    push(CtorTranslator!CppModule(c, current));
+                    current[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
                     descend = false;
                     break;
                 case CXCursor_CXXMethod:
                     break;
                 case CXCursor_CXXAccessSpecifier:
-                    AccessSpecifierTranslator!CppModule(c, current, &push!CppModule);
+                    push(AccessSpecifierTranslator!CppModule(c, current));
                     break;
 
                 default: break;
@@ -291,12 +240,12 @@ struct ClassTranslatorHdr {
     }
 }
 
-/// Translate an access specifier to code suitable for a c++ header.
-/// @param cursor Cursor to translate
-/// @param top Top module to append the translation to.
-/// @param push Function used to push the created node to the indent queue.
-void AccessSpecifierTranslator(T)(Cursor cursor, ref T top, T delegate(T c) push) {
-    T current;
+/** Translate an access specifier to code suitable for a c++ header.
+ * @param cursor Cursor to translate
+ * @param top Top module to append the translation to.
+ */
+T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
+    T node;
 
     with (CXCursorKind) {
         final switch (cursor.access.accessSpecifier) {
@@ -304,58 +253,116 @@ void AccessSpecifierTranslator(T)(Cursor cursor, ref T top, T delegate(T c) push
                 case CX_CXXInvalidAccessSpecifier:
                     logger.log(cursor.access.accessSpecifier); break;
                 case CX_CXXPublic:
-                    current = push(top.public_);
+                    node = top.public_;
                     break;
                 case CX_CXXProtected:
-                    current = push(top.protected_);
+                    node = top.protected_;
                     break;
                 case CX_CXXPrivate:
-                    current = push(top.private_);
+                    node = top.private_;
                     break;
             }
         }
     }
 
-    current.suppress_indent(1);
+    node.suppress_indent(1);
+    return node;
 }
 
-struct CtorTranslator {
-    mixin VisitNodeModule!CppModule;
+T CtorTranslator(T)(Cursor c, ref T top) {
+    T node;
 
-    private CXCursor cursor;
-    private CppModule top; // top code generator node
-
-    this(CXCursor cursor, ref CppModule top) {
-        this.cursor = cursor;
-        this.top = top;
-        push(top);
+    switch(c.kind) {
+        case CXCursorKind.CXCursor_Constructor:
+            auto params = ParmDeclToString(c);
+            if (params.length == 0)
+                node = top.ctor(c.spelling);
+            else
+                node = top.ctor(c.spelling, join(params, ","));
+            break;
+        default: break;
     }
 
-    this(Cursor cursor, ref CppModule top) {
-        this.cursor = cursor.cx;
-        this.top = top;
-        push(top);
+    return node;
+}
+
+/** Travers a node tree and gather all paramdecl converting them to a string.
+ * Example: class Simple{ Simple(char x, char y); }
+ * The AST for the above is kind of the following:
+ * Simple [CXCursor_Constructor Type(CXType(CXType_FunctionProto
+ *   x [CXCursor_ParmDecl Type(CXType(CXType_Char_S
+ *   y [CXCursor_ParmDecl Type(CXType(CXType_Char_S
+ * It is translated to the string "char x, char y".
+ */
+string[] ParmDeclToString(Cursor cursor) {
+    string[] params;
+
+    foreach (param; cursor.func.parameters) {
+        log_node(param, 0);
+        auto type = translateType(param.type);
+        params ~= format("%s %s", type, param.spelling);
     }
 
-    void translate() {
-        auto c = Cursor(this.cursor);
-        visit_ast!CtorTranslator(c, this);
-    }
+    logger.log(params);
+    return params;
+}
 
-    bool apply(Cursor c) {
-        bool descend = true;
-        log_node(this, c, level);
-        switch(c.kind) {
-            case CXCursorKind.CXCursor_Constructor:
-                push(current.ctor(c.spelling));
-                break;
-            case CXCursorKind.CXCursor_ParmDecl:
-                break;
-            default: break;
+@name("Test creating a Context instance")
+unittest {
+    auto x = new Context("test_files/arrays.h");
+}
+
+@name("Test diagnostic on a Context, file exist")
+unittest {
+    auto x = new Context("test_files/arrays.h");
+    x.diagnostic();
+}
+
+@name("Test diagnostic on a Context, no file")
+unittest {
+    auto x = new Context("foobarfailnofile.h");
+    x.diagnostic();
+}
+
+@name("Test visit_ast with VisitorFoo")
+unittest {
+    struct VisitorFoo {
+        public int count;
+        private int indent;
+
+        void incr() {
+            this.indent += 1;
         }
 
-        return descend;
+        void decr() {
+            this.indent -= 1;
+        }
+
+        bool apply(ref Cursor c) {
+            log_node(c, this.indent);
+            count++;
+            return true;
+        }
     }
+
+    auto x = new Context("test_files/class.h");
+    x.diagnostic();
+
+    VisitorFoo v;
+    auto c = x.translation_unit.cursor;
+    visit_ast!VisitorFoo(c, v);
+    assert(v.count == 40);
+}
+
+@name("Test of TranslateContext")
+unittest {
+    auto x = new Context("test_files/class.h");
+    x.diagnostic();
+
+    TranslateContext ctx;
+    auto cursor = x.translation_unit.cursor;
+    visit_ast!TranslateContext(cursor, ctx);
+    //assert(ctx.output.length > 0);
 }
 
 @name("Test of ClassTranslatorHdr, class_simple.hpp")

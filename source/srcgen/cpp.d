@@ -2,7 +2,7 @@
 /// @date 2015, Joakim Brännström
 /// @copyright MIT License
 /// @author Joakim Brännström (joakim.brannstrom@gmx.com)
-module cpp;
+module srcgen.cpp;
 import std.algorithm;
 import std.ascii;
 import std.conv;
@@ -10,13 +10,13 @@ import std.string;
 
 import tested;
 
-import base;
-import c;
+import srcgen.base;
+import srcgen.c;
 
 version (unittest) {
     shared static this() {
         import std.exception;
-        enforce(runUnitTests!cpp(new ConsoleTestResultWriter), "Unit tests failed.");
+        enforce(runUnitTests!(srcgen.cpp)(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 
