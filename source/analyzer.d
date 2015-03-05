@@ -324,7 +324,12 @@ string[] ParmDeclToString(Cursor cursor) {
     foreach (param; cursor.func.parameters) {
         log_node(param, 0);
         auto type = translateType(param.type);
-        params ~= format("%s %s", type.name, param.spelling);
+        trace(type);
+        params ~= format("%s%s%s %s",
+                         type.prefix.length == 0 ? "" : type.prefix ~ " ",
+                         type.name,
+                         type.suffix,
+                         param.spelling);
     }
 
     logger.trace(params);
@@ -587,7 +592,16 @@ unittest {
 unittest {
     // Contains a C++ interface. Pure virtual.
     // Expecting an implementation.
-    string expect = """
+    string expect = """    class Simple {
+    public:
+        Simple();
+        ~Simple();
+
+        void operator=(const Simple& other);
+        void func1();
+    private:
+        char func3();
+    };
 
 """;
 

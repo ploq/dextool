@@ -17,6 +17,8 @@ import translator.Translator;
 
 struct TypeKind {
     string name;
+    string prefix; // const
+    string suffix; // *, &, **
     bool isConst;
     bool isRef;
     bool isPointer;
@@ -27,7 +29,7 @@ struct TypeKind {
  *   type = a clang cursor to the type node
  * Returns: Struct of metadata about the type.
  */
-TypeKind translateType (Type type, bool applyConst = true)
+TypeKind translateType (Type type)
     in
 {
     assert(type.isValid);
@@ -46,8 +48,7 @@ body
         else {
             switch (type.kind) {
                 case CXType_Pointer:
-                    result.name = translatePointer(type, false, applyConst);
-                    result.isPointer = true;
+                    result = translatePointer(type);
                     break;
                 case CXType_Typedef:
                     result.name = translateTypedef(type);
@@ -67,18 +68,13 @@ body
                     result.name = translateUnexposed(type, false);
                     break;
                 case CXType_LValueReference:
-                    result.name = type.pointeeType.spelling;
-                    result.isRef = true;
+                    result = translateReference(type);
                     break;
 
                 default: result.name = translateCursorType(type.kind);
             }
         }
     }
-
-    if (applyConst && type.isConst)
-        result.name = "const " ~ result.name;
-    result.isConst = type.isConst;
 
     return result;
 }
@@ -140,7 +136,7 @@ body
     auto declaration = type.declaration;
 
     if (declaration.isValid)
-        return translateType(declaration.type, rewriteIdToObject).name;
+        return translateType(declaration.type).name;
 
     else
         return translateCursorType(type.kind);
@@ -154,12 +150,12 @@ string translateConstantArray (Type type, bool rewriteIdToObject)
 body
 {
     auto array = type.array;
-    auto elementType = translateType(array.elementType, rewriteIdToObject).name;
+    auto elementType = translateType(array.elementType).name;
 
     return elementType ~ '[' ~ to!string(array.size) ~ ']';
 }
 
-string translatePointer (Type type, bool rewriteIdToObject, bool applyConst)
+TypeKind translatePointer (Type type)
     in
 {
     assert(type.kind == CXTypeKind.CXType_Pointer);
@@ -175,16 +171,44 @@ body
         return pointee.isConst;
     }
 
-    auto result = translateType(type.pointeeType, false).name;
+    TypeKind result;
+    result.name = translateType(type.pointeeType).name;
+    result.isPointer = true;
+    result.suffix = "*";
 
-    if (applyConst && valueTypeIsConst(type)) {
-        if (type.isConst)
-            result = "const " ~ result ~ '*';
-        else
-            result = "const(" ~ result ~ ")*";
+    if (valueTypeIsConst(type)) {
+        result.isConst = true;
+        result.prefix = "const";
     }
-    else
-        result = result ~ '*';
+
+    return result;
+}
+
+TypeKind translateReference (Type type)
+    in
+{
+    assert(type.kind == CXTypeKind.CXType_LValueReference);
+}
+body
+{
+    static bool valueTypeIsConst (Type type) {
+        auto pointee = type.pointeeType;
+
+        while (pointee.kind == CXTypeKind.CXType_Pointer)
+            pointee = pointee.pointeeType;
+
+        return pointee.isConst;
+    }
+
+    TypeKind result;
+    result.name = translateType(type.pointeeType).name;
+    result.isRef = true;
+    result.suffix = "&";
+
+    if (valueTypeIsConst(type)) {
+        result.isConst = true;
+        result.prefix = "const";
+    }
 
     return result;
 }
