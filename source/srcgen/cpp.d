@@ -45,7 +45,9 @@ mixin template CppModuleX() {
     }
 
     auto dtor(T)(T class_name) {
-        auto e = suite(format("~%s()", to!string(class_name)));
+        auto e = suite(format("%s%s()",
+                              class_name[0] == '~' ? "" : "~",
+                              to!string(class_name)));
         return e;
     }
 

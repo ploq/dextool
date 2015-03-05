@@ -227,6 +227,11 @@ struct ClassTranslatorHdr {
                     current[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
                     descend = false;
                     break;
+                case CXCursor_Destructor:
+                    push(DtorTranslator!CppModule(c, current));
+                    current[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
+                    descend = false;
+                    break;
                 case CXCursor_CXXMethod:
                     break;
                 case CXCursor_CXXAccessSpecifier:
@@ -273,17 +278,17 @@ T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
 T CtorTranslator(T)(Cursor c, ref T top) {
     T node;
 
-    switch(c.kind) {
-        case CXCursorKind.CXCursor_Constructor:
-            auto params = ParmDeclToString(c);
-            if (params.length == 0)
-                node = top.ctor(c.spelling);
-            else
-                node = top.ctor(c.spelling, join(params, ","));
-            break;
-        default: break;
-    }
+    auto params = ParmDeclToString(c);
+    if (params.length == 0)
+        node = top.ctor(c.spelling);
+    else
+        node = top.ctor(c.spelling, join(params, ","));
 
+    return node;
+}
+
+T DtorTranslator(T)(Cursor c, ref T top) {
+    T node = top.dtor(c.spelling);
     return node;
 }
 
