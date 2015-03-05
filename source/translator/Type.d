@@ -41,9 +41,7 @@ body
         //if (type.kind == CXType_BlockPointer || type.isFunctionPointerType)
         //    result = translateFunctionPointerType(type);
 
-        if (type.kind == CXType_ObjCObjectPointer && !type.isObjCBuiltinType)
-            result.name = translateObjCObjectPointerType(type);
-        else if (type.isWideCharType)
+        if (type.isWideCharType)
             result.name = "wchar";
         else {
             switch (type.kind) {
@@ -73,7 +71,7 @@ body
                     result.isRef = true;
                     break;
 
-                default: result.name = translateType(type.kind, false);
+                default: result.name = translateCursorType(type.kind);
             }
         }
     }
@@ -83,20 +81,6 @@ body
     result.isConst = type.isConst;
 
     return result;
-}
-
-string translateSelector (string str, bool fullName = false, bool translateIdentifier = true)
-{
-    if (fullName) {
-        str = str.replace(":", "_");
-    } else {
-        auto i = str.indexOf(":");
-
-        if (i > -1)
-            str = str[0 .. i];
-    }
-
-    return str;
 }
 
 private:
@@ -113,17 +97,17 @@ body
     with (CXTypeKind)
         switch (spelling)
         {
-            case "BOOL": return translateType(CXType_Bool);
+            case "BOOL": return translateCursorType(CXType_Bool);
 
-            case "int64_t": return translateType(CXType_LongLong);
-            case "int32_t": return translateType(CXType_Int);
-            case "int16_t": return translateType(CXType_Short);
+            case "int64_t": return translateCursorType(CXType_LongLong);
+            case "int32_t": return translateCursorType(CXType_Int);
+            case "int16_t": return translateCursorType(CXType_Short);
             case "int8_t": return "byte";
 
-            case "uint64_t": return translateType(CXType_ULongLong);
-            case "uint32_t": return translateType(CXType_UInt);
-            case "uint16_t": return translateType(CXType_UShort);
-            case "uint8_t": return translateType(CXType_UChar);
+            case "uint64_t": return translateCursorType(CXType_ULongLong);
+            case "uint32_t": return translateCursorType(CXType_UInt);
+            case "uint16_t": return translateCursorType(CXType_UShort);
+            case "uint8_t": return translateCursorType(CXType_UChar);
 
             case "size_t":
             case "ptrdiff_t":
@@ -159,7 +143,7 @@ body
         return translateType(declaration.type, rewriteIdToObject).name;
 
     else
-        return translateType(type.kind, rewriteIdToObject);
+        return translateCursorType(type.kind);
 }
 
 string translateConstantArray (Type type, bool rewriteIdToObject)
@@ -225,28 +209,7 @@ body
 //    return translateFunction(resultType, "function", params, func.isVariadic, new String);
 //}
 
-string translateObjCObjectPointerType (Type type)
-    in
-{
-    assert(type.kind == CXTypeKind.CXType_ObjCObjectPointer && !type.isObjCBuiltinType);
-}
-body
-{
-    auto pointee = type.pointeeType;
-
-    if (pointee.spelling == "Protocol")
-        return "Protocol*";
-
-    else
-        return translateType(pointee).name;
-}
-
-string translateCursorType (CXTypeKind kind, bool rewriteIdToObject = true)
-{
-    return "";
-}
-
-string translateType (CXTypeKind kind, bool rewriteIdToObject = true)
+string translateCursorType (CXTypeKind kind)
 {
     with (CXTypeKind)
         switch (kind)
@@ -286,9 +249,6 @@ string translateType (CXTypeKind kind, bool rewriteIdToObject = true)
             case CXType_NullPtr: return "null";
             case CXType_Overload: return "<unimplemented>";
             case CXType_Dependent: return "<unimplemented>";
-            case CXType_ObjCId: return rewriteIdToObject ? "Object" : "id";
-            case CXType_ObjCClass: return "Class";
-            case CXType_ObjCSel: return "SEL";
             case CXType_Complex: return "<unimplemented>";
             case CXType_Pointer: return "<unimplemented>";
             case CXType_BlockPointer: return "<unimplemented>";
