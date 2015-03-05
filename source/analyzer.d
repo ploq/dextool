@@ -324,7 +324,7 @@ string[] ParmDeclToString(Cursor cursor) {
     foreach (param; cursor.func.parameters) {
         log_node(param, 0);
         auto type = translateType(param.type);
-        params ~= format("%s %s", type, param.spelling);
+        params ~= format("%s %s", type.name, param.spelling);
     }
 
     logger.trace(params);
@@ -337,9 +337,9 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     string[] params = ParmDeclToString(c);
     auto return_type = translateType(c.func.resultType);
     if (params.length == 0)
-        node = top.func(return_type, c.spelling);
+        node = top.func(return_type.name, c.spelling);
     else
-        node = top.func(return_type, c.spelling, join(params, ", "));
+        node = top.func(return_type.name, c.spelling, join(params, ", "));
 
     return node;
 }
@@ -591,7 +591,7 @@ unittest {
 
 """;
 
-    logger.globalLogLevel(LogLevel.info);
+    logger.globalLogLevel(LogLevel.trace);
     auto x = new Context("test_files/class_interface.hpp");
     x.diagnostic();
 

@@ -15,14 +15,26 @@ import clang.Type;
 
 import translator.Translator;
 
-string translateType (Type type, bool rewriteIdToObject = true, bool applyConst = true)
+struct TypeKind {
+    string name;
+    bool isConst;
+    bool isRef;
+    bool isPointer;
+}
+
+/** Translate a clang CXTypeKind to a string representation.
+ * Params:
+ *   type = a clang cursor to the type node
+ * Returns: Struct of metadata about the type.
+ */
+TypeKind translateType (Type type, bool applyConst = true)
     in
 {
     assert(type.isValid);
 }
 body
 {
-    string result;
+    TypeKind result;
 
     with (CXTypeKind)
     {
@@ -30,37 +42,45 @@ body
         //    result = translateFunctionPointerType(type);
 
         if (type.kind == CXType_ObjCObjectPointer && !type.isObjCBuiltinType)
-            result = translateObjCObjectPointerType(type);
-
+            result.name = translateObjCObjectPointerType(type);
         else if (type.isWideCharType)
-            result = "wchar";
-
-        else if (type.isObjCIdType)
-            result = rewriteIdToObject ? "Object" : "id";
-
-        else
-            switch (type.kind)
-            {
-                case CXType_Pointer: return translatePointer(type, rewriteIdToObject, applyConst);
-                case CXType_Typedef: result = translateTypedef(type); break;
+            result.name = "wchar";
+        else {
+            switch (type.kind) {
+                case CXType_Pointer:
+                    result.name = translatePointer(type, false, applyConst);
+                    result.isPointer = true;
+                    break;
+                case CXType_Typedef:
+                    result.name = translateTypedef(type);
+                    break;
 
                 case CXType_Record:
                 case CXType_Enum:
-                                     result = type.spelling;
+                    result.name = type.spelling;
+                    if (result.name.length == 0)
+                        result.name = getAnonymousName(type.declaration);
+                    break;
 
-                                     if (result.length == 0)
-                                         result = getAnonymousName(type.declaration);
-                                     break;
+                case CXType_ConstantArray:
+                    result.name = translateConstantArray(type, false);
+                    break;
+                case CXType_Unexposed:
+                    result.name = translateUnexposed(type, false);
+                    break;
+                case CXType_LValueReference:
+                    result.name = type.pointeeType.spelling;
+                    result.isRef = true;
+                    break;
 
-                case CXType_ConstantArray: result = translateConstantArray(type, rewriteIdToObject); break;
-                case CXType_Unexposed: result = translateUnexposed(type, rewriteIdToObject); break;
-
-                default: result = translateType(type.kind, rewriteIdToObject);
+                default: result.name = translateType(type.kind, false);
             }
+        }
     }
 
     if (applyConst && type.isConst)
-        result = "const " ~ result;
+        result.name = "const " ~ result.name;
+    result.isConst = type.isConst;
 
     return result;
 }
@@ -136,7 +156,7 @@ body
     auto declaration = type.declaration;
 
     if (declaration.isValid)
-        return translateType(declaration.type, rewriteIdToObject);
+        return translateType(declaration.type, rewriteIdToObject).name;
 
     else
         return translateType(type.kind, rewriteIdToObject);
@@ -150,7 +170,7 @@ string translateConstantArray (Type type, bool rewriteIdToObject)
 body
 {
     auto array = type.array;
-    auto elementType = translateType(array.elementType, rewriteIdToObject);
+    auto elementType = translateType(array.elementType, rewriteIdToObject).name;
 
     return elementType ~ '[' ~ to!string(array.size) ~ ']';
 }
@@ -162,8 +182,7 @@ string translatePointer (Type type, bool rewriteIdToObject, bool applyConst)
 }
 body
 {
-    static bool valueTypeIsConst (Type type)
-    {
+    static bool valueTypeIsConst (Type type) {
         auto pointee = type.pointeeType;
 
         while (pointee.kind == CXTypeKind.CXType_Pointer)
@@ -172,25 +191,16 @@ body
         return pointee.isConst;
     }
 
-    auto result = translateType(type.pointeeType, rewriteIdToObject, false);
+    auto result = translateType(type.pointeeType, false).name;
 
-    version (D1)
-    {
-        result = result ~ '*';
+    if (applyConst && valueTypeIsConst(type)) {
+        if (type.isConst)
+            result = "const " ~ result ~ '*';
+        else
+            result = "const(" ~ result ~ ")*";
     }
     else
-    {
-        if (applyConst && valueTypeIsConst(type))
-        {
-            if (type.isConst)
-                result = "const " ~ result ~ '*';
-
-            else
-                result = "const(" ~ result ~ ")*";
-        }
-        else
-            result = result ~ '*';
-    }
+        result = result ~ '*';
 
     return result;
 }
@@ -228,7 +238,12 @@ body
         return "Protocol*";
 
     else
-        return translateType(pointee);
+        return translateType(pointee).name;
+}
+
+string translateCursorType (CXTypeKind kind, bool rewriteIdToObject = true)
+{
+    return "";
 }
 
 string translateType (CXTypeKind kind, bool rewriteIdToObject = true)

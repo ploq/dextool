@@ -1,7 +1,7 @@
 /// Written in the D programming language.
-/// @date 2015, Joakim Brännström
-/// @copyright MIT License
-/// @author Joakim Brännström (joakim.brannstrom@gmx.com)
+/// Date: 2015, Joakim Brännström
+/// License: MIT License
+/// Author: Joakim Brännström (joakim.brannstrom@gmx.com)
 module srcgen.c;
 import std.algorithm;
 import std.ascii;
@@ -20,7 +20,7 @@ version (unittest) {
     }
 }
 
-///@todo change to c-comment and make a separate for c++.
+///TODO: change to c-comment and make a separate for c++.
 class Comment: BaseModule {
     string contents;
     this(string contents) {
@@ -232,9 +232,10 @@ string stmt_append_end(string s, in ref string[string] attrs) pure nothrow @safe
     return s;
 }
 
-/// Affected by attribute end.
-/// stmt ~ end
-///     <recursive>
+/** Affected by attribute end.
+ * stmt ~ end
+ *    <recursive>
+ */
 class Stmt(T) : T {
     string stmt;
 

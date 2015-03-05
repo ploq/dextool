@@ -115,7 +115,6 @@ struct Type
 
     @property bool isAnonymous ()
     {
-        //return spelling.isEmpty;
         return spelling.length == 0;
     }
 
