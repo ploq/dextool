@@ -215,6 +215,108 @@ class CModule: BaseModule {
     mixin CModuleX;
 }
 
+string stmt_append_end(string s, in ref string[string] attrs) pure nothrow @safe {
+    bool in_pattern = false;
+    try {
+        in_pattern = inPattern(s[$-1], ";:,{");
+    } catch (Exception e) {}
+
+    if (!in_pattern && s[0] != '#') {
+        string end = ";";
+        if ("end" in attrs) {
+            end = attrs["end"];
+        }
+        s ~= end;
+    }
+
+    return s;
+}
+
+/// Affected by attribute end.
+/// stmt ~ end
+///     <recursive>
+class Stmt(T) : T {
+    string stmt;
+
+    this(string stmt) {
+        this.stmt = stmt;
+    }
+
+    override string _render_indent(int level) {
+        string s = stmt_append_end(stmt, attrs);
+        return indent(s, level);
+    }
+}
+
+/** Affected by attribute begin, end, noindent.
+ * headline ~ begin
+ *     <recursive>
+ * end
+ * noindent affects post_recursive. If set no indention there.
+ * r.length > 0 catches the case when begin or end is empty string. Used in switch/case.
+ */
+class Suite(T) : T {
+    string headline;
+
+    this(string headline) {
+        this.headline = headline;
+    }
+
+    override string _render_indent(int level) {
+        string r = headline ~ " {" ~ newline;
+        if ("begin" in attrs) {
+            r = headline ~ attrs["begin"];
+        }
+        if (r.length > 0) {
+            r = indent(r, level);
+        }
+        return r;
+    }
+
+    override string _render_post_recursive(int level) {
+        string r = "}" ~ newline;
+        if ("end" in attrs) {
+            r = attrs["end"];
+        }
+        if (r.length > 0 && !("noindent" in attrs)) {
+            r = indent(r, level);
+        }
+        return r;
+    }
+}
+
+/// Code generation for C++ header.
+struct CppHModule {
+    string ifdef_guard;
+    CModule doc;
+    CModule header;
+    CModule content;
+    CModule footer;
+
+    this(string ifdef_guard) {
+        // Must suppress indentation to generate what is expected by the user.
+        this.ifdef_guard = ifdef_guard;
+        doc = new CModule;
+        with (doc) {
+            suppress_indent(1);
+            header = base;
+            header.suppress_indent(1);
+            with (IFNDEF(ifdef_guard)) {
+                suppress_indent(1);
+                define(ifdef_guard);
+                content = base;
+                content.suppress_indent(1);
+            }
+            footer = base;
+            footer.suppress_indent(1);
+        }
+    }
+
+    auto render() {
+        return doc.render();
+    }
+}
+
 @name("Test of statements")
 unittest {
     string expect = """    77;
@@ -337,21 +439,10 @@ unittest {
     assert(rval == expect, rval);
 }
 
-string stmt_append_end(string s, in ref string[string] attrs) pure nothrow @safe {
-    bool in_pattern = false;
-    try {
-        in_pattern = inPattern(s[$-1], ";:,{");
-    } catch (Exception e) {}
-
-    if (!in_pattern && s[0] != '#') {
-        string end = ";";
-        if ("end" in attrs) {
-            end = attrs["end"];
-        }
-        s ~= end;
-    }
-
-    return s;
+@name("Test of empty CSuite")
+unittest {
+    auto x = new Suite!CModule("test");
+    assert(x.render == "test {\n}\n", x.render);
 }
 
 @name("Test of stmt_append_end")
@@ -367,64 +458,6 @@ unittest {
     attrs["end"] = "{";
     result = stmt_append_end(stmt, attrs);
     assert(stmt ~ "{" == result, result);
-}
-
-/// Affected by attribute end.
-/// stmt ~ end
-///     <recursive>
-class Stmt(T) : T {
-    string stmt;
-
-    this(string stmt) {
-        this.stmt = stmt;
-    }
-
-    override string _render_indent(int level) {
-        string s = stmt_append_end(stmt, attrs);
-        return indent(s, level);
-    }
-}
-
-/// Affected by attribute begin, end, noindent.
-/// headline ~ begin
-///     <recursive>
-/// end
-/// noindent affects post_recursive. If set no indention there.
-/// r.length > 0 catches the case when begin or end is empty string. Used in switch/case.
-class Suite(T) : T {
-    string headline;
-
-    this(string headline) {
-        this.headline = headline;
-    }
-
-    override string _render_indent(int level) {
-        string r = headline ~ " {" ~ newline;
-        if ("begin" in attrs) {
-            r = headline ~ attrs["begin"];
-        }
-        if (r.length > 0) {
-            r = indent(r, level);
-        }
-        return r;
-    }
-
-    override string _render_post_recursive(int level) {
-        string r = "}" ~ newline;
-        if ("end" in attrs) {
-            r = attrs["end"];
-        }
-        if (r.length > 0 && !("noindent" in attrs)) {
-            r = indent(r, level);
-        }
-        return r;
-    }
-}
-
-@name("Test of empty CSuite")
-unittest {
-    auto x = new Suite!CModule("test");
-    assert(x.render == "test {\n}\n", x.render);
 }
 
 @name("Test of CSuite with formatting")
@@ -478,38 +511,6 @@ bar
     }
 }
 """, x.render);
-}
-
-/// Code generation for C++ header.
-struct CppHModule {
-    string ifdef_guard;
-    CModule doc;
-    CModule header;
-    CModule content;
-    CModule footer;
-
-    this(string ifdef_guard) {
-        // Must suppress indentation to generate what is expected by the user.
-        this.ifdef_guard = ifdef_guard;
-        doc = new CModule;
-        with (doc) {
-            suppress_indent(1);
-            header = base;
-            header.suppress_indent(1);
-            with (IFNDEF(ifdef_guard)) {
-                suppress_indent(1);
-                define(ifdef_guard);
-                content = base;
-                content.suppress_indent(1);
-            }
-            footer = base;
-            footer.suppress_indent(1);
-        }
-    }
-
-    auto render() {
-        return doc.render();
-    }
 }
 
 @name("Test of text in CModule with guard")

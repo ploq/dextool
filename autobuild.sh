@@ -23,8 +23,16 @@ export LD_LIBRARY_PATH=$ROOT:$LD_LIBRARY_PATH
 # ut_check_status
 # release_build
 # release_check_status
+# test_passed
+# doc_check_counter
+# doc_build
 STATE="init"
+
+# return value from check_status. 0 is good, anything else is bad.
 CHECK_STATUS_RVAL=1
+# Incremented each loop. When it reaches MAX_CNT it will build with documentation and reset counter.
+DOC_CNT=9 # force a rebuild on first pass. then reset to 0.
+DOC_MAX_CNT=9
 
 function check_status() {
     CHECK_STATUS_RVAL=$?
@@ -67,12 +75,19 @@ function state_release_build() {
     return
 }
 
+function doc_build() {
+    dub build -b docs
+    check_status "Generate Documentation"
+    echo "firefox $ROOT/docs/"
+    DOC_CNT=0
+}
+
 function play_sound() {
     # mplayer /usr/share/sounds/KDE-Sys-App-Error.ogg 2>/dev/null >/dev/null
     if [[ "$1" = "ok" ]]; then
-        mplayer /usr/share/sounds/KDE-Sys-App-Positive.ogg 2>/dev/null >/dev/null
+        mplayer /usr/share/sounds/KDE-Sys-App-Positive.ogg 2>/dev/null >/dev/null &
     else
-        mplayer /usr/share/sounds/KDE-Sys-App-Negative.ogg 2>/dev/null >/dev/null
+        mplayer /usr/share/sounds/KDE-Sys-App-Negative.ogg 2>/dev/null >/dev/null &
     fi
 }
 
@@ -83,7 +98,7 @@ do
     case "$STATE" in
         "init")
             state_init
-            STATE="wait"
+            STATE="ut_build_run"
             ;;
         "wait")
             state_wait
@@ -94,11 +109,11 @@ do
             STATE="ut_check_status"
             ;;
         "ut_check_status")
+            STATE="wait"
             if [[ $CHECK_STATUS_RVAL -eq 0 ]]; then
                 STATE="release_build"
             else
                 play_sound "fail"
-                STATE="wait"
             fi
             ;;
         "release_build")
@@ -108,10 +123,26 @@ do
         "release_check_status")
             STATE="wait"
             if [[ $CHECK_STATUS_RVAL -eq 0 ]]; then
-                play_sound "ok"
+                STATE="test_passed"
             else
                 play_sound "fail"
             fi
+            ;;
+        "test_passed")
+            # breaking the pattern of doing something in the FSM but OK hack when it is only one line
+            STATE="wait"
+            if [[ $DOC_CNT -ge $DOC_MAX_CNT ]]; then
+                STATE="doc_build"
+            else
+                echo "Building doc in "$(($DOC_MAX_CNT - $DOC_CNT))" successfull passes"
+                play_sound "ok"
+            fi
+            DOC_CNT=$(($DOC_CNT + 1))
+            ;;
+        "doc_build")
+            STATE="wait"
+            doc_build
+            play_sound "ok"
             ;;
         *) echo "Unknown state $STATE"
             exit 1

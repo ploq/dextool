@@ -1,7 +1,7 @@
 /// Written in the D programming language.
-/// @date 2015, Joakim Brännström
-/// @copyright MIT License
-/// @author Joakim Brännström (joakim.brannstrom@gmx.com)
+/// Date: 2015, Joakim Brännström
+/// License: MIT License
+/// Author: Joakim Brännström (joakim.brannstrom@gmx.com)
 module analyzer;
 
 import std.ascii;
@@ -33,7 +33,7 @@ version (unittest) {
     }
 }
 
-// Holds the context of the file.
+/// Holds the context of the file.
 class Context {
     /// Initialize context from file
     this(string input_file) {
@@ -54,12 +54,12 @@ private:
     TranslationUnit translation_unit;
 }
 
-// No errors occured during translation.
+/// No errors occured during translation.
 bool isValid(Context context) {
     return context.translation_unit.isValid;
 }
 
-// Print diagnostic error messages.
+/// Print diagnostic error messages.
 void diagnostic(Context context) {
     if (!context.isValid())
         return;
@@ -79,7 +79,7 @@ void diagnostic(Context context) {
     }
 }
 
-// If apply returns true visit_ast will decend into the node if it contains children.
+/// If apply returns true visit_ast will decend into the node if it contains children.
 void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
     v.incr();
     bool decend = v.apply(cursor);
@@ -241,8 +241,9 @@ struct ClassTranslatorHdr {
 }
 
 /** Translate an access specifier to code suitable for a c++ header.
- * @param cursor Cursor to translate
- * @param top Top module to append the translation to.
+ * Params:
+ *  cursor = Cursor to translate
+ *  top = Top module to append the translation to.
  */
 T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
     T node;
@@ -287,11 +288,17 @@ T CtorTranslator(T)(Cursor c, ref T top) {
 }
 
 /** Travers a node tree and gather all paramdecl converting them to a string.
- * Example: class Simple{ Simple(char x, char y); }
+ * Example:
+ * -----
+ * class Simple{ Simple(char x, char y); }
+ * -----
  * The AST for the above is kind of the following:
- * Simple [CXCursor_Constructor Type(CXType(CXType_FunctionProto
- *   x [CXCursor_ParmDecl Type(CXType(CXType_Char_S
- *   y [CXCursor_ParmDecl Type(CXType(CXType_Char_S
+ * Example:
+ * ---
+ * Simple [CXCursor_Constructor Type(CXType(CXType_FunctionProto))
+ *   x [CXCursor_ParmDecl Type(CXType(CXType_Char_S))
+ *   y [CXCursor_ParmDecl Type(CXType(CXType_Char_S))
+ * ---
  * It is translated to the string "char x, char y".
  */
 string[] ParmDeclToString(Cursor cursor) {
