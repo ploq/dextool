@@ -233,6 +233,9 @@ struct ClassTranslatorHdr {
                     descend = false;
                     break;
                 case CXCursor_CXXMethod:
+                    //push(FunctionTranslator!CppModule(c, current));
+                    current[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
+                    //descend = false;
                     break;
                 case CXCursor_CXXAccessSpecifier:
                     push(AccessSpecifierTranslator!CppModule(c, current));
@@ -317,6 +320,12 @@ string[] ParmDeclToString(Cursor cursor) {
 
     logger.log(params);
     return params;
+}
+
+T FunctionTranslator(T)(Cursor c, ref T top) {
+    T node;
+
+    return node;
 }
 
 @name("Test creating a Context instance")
