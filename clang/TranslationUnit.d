@@ -15,6 +15,7 @@ import clang.Cursor;
 import clang.Diagnostic;
 import clang.File;
 import clang.Index;
+import clang.Token;
 import clang.UnsavedFile;
 import clang.Util;
 import clang.Visitor;
@@ -62,6 +63,12 @@ struct TranslationUnit
     {
         auto r = clang_getTranslationUnitCursor(cx);
         return Cursor(r);
+    }
+
+    @property Token token ()
+    {
+        auto r = Token(this);
+        return r;
     }
 }
 

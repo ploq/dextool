@@ -9,11 +9,13 @@ module translator.Type;
 import std.array;
 import std.conv;
 import std.string;
+import std.experimental.logger;
 
 import clang.c.index;
 import clang.Type;
 
 import translator.Translator;
+
 
 struct TypeKind {
     string name;
@@ -22,6 +24,14 @@ struct TypeKind {
     bool isConst;
     bool isRef;
     bool isPointer;
+}
+
+string ToString (in TypeKind type)
+{
+    return format("%s%s%s",
+                  type.prefix.length == 0 ? "" : type.prefix ~ " ",
+                  type.name,
+                  type.suffix);
 }
 
 /** Translate a clang CXTypeKind to a string representation.
@@ -71,7 +81,13 @@ body
                     result = translateReference(type);
                     break;
 
-                default: result.name = translateCursorType(type.kind);
+                default:
+                    trace(format("%s|%s|%s|%s",
+                                 type.kind,
+                                 type.declaration,
+                                 type.isValid,
+                                 type.typeKindSpelling));
+                    result.name = translateCursorType(type.kind);
             }
         }
     }

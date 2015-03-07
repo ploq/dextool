@@ -29,6 +29,11 @@ struct Cursor
         return toD(clang_getCursorSpelling(cx));
     }
 
+    @property string displayName ()
+    {
+        return toD(clang_getCursorDisplayName(cx));
+    }
+
     @property CXCursorKind kind ()
     {
         return clang_getCursorKind(cx);
@@ -43,6 +48,30 @@ struct Cursor
     {
         auto r = clang_getCursorType(cx);
         return Type(r);
+    }
+
+    @property Type typedefUnderlyingType ()
+    {
+        auto r = clang_getTypedefDeclUnderlyingType(cx);
+        return Type(r);
+    }
+
+    @property Cursor definition ()
+    {
+        auto r = clang_getCursorDefinition(cx);
+        return Cursor(r);
+    }
+
+    @property Cursor semanticParent()
+    {
+        auto r = clang_getCursorSemanticParent(cx);
+        return Cursor(r);
+    }
+
+    @property Cursor referenced()
+    {
+        auto r = clang_getCursorReferenced(cx);
+        return Cursor(r);
     }
 
     @property bool isDeclaration ()
@@ -75,16 +104,6 @@ struct Cursor
         return AccessCursor(this);
     }
 
-    @property bool isValid ()
-    {
-        return !clang_isInvalid(cx.kind);
-    }
-
-    @property bool isEmpty ()
-    {
-        return clang_Cursor_isNull(cx) != 0;
-    }
-
     @property Visitor all ()
     {
         return Visitor(this);
@@ -105,9 +124,24 @@ struct Cursor
         return clang_hashCursor(cast(CXCursor) cx);
     }
 
+    @property bool isValid ()
+    {
+        return !clang_isInvalid(cx.kind);
+    }
+
+    @property bool isEmpty ()
+    {
+        return clang_Cursor_isNull(cx) != 0;
+    }
+
     bool isDefinition () const
     {
         return clang_isCursorDefinition(cast(CXCursor) cx) != 0;
+    }
+
+    @property bool isTranslationUnit()
+    {
+        return clang_isTranslationUnit(kind) == 0;
     }
 }
 

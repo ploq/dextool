@@ -1,3 +1,5 @@
+typedef char* some_pointer;
+
 class Simple {
 public:
     Simple();
@@ -9,6 +11,7 @@ public:
     int func3(int x);
     int func3(int x, char* y);
     int func4(MadeUp z);
+    char* func5(some_pointer w);
 
 private:
     int x;

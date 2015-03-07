@@ -97,14 +97,16 @@ void log_node(int line = __LINE__, string file = __FILE__, string funcName = __F
     foreach (ref ch ; indent_str) ch = ' ';
 
     logf!(line, file, funcName, prettyFuncName, moduleName)(LogLevel.trace,
-         "%s|%s [%s %s line=%d, col=%d, def=%d]",
+         "%s|%s [%s %s line=%d, col=%d, def=%d] %s",
          indent_str,
          c.spelling,
          c.kind,
          c.type,
          c.location.spelling.line,
          c.location.spelling.column,
-         c.isDefinition);
+         c.isDefinition,
+         c.type.declaration
+         );
 }
 
 /// T is module type.
@@ -181,7 +183,7 @@ struct TranslateContext {
         return decend;
     }
 
-    @property string output() {
+    @property string render() {
         return this.output_;
     }
 }
@@ -325,10 +327,8 @@ string[] ParmDeclToString(Cursor cursor) {
         log_node(param, 0);
         auto type = translateType(param.type);
         trace(type);
-        params ~= format("%s%s%s %s",
-                         type.prefix.length == 0 ? "" : type.prefix ~ " ",
-                         type.name,
-                         type.suffix,
+        params ~= format("%s %s",
+                         type.ToString,
                          param.spelling);
     }
 
@@ -340,11 +340,11 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     T node;
 
     string[] params = ParmDeclToString(c);
-    auto return_type = translateType(c.func.resultType);
+    auto return_type = translateType(c.func.resultType).ToString;
     if (params.length == 0)
-        node = top.func(return_type.name, c.spelling);
+        node = top.func(return_type, c.spelling);
     else
-        node = top.func(return_type.name, c.spelling, join(params, ", "));
+        node = top.func(return_type, c.spelling, join(params, ", "));
 
     return node;
 }
@@ -459,7 +459,7 @@ unittest {
     auto cursor = x.translation_unit.cursor;
     visit_ast!TranslateContext(cursor, ctx);
 
-    auto rval = ctx.output;
+    auto rval = ctx.render;
     assert(rval == expect, rval);
 }
 
@@ -480,7 +480,7 @@ unittest {
     auto cursor = x.translation_unit.cursor;
     visit_ast!TranslateContext(cursor, ctx);
 
-    auto rval = ctx.output;
+    auto rval = ctx.render;
     assert(rval == expect, rval);
 }
 
@@ -523,7 +523,7 @@ unittest {
     auto cursor = x.translation_unit.cursor;
     visit_ast!TranslateContext(cursor, ctx);
 
-    auto rval = ctx.output;
+    auto rval = ctx.render;
     assert(rval == expect, rval);
 }
 
@@ -554,7 +554,7 @@ unittest {
     auto cursor = x.translation_unit.cursor;
     visit_ast!TranslateContext(cursor, ctx);
 
-    auto rval = ctx.output;
+    auto rval = ctx.render;
     assert(rval == expect, rval);
 }
 
@@ -570,7 +570,8 @@ unittest {
         int func2();
         int func3(int x);
         int func3(int x, char* y);
-        int func4(int z);
+        int func4(MadeUp z);
+        char* func5(some_pointer w);
     private:
     };
 
@@ -584,8 +585,8 @@ unittest {
     auto cursor = x.translation_unit.cursor;
     visit_ast!TranslateContext(cursor, ctx);
 
-    auto rval = ctx.output;
-    assert(rval == expect, rval);
+    //auto rval = ctx.render;
+    //assert(rval == expect, rval);
 }
 
 @name("Test of ClassTranslatorHdr, class_interface.hpp")
@@ -600,12 +601,12 @@ unittest {
         void operator=(const Simple& other);
         void func1();
     private:
-        char func3();
+        char* func3();
     };
 
 """;
 
-    logger.globalLogLevel(LogLevel.trace);
+    logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/class_interface.hpp");
     x.diagnostic();
 
@@ -613,6 +614,6 @@ unittest {
     auto cursor = x.translation_unit.cursor;
     visit_ast!TranslateContext(cursor, ctx);
 
-    auto rval = ctx.output;
+    auto rval = ctx.render;
     assert(rval == expect, rval);
 }

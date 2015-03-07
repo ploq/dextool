@@ -22,6 +22,12 @@ struct Type
         return Cursor(r).spelling;
     }
 
+    @property string typeKindSpelling ()
+    {
+        auto r = clang_getTypeKindSpelling(cx.kind);
+        return toD(r);
+    }
+
     @property bool isTypedef ()
     {
         return kind == CXTypeKind.CXType_Typedef;
