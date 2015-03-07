@@ -1,8 +1,14 @@
 /**
  * Copyright: Copyright (c) 2011 Jacob Carlborg. All rights reserved.
- * Authors: Jacob Carlborg
- * Version: Initial created: Jan 29, 2012
+ * Authors: Jacob Carlborg, Joakim Brännström (joakim.brannstrom dottli gmx.com)
+ * Version: 1.1
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
+ * History:
+ *  1.0 initial release. 2012-01-29 $(BR)
+ *    Jacob Carlborg
+ *
+ *  1.1 additional features missing compared to cindex.py. 2015-03-07 $(BR)
+ *    Joakim Brännström
  */
 module clang.SourceLocation;
 
@@ -11,6 +17,7 @@ import clang.File;
 import clang.TranslationUnit;
 import clang.Util;
 
+/// A SourceLocation represents a particular location within a source file.
 struct SourceLocation
 {
     mixin CX;
@@ -32,9 +39,9 @@ struct SourceLocation
 
     /** Retrieves the source location associated with a given file/line/column
      * in a particular translation unit.
+     * TODO consider moving to TranslationUnit instead
      */
-    ///TODO consider moving to TranslationUnit instead
-    SourceLocation fromPosition(ref TranslationUnit tu, Location location)
+    static SourceLocation fromPosition (ref TranslationUnit tu, Location location)
     {
         auto r = clang_getLocation(tu, location.file, location.column, location.offset);
         return SourceLocation(r);
@@ -42,12 +49,40 @@ struct SourceLocation
 
     /** Retrieves the source location associated with a given character offset
      * in a particular translation unit.
+     * TODO consider moving to TranslationUnit instead
      */
-    ///TODO consider moving to TranslationUnit instead
-    SourceLocation fromOffset(ref TranslationUnit tu, Location location)
+    static SourceLocation fromOffset (ref TranslationUnit tu, Location location)
     {
         auto r = clang_getLocation(tu, location.file, location.column, location.offset);
         return SourceLocation(r);
+    }
+
+    /// Get the file represented by this source location.
+    /// TODO implement with a cache, this is inefficient.
+    @property File file () @safe
+    {
+        return expansion.file;
+    }
+
+    /// Get the line represented by this source location.
+    /// TODO implement with a cache, this is inefficient.
+    @property uint line () @safe
+    {
+        return expansion.line;
+    }
+
+    /// Get the column represented by this source location.
+    /// TODO implement with a cache, this is inefficient.
+    @property uint column () @safe
+    {
+        return expansion.column;
+    }
+
+    /// Get the file offset represented by this source location.
+    /// TODO implement with a cache, this is inefficient.
+    @property uint offset () @safe
+    {
+        return expansion.offset;
     }
 
     /** Retrieve the file, line, column, and offset represented by
@@ -56,23 +91,21 @@ struct SourceLocation
      * If the location refers into a macro expansion, retrieves the
      * location of the macro expansion.
      *
-     * Params:
-     *  location = the location within a source file that will be decomposed
-     * into its parts.
+     * Location within a source file that will be decomposed into its parts.
      *
-     *  file = [out] if non-NULL, will be set to the file to which the given
+     * file [out] if non-NULL, will be set to the file to which the given
      * source location points.
      *
-     *  line = [out] if non-NULL, will be set to the line to which the given
+     * line [out] if non-NULL, will be set to the line to which the given
      * source location points.
      *
-     *  column = [out] if non-NULL, will be set to the column to which the given
+     * column [out] if non-NULL, will be set to the column to which the given
      * source location points.
      *
-     *  offset = [out] if non-NULL, will be set to the offset into the
+     * offset [out] if non-NULL, will be set to the offset into the
      * buffer to which the given source location points.
      */
-    @property Location expansion ()
+    @property Location expansion () @trusted
     {
         Location data;
 
@@ -102,9 +135,6 @@ struct SourceLocation
      * File: somefile.c Line: 3 Column: 12
      * ---
      * Params:
-     *  location = the location within a source file that will be decomposed
-     * into its parts.
-     *
      *  filename = [out] if non-NULL, will be set to the filename of the
      * source location. Note that filenames returned will be for "virtual" files,
      * which don't necessarily exist on the machine running clang - e.g. when
@@ -119,7 +149,7 @@ struct SourceLocation
      *  column = [out] if non-NULL, will be set to the column number of the
      * source location. For an invalid source location, zero is returned.
      */
-    void presumed (out string filename, out uint line, out uint column)
+    void presumed (out string filename, out uint line, out uint column) @trusted
     {
         CXString cxstring;
 
@@ -133,23 +163,22 @@ struct SourceLocation
      * If the location refers into a macro instantiation, return where the
      * location was originally spelled in the source file.
      *
-     * Params:
-     *  location = the location within a source file that will be decomposed
-     * into its parts.
+     * The location within a source file that will be decomposed into its
+     * parts.
      *
-     *  file = [out] if non-NULL, will be set to the file to which the given
+     * file [out] if non-NULL, will be set to the file to which the given
      * source location points.
      *
-     *  line = [out] if non-NULL, will be set to the line to which the given
+     * line [out] if non-NULL, will be set to the line to which the given
      * source location points.
      *
-     *  column = [out] if non-NULL, will be set to the column to which the given
+     * column [out] if non-NULL, will be set to the column to which the given
      * source location points.
      *
-     *  offset = [out] if non-NULL, will be set to the offset into the
+     * offset [out] if non-NULL, will be set to the offset into the
      * buffer to which the given source location points.
      */
-    @property Location spelling ()
+    @property Location spelling () @trusted
     {
         Location data;
 

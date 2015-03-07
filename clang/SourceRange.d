@@ -1,7 +1,11 @@
-/// Written in the D programming language.
-/// Date: 2015, Joakim Brännström
-/// License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
-/// Author: Joakim Brännström (joakim.brannstrom@gmx.com)
+/** Written in the D programming language.
+ * Authors: Joakim Brännström (joakim.brannstrom dottli gmx.com)
+ * Version: 1.1
+ * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
+ * History:
+ *  1.1 additional features missing compared to cindex.py. 2015-03-06 $(BR)
+ *    Joakim Brännström
+ */
 module clang.SourceRange;
 
 import std.conv;
@@ -21,6 +25,7 @@ version (unittest) {
     }
 }
 
+///
 struct SourceRange
 {
     mixin CX;
@@ -46,11 +51,13 @@ struct SourceRange
         return SourceLocation(r);
     }
 
+    ///
     bool isNull ()
     {
         return clang_Range_isNull(cx) != 0;
     }
 
+    ///
     equals_t opEquals (const ref SourceRange range2) const
     {
         return clang_equalRanges(cast(CXSourceRange) cx, cast(CXSourceRange) range2) != 0;

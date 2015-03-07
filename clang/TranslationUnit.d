@@ -7,6 +7,7 @@
 module clang.TranslationUnit;
 
 import std.string;
+import std.typecons;
 
 //import mambo.core.io;
 
@@ -15,6 +16,7 @@ import clang.Cursor;
 import clang.Diagnostic;
 import clang.File;
 import clang.Index;
+import clang.SourceLocation;
 import clang.Token;
 import clang.UnsavedFile;
 import clang.Util;
@@ -54,9 +56,16 @@ struct TranslationUnit
         return DeclarationVisitor(clang_getTranslationUnitCursor(cx));
     }
 
-    File file (string filename)
+    Nullable!File file (string filename) @trusted
     {
-        return File(clang_getFile(cx, filename.toStringz));
+        Nullable!File r;
+
+        auto f = clang_getFile(cx, filename.toStringz);
+        if (f !is null) {
+            r = File(f);
+        }
+
+        return r;
     }
 
     @property Cursor cursor ()
@@ -65,11 +74,11 @@ struct TranslationUnit
         return Cursor(r);
     }
 
-    @property Token token ()
-    {
-        auto r = Token(this);
-        return r;
-    }
+    //@property Token token ()
+    //{
+    //    auto r = Token(this);
+    //    return r;
+    //}
 }
 
 struct DiagnosticVisitor
