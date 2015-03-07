@@ -73,12 +73,6 @@ struct TranslationUnit
         auto r = clang_getTranslationUnitCursor(cx);
         return Cursor(r);
     }
-
-    //@property Token token ()
-    //{
-    //    auto r = Token(this);
-    //    return r;
-    //}
 }
 
 struct DiagnosticVisitor

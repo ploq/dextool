@@ -26,6 +26,19 @@ version (unittest) {
     }
 }
 
+string toString(ref Token tok) {
+    import std.conv;
+
+    if (tok.isValid) {
+        return format("%s(%s) [spelling='%s']",
+                      text(typeid(tok)),
+                      text(tok.cx),
+                      tok.spelling);
+    }
+
+    return text(tok);
+}
+
 /** Represents a single token from the preprocessor.
  *
  *  Tokens are effectively segments of source code. Source code is first parsed
@@ -168,8 +181,11 @@ struct TokenGroup
         }
     }
 
-    auto opIndex(T...)(T ks)
-    {
+    auto opIndex(T)(T idx) {
+        return tokens[idx];
+    }
+
+    auto opIndex(T...)(T ks) {
         Token[] rval;
 
         foreach (k; ks) {
@@ -177,6 +193,10 @@ struct TokenGroup
         }
 
         return rval;
+    }
+
+    auto opDollar(int dim)() {
+        return length;
     }
 
     @property auto length ()
@@ -194,6 +214,33 @@ struct TokenGroup
 
         return 0;
     }
+}
+
+@name("Test of tokenizing a range")
+unittest {
+    import clang.Index;
+    import std.conv;
+
+    globalLogLevel(LogLevel.info);
+    auto index = Index(false, false);
+    auto filename = "test_files/class_funcs.hpp";
+    auto tu = TranslationUnit.parse(index, filename, ["-xc++"]);
+    auto file = tu.file(filename);
+
+    auto loc1 = SourceLocation.fromOffset(tu, file, 0);
+    auto loc2 = SourceLocation.fromPosition(tu, file, 13, 15);
+    assert(loc1.spelling.file.name == filename, text(loc1.spelling));
+    assert(loc2.spelling.file.name == filename, text(loc2.spelling));
+
+    auto range1 = range(loc1, loc2);
+    auto token_group = tokens(tu, range1);
+
+    assert(token_group.length > 0, "Expected length > 0 but it is " ~ to!string(token_group.length));
+    foreach (token; token_group) {
+        trace(token.toString);
+    }
+
+    assert(token_group[$-1].spelling == "MadeUp", token_group[$-1].toString);
 }
 
 @name("Test of Token")

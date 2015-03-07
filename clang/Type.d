@@ -18,14 +18,56 @@ struct Type
 
     @property string spelling ()
     {
-        auto r = clang_getTypeDeclaration(cx);
-        return Cursor(r).spelling;
+        return declaration.spelling;
     }
 
     @property string typeKindSpelling ()
     {
         auto r = clang_getTypeKindSpelling(cx.kind);
         return toD(r);
+    }
+
+    /** Return the canonical type for a CXType.
+     *
+     * Clang's type system explicitly models aliases and all the ways
+     * a specific type can be represented.  The canonical type is the underlying
+     * type with all the "sugar" removed.  For example, if 'T' is a typedef
+     * for 'int', the canonical type for 'T' would be 'int'.
+     */
+    @property Type canonicalType ()
+    {
+        auto r = clang_getCanonicalType(cx);
+        return Type(r);
+    }
+
+    /// For pointer types, returns the type of the pointee.
+    @property Type pointeeType ()
+    {
+        auto r = clang_getPointeeType(cx);
+        return Type(r);
+    }
+
+    /// Return: the cursor for the declaration of the given type.
+    @property Cursor declaration ()
+    {
+        auto r = clang_getTypeDeclaration(cx);
+        return Cursor(r);
+    }
+
+    @property FuncType func ()
+    {
+        return FuncType(this);
+    }
+
+    @property ArrayType array ()
+    {
+        return ArrayType(this);
+    }
+
+    /// Determine whether two CXTypes represent the same type.
+    equals_t opEquals (const ref Type type_) const
+    {
+        return clang_equalTypes(cast(CXType) type_.cx, cast(CXType) cx) != 0;
     }
 
     @property bool isTypedef ()
@@ -36,18 +78,6 @@ struct Type
     @property bool isEnum ()
     {
         return kind == CXTypeKind.CXType_Enum;
-    }
-
-    @property Type canonicalType ()
-    {
-        auto r = clang_getCanonicalType(cx);
-        return Type(r);
-    }
-
-    @property Type pointeeType ()
-    {
-        auto r = clang_getPointeeType(cx);
-        return Type(r);
     }
 
     @property bool isValid ()
@@ -109,6 +139,9 @@ struct Type
             return kind == CXType_WChar;
     }
 
+    /** Determine whether a CXType has the "const" qualifier set,
+     *  without looking through aliases that may have added "const" at a different level.
+     */
     @property bool isConst ()
     {
         return clang_isConstQualifiedType(cx) == 1;
@@ -124,20 +157,23 @@ struct Type
         return spelling.length == 0;
     }
 
-    @property Cursor declaration ()
-    {
-        auto r = clang_getTypeDeclaration(cx);
-        return Cursor(r);
+    /** Determine whether a CXType has the "volatile" qualifier set,
+     *  without looking through aliases that may have added "volatile" at a different level.
+     */
+    @property bool isVolatile() {
+        return clang_isVolatileQualifiedType(cx) == 1;
     }
 
-    @property FuncType func ()
-    {
-        return FuncType(this);
+    /** Determine whether a CXType has the "restrict" qualifier set,
+     *  without looking through aliases that may have added "restrict" at a different level.
+     */
+    @property bool isRestrict() {
+        return clang_isRestrictQualifiedType(cx) == 1;
     }
 
-    @property ArrayType array ()
-    {
-        return ArrayType(this);
+    /// Return: true if the CXType is a POD (plain old data)
+    @property bool isPOD() {
+        return clang_isPODType(cx) == 1;
     }
 }
 
@@ -168,7 +204,30 @@ struct ArrayType
     Type type;
     alias type this;
 
-    @property Type elementType ()
+    /** Return the element type of an array, complex, or vector type.
+     *
+     * If a type is passed in that is not an array, complex, or vector type,
+     * an invalid type is returned.
+     */
+    @property Type elementType () {
+        auto r = clang_getElementType(cx);
+        return Type(r);
+    }
+
+    /** Return the number of elements of an array or vector type.
+     *
+     * If a type is passed in that is not an array or vector type,
+     * -1 is returned.
+     */
+    @property auto numElements () {
+        return clang_getNumElements(cx);
+    }
+
+    /** Return the element type of an array type.
+     *
+     * If a non-array type is passed in, an invalid type is returned.
+     */
+    @property Type elementArrayType ()
     {
         auto r = clang_getArrayElementType(cx);
         return Type(r);

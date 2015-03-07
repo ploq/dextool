@@ -585,8 +585,8 @@ unittest {
     auto cursor = x.translation_unit.cursor;
     visit_ast!TranslateContext(cursor, ctx);
 
-    //auto rval = ctx.render;
-    //assert(rval == expect, rval);
+    auto rval = ctx.render;
+    assert(rval == expect, rval);
 }
 
 @name("Test of ClassTranslatorHdr, class_interface.hpp")

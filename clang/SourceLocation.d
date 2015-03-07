@@ -12,10 +12,32 @@
  */
 module clang.SourceLocation;
 
+import std.typecons;
+
 import clang.c.index;
 import clang.File;
 import clang.TranslationUnit;
 import clang.Util;
+
+string toString(SourceLocation value)
+{
+    import std.string;
+    import std.conv;
+
+    if (value.isValid)
+    {
+        auto spell = value.spelling;
+        return format("%s(%s) [file=%s('%s') line=%d column=%d offset=%d]",
+                      text(typeid(value)),
+                      text(value.cx),
+                      text(spell.file), text(spell.file.name),
+                      spell.line, spell.column, spell.offset);
+    }
+
+    return format("%s(%s)",
+                  text(typeid(value)),
+                  text(value.cx));
+}
 
 /// A SourceLocation represents a particular location within a source file.
 struct SourceLocation
@@ -40,20 +62,30 @@ struct SourceLocation
     /** Retrieves the source location associated with a given file/line/column
      * in a particular translation unit.
      * TODO consider moving to TranslationUnit instead
+     *
+     * Params:
+     *  tu = translation unit to derive location from.
+     *  file = a file in tu.
+     *  line = text line. Starting at 1.
+     *  offset = offset into the line. Starting at 1.
      */
-    static SourceLocation fromPosition (ref TranslationUnit tu, Location location)
-    {
-        auto r = clang_getLocation(tu, location.file, location.column, location.offset);
-        return SourceLocation(r);
+    static Nullable!SourceLocation fromPosition (ref TranslationUnit tu, ref File file, uint line, uint offset) {
+        auto rval = Nullable!SourceLocation();
+        auto r = SourceLocation(clang_getLocation(tu, file, line, offset));
+        if (r.file !is null) {
+            rval = SourceLocation(r);
+        }
+
+        return rval;
     }
 
     /** Retrieves the source location associated with a given character offset
      * in a particular translation unit.
      * TODO consider moving to TranslationUnit instead
      */
-    static SourceLocation fromOffset (ref TranslationUnit tu, Location location)
+    static SourceLocation fromOffset (ref TranslationUnit tu, ref File file, uint offset)
     {
-        auto r = clang_getLocation(tu, location.file, location.column, location.offset);
+        auto r = clang_getLocationForOffset(tu, file, offset);
         return SourceLocation(r);
     }
 

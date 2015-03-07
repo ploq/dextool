@@ -18,8 +18,7 @@ struct Cursor
 {
     mixin CX;
 
-    @property static Cursor empty ()
-    {
+    @property static Cursor empty () {
         auto r = clang_getNullCursor();
         return Cursor(r);
     }
@@ -62,21 +61,27 @@ struct Cursor
         return Cursor(r);
     }
 
+    /// Returns: the semantic parent for this cursor.
     @property Cursor semanticParent()
     {
         auto r = clang_getCursorSemanticParent(cx);
         return Cursor(r);
     }
 
+    /// Returns: the lexical parent for this cursor.
+    @property Cursor lexicalParent()
+    {
+        auto r = clang_getCursorLexicalParent(cx);
+        return Cursor(r);
+    }
+
+    /** For a cursor that is a reference, returns a cursor representing the
+     * entity that it references.
+     */
     @property Cursor referenced()
     {
         auto r = clang_getCursorReferenced(cx);
         return Cursor(r);
-    }
-
-    @property bool isDeclaration ()
-    {
-        return clang_isDeclaration(cx.kind) != 0;
     }
 
     @property DeclarationVisitor declarations ()
@@ -124,6 +129,11 @@ struct Cursor
         return clang_hashCursor(cast(CXCursor) cx);
     }
 
+    @property bool isDeclaration ()
+    {
+        return clang_isDeclaration(cx.kind) != 0;
+    }
+
     @property bool isValid ()
     {
         return !clang_isInvalid(cx.kind);
@@ -142,6 +152,11 @@ struct Cursor
     @property bool isTranslationUnit()
     {
         return clang_isTranslationUnit(kind) == 0;
+    }
+
+    /// Returns: if the base class specified by the cursor with kind CX_CXXBaseSpecifier is virtual.
+    @property bool isVirtualBase() {
+        return clang_isVirtualBase(cx) == 1;
     }
 }
 
