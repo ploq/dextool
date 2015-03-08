@@ -44,7 +44,7 @@ struct Type {
     }
 
     /// Return: the cursor for the declaration of the given type.
-    @property Cursor declaration() {
+    @property Cursor declaration() @trusted {
         auto r = clang_getTypeDeclaration(cx);
         return Cursor(r);
     }

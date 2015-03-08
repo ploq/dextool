@@ -64,6 +64,11 @@ struct TranslationUnit {
     }
 }
 
+package TranslationUnit translationUnitFromCursor(CXCursor cx) @trusted {
+    auto r = clang_Cursor_getTranslationUnit(cx);
+    return TranslationUnit(r);
+}
+
 struct DiagnosticVisitor {
     private CXTranslationUnit translatoinUnit;
 
