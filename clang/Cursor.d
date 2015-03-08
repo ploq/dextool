@@ -8,12 +8,15 @@
 module clang.Cursor;
 
 import std.conv;
+import std.typecons;
 
 import clang.c.index;
+import clang.File;
 import clang.SourceLocation;
 import clang.SourceRange;
 import clang.Type;
 import clang.TranslationUnit;
+import clang.Token;
 import clang.Util;
 import clang.Visitor;
 
@@ -233,8 +236,22 @@ struct Cursor {
     }
 
     /// Returns: the translation unit that a cursor originated from.
-    @property TranslationUnit translationUnit() @trusted {
-        return translationUnitFromCursor(cx);
+    @property RefCounted!TranslationUnit translationUnit() @trusted {
+        return RefCounted!TranslationUnit(translationUnitFromCursor(cx));
+    }
+
+    /** Obtain Token instances formulating that compose this Cursor.
+     *
+     * This is a generator for Token instances. It returns all tokens which
+     * occupy the extent this cursor occupies.
+     *
+     * Returns: A RefCounted TokenGroup.
+     */
+    @property auto tokens() {
+        auto tu = translationUnit;
+        auto range = extent;
+
+        return tokenize(tu, range);
     }
 
     @property ObjcCursor objc() {
@@ -271,9 +288,54 @@ struct Cursor {
         return clang_isDeclaration(cx.kind) != 0;
     }
 
+    /** Determine whether the given cursor kind represents a simple
+     * reference.
+     *
+     * Note that other kinds of cursors (such as expressions) can also refer to
+     * other cursors. Use clang_getCursorReferenced() to determine whether a
+     * particular cursor refers to another entity.
+     */
+    @property bool isReference() {
+        return clang_isReference(cx.kind) != 0;
+    }
+
+    /// Determine whether the given cursor kind represents an expression.
+    @property bool isExpression() {
+        return clang_isExpression(cx.kind) != 0;
+    }
+
+    /// Determine whether the given cursor kind represents a statement.
+    @property bool isStatement() {
+        return clang_isStatement(cx.kind) != 0;
+    }
+
+    /// Determine whether the given cursor kind represents an attribute.
+    @property bool isAttribute() {
+        return clang_isAttribute(cx.kind) != 0;
+    }
+
     /// Determine whether the given cursor kind represents an invalid cursor.
     @property bool isValid() {
-        return !clang_isInvalid(cx.kind);
+        return clang_isInvalid(cx.kind) == 0;
+    }
+
+    /// Determine whether the given cursor kind represents a translation unit.
+    @property bool isTranslationUnit() {
+        return clang_isTranslationUnit(cx.kind) == 0;
+    }
+
+    /** Determine whether the given cursor represents a preprocessing
+     * element, such as a preprocessor directive or macro instantiation.
+     */
+    @property bool isPreprocessing() {
+        return clang_isPreprocessing(cx.kind) != 0;
+    }
+
+    /** Determine whether the given cursor represents a currently unexposed
+     * piece of the AST (e.g., CXCursor_UnexposedStmt).
+     */
+    @property bool isUnexposed() {
+        return clang_isUnexposed(cx.kind) != 0;
     }
 
     /// Return: if cursor is null/empty.
@@ -288,10 +350,6 @@ struct Cursor {
         return clang_isCursorDefinition(cast(CXCursor) cx) != 0;
     }
 
-    /// Determine whether the given cursor kind represents a translation unit.
-    @property bool isTranslationUnit() {
-        return clang_isTranslationUnit(kind) == 0;
-    }
 
     /// Returns: if the base class specified by the cursor with kind CX_CXXBaseSpecifier is virtual.
     @property bool isVirtualBase() {
@@ -378,6 +436,19 @@ struct AccessCursor {
 struct ParamCursor {
     Cursor cursor;
     alias cursor this;
+}
+
+struct IncludeCursor {
+    Cursor cursor;
+    alias cursor this;
+
+    /** Retrieve the file that is included by the given inclusion directive
+     * cursor.
+     */
+    @property auto file() {
+        auto r = clang_getIncludedFile(cx);
+        return File(r);
+    }
 }
 
 struct EnumCursor {
