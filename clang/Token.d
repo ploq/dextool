@@ -39,6 +39,22 @@ string toString(ref Token tok) {
     return text(tok);
 }
 
+auto toString(ref TokenGroup toks) {
+    string s;
+
+    foreach (t; toks) {
+        if (t.isValid) {
+            s ~= t.spelling ~ " ";
+        }
+    }
+
+    return s.strip;
+}
+
+auto toString(RefCounted!TokenGroup toks) {
+    return toks.refCountedPayload.toString;
+}
+
 /** Represents a single token from the preprocessor.
  *
  *  Tokens are effectively segments of source code. Source code is first parsed
@@ -84,7 +100,7 @@ struct Token {
         return SourceRange(r);
     }
 
-    ///The Cursor this Token corresponds to.
+    /// The Cursor this Token corresponds to.
     @property Cursor cursor() {
         Cursor c = Cursor.empty;
 
@@ -114,7 +130,7 @@ struct Token {
  *  NumTokens = will be set to the number of tokens in the \c* Tokens
  * array.
  */
-RefCounted!TokenGroup tokens(TranslationUnit tu, SourceRange range) {
+RefCounted!TokenGroup tokenize(RefCounted!TranslationUnit tu, SourceRange range) {
     TokenGroup.CXTokenArray tokens;
     auto tg = RefCounted!TokenGroup(tu);
 
@@ -156,7 +172,7 @@ struct TokenGroup {
         uint length;
     }
 
-    this(TranslationUnit tu) {
+    this(RefCounted!TranslationUnit tu) {
         tu = tu;
     }
 
@@ -216,7 +232,7 @@ struct TokenGroup {
     assert(loc2.spelling.file.name == filename, text(loc2.spelling));
 
     auto range1 = range(loc1, loc2);
-    auto token_group = tokens(tu, range1);
+    auto token_group = tokenize(tu, range1);
 
     assert(token_group.length > 0, "Expected length > 0 but it is " ~ to!string(
         token_group.length));
