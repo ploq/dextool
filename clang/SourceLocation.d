@@ -45,6 +45,14 @@ struct SourceLocation {
         uint offset;
     }
 
+    // ugly hack. Must fix to somethhing thhat works for both File and string.
+    struct Location2 {
+        string file;
+        uint line;
+        uint column;
+        uint offset;
+    }
+
     /// Retrieve a NULL (invalid) source location.
     static SourceLocation empty() {
         auto r = clang_getNullLocation();
@@ -63,6 +71,7 @@ struct SourceLocation {
      */
     static Nullable!SourceLocation fromPosition(ref TranslationUnit tu,
         ref File file, uint line, uint offset) {
+
         auto rval = Nullable!SourceLocation();
         auto r = SourceLocation(clang_getLocation(tu, file, line, offset));
         if (r.file !is null) {
@@ -155,8 +164,8 @@ struct SourceLocation {
      * ---
      * File: somefile.c Line: 3 Column: 12
      * ---
-     * Params:
-     *  filename = [out] if non-NULL, will be set to the filename of the
+     *
+     *  filename [out] if non-NULL, will be set to the filename of the
      * source location. Note that filenames returned will be for "virtual" files,
      * which don't necessarily exist on the machine running clang - e.g. when
      * parsing preprocessed output obtained from a different environment. If
@@ -164,17 +173,20 @@ struct SourceLocation {
      * using \c clang_disposeString() once you've finished with it. For an invalid
      * source location, an empty string is returned.
      *
-     *  line = [out] if non-NULL, will be set to the line number of the
+     *  line [out] if non-NULL, will be set to the line number of the
      * source location. For an invalid source location, zero is returned.
      *
-     *  column = [out] if non-NULL, will be set to the column number of the
+     *  column [out] if non-NULL, will be set to the column number of the
      * source location. For an invalid source location, zero is returned.
      */
-    void presumed (out string filename, out uint line, out uint column) @trusted {
+    auto presumed () @trusted {
+        Location2 data;
         CXString cxstring;
 
-        clang_getPresumedLocation(cx, &cxstring, &line, &column);
-        filename = toD(cxstring);
+        clang_getPresumedLocation(cx, &cxstring, &data.line, &data.column);
+        data.file = toD(cxstring);
+
+        return data;
     }
 
     /** Retrieve the file, line, column, and offset represented by
