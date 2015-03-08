@@ -17,10 +17,11 @@ alias logger = std.experimental.logger;
 import tested;
 
 import clang.c.index;
+import clang.Cursor;
 import clang.Index;
+import clang.Token;
 import clang.TranslationUnit;
 import clang.Visitor;
-import clang.Cursor;
 import clang.UnsavedFile;
 
 import srcgen.cpp;
@@ -324,7 +325,7 @@ string[] ParmDeclToString(Cursor cursor) {
         log_node(param, 0);
         auto type = translateType(param.type);
         trace(type);
-        params ~= format("%s %s", type.ToString, param.spelling);
+        params ~= format("%s %s", type.toString, param.spelling);
     }
 
     logger.trace(params);
@@ -335,7 +336,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     T node;
 
     string[] params = ParmDeclToString(c);
-    auto return_type = translateType(c.func.resultType).ToString;
+    auto return_type = translateType(c.func.resultType).toString;
     if (params.length == 0)
         node = top.func(return_type, c.spelling);
     else

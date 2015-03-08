@@ -13,6 +13,7 @@ import std.string;
 import std.experimental.logger;
 
 import clang.c.index;
+import clang.Token;
 import clang.Type;
 
 import translator.Translator;
@@ -26,7 +27,7 @@ struct TypeKind {
     bool isPointer;
 }
 
-string ToString(in TypeKind type) {
+string toString(in TypeKind type) {
     return format("%s%s%s", type.prefix.length == 0 ? "" : type.prefix ~ " ", type.name,
         type.suffix);
 }
@@ -36,7 +37,6 @@ string ToString(in TypeKind type) {
  *   type = a clang cursor to the type node
  * Returns: Struct of metadata about the type.
  */
-
 TypeKind translateType(Type type)
 in {
     assert(type.isValid);
@@ -45,7 +45,8 @@ body {
     TypeKind result;
 
     with (CXTypeKind) {
-        //if (type.kind == CXType_BlockPointer || type.isFunctionPointerType)
+        if (type.kind == CXType_BlockPointer || type.isFunctionPointerType)
+            error("Implement missing translation of function pointer");
         //    result = translateFunctionPointerType(type);
 
         if (type.isWideCharType)
