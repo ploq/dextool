@@ -15,13 +15,15 @@ import srcgen.base;
 version (unittest) {
     shared static this() {
         import std.exception;
+
         //runUnitTests!app(new JsonTestResultWriter("results.json"));
-        enforce(runUnitTests!(srcgen.c)(new ConsoleTestResultWriter), "Unit tests failed.");
+        enforce(runUnitTests!(srcgen.c)(new ConsoleTestResultWriter),
+            "Unit tests failed.");
     }
 }
 
 ///TODO: change to c-comment and make a separate for c++.
-class Comment: BaseModule {
+class Comment : BaseModule {
     string contents;
     this(string contents) {
         this.contents = contents;
@@ -37,7 +39,7 @@ mixin template CModuleX() {
     string[string] attrs;
 
     auto opIndex(T...)(T kvs) {
-        foreach(kv; kvs) {
+        foreach (kv; kvs) {
             attrs[kv.k] = kv.v;
         }
         return this;
@@ -58,6 +60,7 @@ mixin template CModuleX() {
         _append(e);
         return this;
     }
+
     alias opCall = text;
 
     auto base() {
@@ -127,10 +130,8 @@ mixin template CModuleX() {
     }
 
     auto for_(T0, T1, T2)(T0 init, T1 cond, T2 next) {
-        return suite(format("for (%s; %s; %s)",
-                            to!string(init),
-                            to!string(cond),
-                            to!string(next)));
+        return suite(format("for (%s; %s; %s)", to!string(init), to!string(cond),
+            to!string(next)));
     }
 
     auto while_(T)(T cond) {
@@ -160,9 +161,8 @@ mixin template CModuleX() {
     }
 
     auto func(T0, T1)(T0 return_type, T1 name) {
-        auto e = suite(format("%s %s()",
-                              to!string(return_type),
-                              to!string(name)));
+        auto e = suite(format("%s %s()", to!string(return_type), to!string(
+            name)));
         return e;
     }
 
@@ -172,15 +172,13 @@ mixin template CModuleX() {
             params = to!string(args[0]);
         }
         if (args.length >= 2) {
-            foreach(v; args[1 .. $]) {
+            foreach (v; args[1 .. $]) {
                 params ~= ", " ~ to!string(v);
             }
         }
 
-        auto e = suite(format("%s %s(%s)",
-                              to!string(return_type),
-                              to!string(name),
-                              params));
+        auto e = suite(format("%s %s(%s)", to!string(return_type), to!string(
+            name), params));
         return e;
     }
 
@@ -211,19 +209,21 @@ mixin template CModuleX() {
     }
 }
 
-class CModule: BaseModule {
+class CModule : BaseModule {
     mixin CModuleX;
 }
 
-string stmt_append_end(string s, in ref string[string] attrs) pure nothrow @safe {
+string stmt_append_end(string s, in ref string[string] attrs) pure nothrow@safe {
     bool in_pattern = false;
     try {
-        in_pattern = inPattern(s[$-1], ";:,{");
-    } catch (Exception e) {}
+        in_pattern = inPattern(s[$ - 1], ";:,{");
+    }
+    catch (Exception e) {
+    }
 
     if (!in_pattern && s[0] != '#') {
         string end = ";";
-        if ("end" in attrs) {
+        if ("end"in attrs) {
             end = attrs["end"];
         }
         s ~= end;
@@ -236,6 +236,7 @@ string stmt_append_end(string s, in ref string[string] attrs) pure nothrow @safe
  * stmt ~ end
  *    <recursive>
  */
+
 class Stmt(T) : T {
     string stmt;
 
@@ -256,6 +257,7 @@ class Stmt(T) : T {
  * noindent affects post_recursive. If set no indention there.
  * r.length > 0 catches the case when begin or end is empty string. Used in switch/case.
  */
+
 class Suite(T) : T {
     string headline;
 
@@ -265,7 +267,7 @@ class Suite(T) : T {
 
     override string _render_indent(int level) {
         string r = headline ~ " {" ~ newline;
-        if ("begin" in attrs) {
+        if ("begin"in attrs) {
             r = headline ~ attrs["begin"];
         }
         if (r.length > 0) {
@@ -276,10 +278,10 @@ class Suite(T) : T {
 
     override string _render_post_recursive(int level) {
         string r = "}" ~ newline;
-        if ("end" in attrs) {
+        if ("end"in attrs) {
             r = attrs["end"];
         }
-        if (r.length > 0 && !("noindent" in attrs)) {
+        if (r.length > 0 && !("noindent"in attrs)) {
             r = indent(r, level);
         }
         return r;
@@ -318,8 +320,7 @@ struct CppHModule {
     }
 }
 
-@name("Test of statements")
-unittest {
+@name("Test of statements") unittest {
     string expect = """    77;
     break;
     continue;
@@ -349,8 +350,7 @@ unittest {
     assert(rval == expect, rval);
 }
 
-@name("Test of suites")
-unittest {
+@name("Test of suites") unittest {
     string expect = """
     foo {
     }
@@ -388,10 +388,10 @@ unittest {
         while_("x");
         do_while("x");
         switch_("x");
-        with(case_("y")) {
+        with (case_("y")) {
             stmt("foo");
         }
-        with(default_) {
+        with (default_) {
             stmt("foobar");
         }
         func("int", "foobar", "int x");
@@ -403,8 +403,7 @@ unittest {
     assert(rval == expect, rval);
 }
 
-@name("Test of complicated switch")
-unittest {
+@name("Test of complicated switch") unittest {
     string expect = """
     switch (x) {
         case 0:
@@ -421,16 +420,16 @@ unittest {
     auto x = new CModule();
     with (x) {
         sep();
-        with(switch_("x")) {
-            with(case_(0)) {
+        with (switch_("x")) {
+            with (case_(0)) {
                 return_(5);
                 break_;
             }
-            with(case_(1)) {
+            with (case_(1)) {
                 return_(3);
                 break_;
             }
-            with(default_) {
+            with (default_) {
                 return_(-1);
             }
         }
@@ -440,14 +439,12 @@ unittest {
     assert(rval == expect, rval);
 }
 
-@name("Test of empty CSuite")
-unittest {
+@name("Test of empty CSuite") unittest {
     auto x = new Suite!CModule("test");
     assert(x.render == "test {\n}\n", x.render);
 }
 
-@name("Test of stmt_append_end")
-unittest {
+@name("Test of stmt_append_end") unittest {
     string[string] attrs;
     string stmt = "some_line";
     string result = stmt_append_end(stmt, attrs);
@@ -461,14 +458,12 @@ unittest {
     assert(stmt ~ "{" == result, result);
 }
 
-@name("Test of CSuite with formatting")
-unittest {
+@name("Test of CSuite with formatting") unittest {
     auto x = new Suite!CModule("if (x > 5)");
     assert(x.render() == "if (x > 5) {\n}\n", x.render);
 }
 
-@name("Test of CSuite with simple text")
-unittest {
+@name("Test of CSuite with simple text") unittest {
     // also test that text(..) do NOT add a linebreak
     auto x = new Suite!CModule("foo");
     with (x) {
@@ -477,8 +472,7 @@ unittest {
     assert(x.render() == "foo {\nbar}\n", x.render);
 }
 
-@name("Test of CSuite with simple text and changed begin")
-unittest {
+@name("Test of CSuite with simple text and changed begin") unittest {
     auto x = new Suite!CModule("foo");
     with (x[$.begin = "_:_"]) {
         text("bar");
@@ -486,8 +480,7 @@ unittest {
     assert(x.render() == "foo_:_bar}\n", x.render);
 }
 
-@name("Test of CSuite with simple text and changed end")
-unittest {
+@name("Test of CSuite with simple text and changed end") unittest {
     auto x = new Suite!CModule("foo");
     with (x[$.end = "_:_"]) {
         text("bar");
@@ -495,8 +488,7 @@ unittest {
     assert(x.render() == "foo {\nbar_:_", x.render);
 }
 
-@name("Test of nested CSuite")
-unittest {
+@name("Test of nested CSuite") unittest {
     auto x = new Suite!CModule("foo");
     with (x) {
         text("bar");
@@ -514,8 +506,7 @@ bar
 """, x.render);
 }
 
-@name("Test of text in CModule with guard")
-unittest {
+@name("Test of text in CModule with guard") unittest {
     auto hdr = CppHModule("somefile_hpp");
 
     with (hdr.header) {

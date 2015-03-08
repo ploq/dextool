@@ -16,13 +16,13 @@ import srcgen.c;
 version (unittest) {
     shared static this() {
         import std.exception;
-        enforce(runUnitTests!(srcgen.cpp)(new ConsoleTestResultWriter), "Unit tests failed.");
+
+        enforce(runUnitTests!(srcgen.cpp)(new ConsoleTestResultWriter),
+            "Unit tests failed.");
     }
 }
 
 mixin template CppModuleX() {
-    // Statements
-
     // Suites
     auto ctor(T0, T...)(T0 class_name, auto ref T args) {
         string params;
@@ -30,7 +30,7 @@ mixin template CppModuleX() {
             params = to!string(args[0]);
         }
         if (args.length >= 2) {
-            foreach(v; args[1 .. $]) {
+            foreach (v; args[1 .. $]) {
                 params ~= ", " ~ to!string(v);
             }
         }
@@ -45,9 +45,7 @@ mixin template CppModuleX() {
     }
 
     auto dtor(T)(T class_name) {
-        auto e = suite(format("%s%s()",
-                              class_name[0] == '~' ? "" : "~",
-                              to!string(class_name)));
+        auto e = suite(format("%s%s()", class_name[0] == '~' ? "" : "~", to!string(class_name)));
         return e;
     }
 
@@ -70,7 +68,8 @@ mixin template CppModuleX() {
         string ih = to!string(inherit);
         if (ih.length == 0) {
             return class_(name);
-        } else {
+        }
+        else {
             auto e = suite(format("class %s : %s", n, ih));
             e[$.end = format("};%s", newline)];
             return e;
@@ -96,13 +95,12 @@ mixin template CppModuleX() {
     }
 }
 
-class CppModule: BaseModule {
+class CppModule : BaseModule {
     mixin CModuleX;
     mixin CppModuleX;
 }
 
-@name("Test of C++ suits")
-unittest {
+@name("Test of C++ suits") unittest {
     string expect = """
     namespace foo {
     } //NS:foo
@@ -121,10 +119,10 @@ unittest {
         return 8;
 """;
     auto x = new CppModule();
-    with(x) {
+    with (x) {
         sep;
         namespace("foo");
-        with(class_("Foo")) {
+        with (class_("Foo")) {
             auto ctor0 = ctor("Foo");
             ctor0[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
             auto ctor1 = ctor("Foo", "int y");
@@ -133,13 +131,13 @@ unittest {
             dtor0[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
         }
         class_("Foo", "Bar");
-        with(public_) {
+        with (public_) {
             return_(5);
         }
-        with(protected_) {
+        with (protected_) {
             return_(7);
         }
-        with(private_) {
+        with (private_) {
             return_(8);
         }
     }

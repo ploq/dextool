@@ -12,7 +12,9 @@ import tested;
 version (unittest) {
     shared static this() {
         import std.exception;
-        enforce(runUnitTests!(srcgen.base)(new ConsoleTestResultWriter), "Unit tests failed.");
+
+        enforce(runUnitTests!(srcgen.base)(new ConsoleTestResultWriter),
+            "Unit tests failed.");
     }
 }
 
@@ -31,8 +33,8 @@ struct AttrSetter {
 
     template opDispatch(string name) {
         @property auto opDispatch(T)(T v) {
-            static if(name.length > 1 && name[$-1] == '_') {
-                return KV(name[0 .. $-1], v);
+            static if (name.length > 1 && name[$ - 1] == '_') {
+                return KV(name[0 .. $ - 1], v);
             }
             else {
                 return KV(name, v);
@@ -48,7 +50,7 @@ interface BaseElement {
     abstract string _render_post_recursive(int level);
 }
 
-class Text: BaseModule {
+class Text : BaseModule {
     string contents;
     this(string contents) {
         this.contents = contents;
@@ -66,7 +68,8 @@ class BaseModule : BaseElement {
     int sep_lines;
     int suppress_indent_;
 
-    this() {}
+    this() {
+    }
 
     this(int indent_width) {
         this.indent_width = indent_width;
@@ -91,7 +94,7 @@ class BaseModule : BaseElement {
         count -= sep_lines;
         if (count <= 0)
             return;
-        foreach(i; 0 .. count) {
+        foreach (i; 0 .. count) {
             children ~= new Text(newline);
         }
 
@@ -101,7 +104,7 @@ class BaseModule : BaseElement {
     string indent(string s, int level) {
         level = max(0, level);
         char[] indent;
-        indent.length = indent_width*level;
+        indent.length = indent_width * level;
         indent[] = ' ';
 
         return to!string(indent) ~ s;
@@ -120,8 +123,8 @@ class BaseModule : BaseElement {
         level -= suppress_indent_;
         string s = _render_indent(level);
 
-        foreach(e; children) {
-            s ~= e._render_recursive(level+1);
+        foreach (e; children) {
+            s ~= e._render_recursive(level + 1);
         }
         s ~= _render_post_recursive(level);
 
@@ -134,7 +137,7 @@ class BaseModule : BaseElement {
 
     override string render() {
         string s = _render_indent(0);
-        foreach(e; children) {
+        foreach (e; children) {
             s ~= e._render_recursive(0 - suppress_indent_);
         }
         s ~= _render_post_recursive(0);
@@ -142,4 +145,3 @@ class BaseModule : BaseElement {
         return _render_recursive(0);
     }
 }
-

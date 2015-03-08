@@ -4,6 +4,7 @@
  * Version: Initial created: Oct 6, 2011
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
  */
+
 module translator.Translator;
 
 import std.file;
@@ -27,20 +28,17 @@ import translator.Type;
 
 private static string[Cursor] anonymousNames;
 
-string getAnonymousName (Cursor cursor)
-{
+string getAnonymousName(Cursor cursor) {
     if (auto name = cursor in anonymousNames)
         return *name;
 
     return "";
 }
 
-string generateAnonymousName (Cursor cursor)
-{
+string generateAnonymousName(Cursor cursor) {
     auto name = getAnonymousName(cursor);
 
-    if (name.length == 0)
-    {
+    if (name.length == 0) {
         name = "_Anonymous_" ~ to!string(anonymousNames.length);
         anonymousNames[cursor] = name;
     }
@@ -48,12 +46,10 @@ string generateAnonymousName (Cursor cursor)
     return name;
 }
 
-string getInclude (Type type)
-    in
-{
+string getInclude(Type type)
+in {
     assert(type.isValid);
 }
-body
-{
+body {
     return type.declaration.location.spelling.file.name;
 }

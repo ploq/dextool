@@ -22,7 +22,9 @@ import tested;
 version (unittest) {
     shared static this() {
         import std.exception;
-        enforce(runUnitTests!(clang.Token)(new ConsoleTestResultWriter), "Unit tests failed.");
+
+        enforce(runUnitTests!(clang.Token)(new ConsoleTestResultWriter),
+            "Unit tests failed.");
     }
 }
 
@@ -30,10 +32,8 @@ string toString(ref Token tok) {
     import std.conv;
 
     if (tok.isValid) {
-        return format("%s(%s) [spelling='%s']",
-                      text(typeid(tok)),
-                      text(tok.cx),
-                      tok.spelling);
+        return format("%s(%s) [spelling='%s']", text(typeid(tok)), text(tok.cx),
+            tok.spelling);
     }
 
     return text(tok);
@@ -47,23 +47,20 @@ string toString(ref Token tok) {
  *  Tokens are obtained from parsed TranslationUnit instances. You currently
  *  can't create tokens manually.
  */
-struct Token
-{
-    private alias CXToken CType;
+struct Token {
+    private alias CType = CXToken;
     CType cx;
     alias cx this;
 
     private RefCounted!TokenGroup group;
 
-    this (RefCounted!TokenGroup group, ref CXToken token)
-    {
+    this(RefCounted!TokenGroup group, ref CXToken token) {
         group = group;
         cx = token;
     }
 
     /// Obtain the TokenKind of the current token.
-    @property CXTokenKind kind ()
-    {
+    @property CXTokenKind kind() {
         return clang_getTokenKind(cx);
     }
 
@@ -71,28 +68,24 @@ struct Token
      *
      *  This is the textual representation of the token in source.
      */
-    @property string spelling ()
-    {
+    @property string spelling() {
         return toD(clang_getTokenSpelling(group.tu, cx));
     }
 
     /// The SourceLocation this Token occurs at.
-    @property SourceLocation location ()
-    {
+    @property SourceLocation location() {
         auto r = clang_getTokenLocation(group.tu, cx);
         return SourceLocation(r);
     }
 
     /// The SourceRange this Token occupies.
-    @property SourceRange extent ()
-    {
+    @property SourceRange extent() {
         auto r = clang_getTokenExtent(group.tu, cx);
         return SourceRange(r);
     }
 
     ///The Cursor this Token corresponds to.
-    @property Cursor cursor ()
-    {
+    @property Cursor cursor() {
         Cursor c = Cursor.empty;
 
         clang_annotateTokens(group.tu, &cx, 1, &c.cx);
@@ -100,8 +93,7 @@ struct Token
         return c;
     }
 
-    @property bool isValid ()
-    {
+    @property bool isValid() {
         return cx !is CType.init;
     }
 }
@@ -122,16 +114,14 @@ struct Token
  *  NumTokens = will be set to the number of tokens in the \c* Tokens
  * array.
  */
-RefCounted!TokenGroup tokens (TranslationUnit tu, SourceRange range)
-{
+RefCounted!TokenGroup tokens(TranslationUnit tu, SourceRange range) {
     TokenGroup.CXTokenArray tokens;
     auto tg = RefCounted!TokenGroup(tu);
 
     clang_tokenize(tu, range, &tokens.tokens, &tokens.length);
     tg.cxtokens = tokens;
 
-    foreach (i; 0 .. tokens.length)
-    {
+    foreach (i; 0 .. tokens.length) {
         tg.tokens ~= Token(tg, tokens.tokens[i]);
     }
 
@@ -139,6 +129,8 @@ RefCounted!TokenGroup tokens (TranslationUnit tu, SourceRange range)
 }
 
 private:
+
+
 
 /** Helper class to facilitate token management.
  * Tokens are allocated from libclang in chunks. They must be disposed of as a
@@ -152,29 +144,24 @@ private:
  *
  * You should not instantiate this class outside of this module.
  */
-struct TokenGroup
-{
-    alias int delegate (ref Token) Delegate;
+struct TokenGroup {
+    alias Delegate = int delegate(ref Token);
 
     private RefCounted!TranslationUnit tu;
     private CXTokenArray cxtokens;
     private Token[] tokens;
 
-    struct CXTokenArray
-    {
+    struct CXTokenArray {
         CXToken* tokens;
         uint length;
     }
 
-    this (TranslationUnit tu)
-    {
+    this(TranslationUnit tu) {
         tu = tu;
     }
 
-    ~this()
-    {
-        if (cxtokens.length > 0)
-        {
+    ~this() {
+        if (cxtokens.length > 0) {
             clang_disposeTokens(tu.cx, cxtokens.tokens, cxtokens.length);
             cxtokens.length = 0;
             tokens.length = 0;
@@ -199,15 +186,12 @@ struct TokenGroup
         return length;
     }
 
-    @property auto length ()
-    {
+    @property auto length() {
         return tokens.length;
     }
 
-    auto opApply (Delegate dg)
-    {
-        foreach (tok; tokens)
-        {
+    auto opApply(Delegate dg) {
+        foreach (tok; tokens) {
             if (auto result = dg(tok))
                 return result;
         }
@@ -216,8 +200,7 @@ struct TokenGroup
     }
 }
 
-@name("Test of tokenizing a range")
-unittest {
+@name("Test of tokenizing a range") unittest {
     import clang.Index;
     import std.conv;
 
@@ -235,27 +218,32 @@ unittest {
     auto range1 = range(loc1, loc2);
     auto token_group = tokens(tu, range1);
 
-    assert(token_group.length > 0, "Expected length > 0 but it is " ~ to!string(token_group.length));
+    assert(token_group.length > 0, "Expected length > 0 but it is " ~ to!string(
+        token_group.length));
     foreach (token; token_group) {
         trace(token.toString);
     }
 
-    assert(token_group[$-1].spelling == "MadeUp", token_group[$-1].toString);
+    assert(token_group[$ - 1].spelling == "MadeUp", token_group[$ - 1].toString);
 }
 
-@name("Test of Token")
-unittest {
+@name("Test of Token") unittest {
     import clang.Index;
 
     string expect = """ """;
 
     globalLogLevel(LogLevel.trace);
     auto index = Index(false, false);
-    auto translation_unit = TranslationUnit.parse(index, "test_files/class_interface.hpp", ["-xc++"]);
+    auto translation_unit = TranslationUnit.parse(index,
+        "test_files/class_interface.hpp", ["-xc++"]);
 
     struct StupidVisitor {
-        void incr() {}
-        void decr() {}
+        void incr() {
+        }
+
+        void decr() {
+        }
+
         bool apply(Cursor c) {
             return true;
         }
@@ -264,10 +252,8 @@ unittest {
     StupidVisitor ctx;
     auto cursor = translation_unit.cursor;
     //visit_ast!StupidVisitor(cursor, ctx);
-
     //auto rval = ctx.render;
     //assert(rval == expect, rval);
-
     // is thhis needed?
     //translation_unit.dispose;
     //index.dispose;

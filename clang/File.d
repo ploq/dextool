@@ -10,6 +10,7 @@
  *  1.1 additional features missing compared to cindex.py. 2015-03-07 $(BR)
  *    Joakim Brännström
  */
+
 module clang.File;
 
 import core.stdc.time;
@@ -18,19 +19,16 @@ import clang.c.index;
 import clang.Util;
 
 /// The File class represents a particular source file that is part of a translation unit.
-struct File
-{
+struct File {
     mixin CX;
 
     /// Returns: the complete file and path name of the file.
-    @property string name () @trusted
-    {
+    @property string name() @trusted {
         return toD(clang_getFileName(cx));
     }
 
     /// Return the last modification time of the file.
-    @property time_t time () @trusted
-    {
+    @property time_t time() @trusted {
         return clang_getFileTime(cx);
     }
 }

@@ -10,6 +10,7 @@
  *  1.1 additional features missing compared to cindex.py. 2015-03-07 $(BR)
  *    Joakim Brännström
  */
+
 module clang.SourceLocation;
 
 import std.typecons;
@@ -19,42 +20,33 @@ import clang.File;
 import clang.TranslationUnit;
 import clang.Util;
 
-string toString(SourceLocation value)
-{
+string toString(SourceLocation value) {
     import std.string;
     import std.conv;
 
-    if (value.isValid)
-    {
+    if (value.isValid) {
         auto spell = value.spelling;
-        return format("%s(%s) [file=%s('%s') line=%d column=%d offset=%d]",
-                      text(typeid(value)),
-                      text(value.cx),
-                      text(spell.file), text(spell.file.name),
-                      spell.line, spell.column, spell.offset);
+        return format("%s(%s) [file=%s('%s') line=%d column=%d offset=%d]", text(
+            typeid(value)), text(value.cx), text(spell.file), text(
+            spell.file.name), spell.line, spell.column, spell.offset);
     }
 
-    return format("%s(%s)",
-                  text(typeid(value)),
-                  text(value.cx));
+    return format("%s(%s)", text(typeid(value)), text(value.cx));
 }
 
 /// A SourceLocation represents a particular location within a source file.
-struct SourceLocation
-{
+struct SourceLocation {
     mixin CX;
 
-    struct Location
-    {
+    struct Location {
         File file;
         uint line;
         uint column;
         uint offset;
     }
 
-     /// Retrieve a NULL (invalid) source location.
-    static SourceLocation empty ()
-    {
+    /// Retrieve a NULL (invalid) source location.
+    static SourceLocation empty() {
         auto r = clang_getNullLocation();
         return SourceLocation(r);
     }
@@ -69,7 +61,8 @@ struct SourceLocation
      *  line = text line. Starting at 1.
      *  offset = offset into the line. Starting at 1.
      */
-    static Nullable!SourceLocation fromPosition (ref TranslationUnit tu, ref File file, uint line, uint offset) {
+    static Nullable!SourceLocation fromPosition(ref TranslationUnit tu,
+        ref File file, uint line, uint offset) {
         auto rval = Nullable!SourceLocation();
         auto r = SourceLocation(clang_getLocation(tu, file, line, offset));
         if (r.file !is null) {
@@ -83,37 +76,33 @@ struct SourceLocation
      * in a particular translation unit.
      * TODO consider moving to TranslationUnit instead
      */
-    static SourceLocation fromOffset (ref TranslationUnit tu, ref File file, uint offset)
-    {
+    static SourceLocation fromOffset(ref TranslationUnit tu, ref File file,
+        uint offset) {
         auto r = clang_getLocationForOffset(tu, file, offset);
         return SourceLocation(r);
     }
 
     /// Get the file represented by this source location.
     /// TODO implement with a cache, this is inefficient.
-    @property File file () @safe
-    {
+    @property File file() @safe {
         return expansion.file;
     }
 
     /// Get the line represented by this source location.
     /// TODO implement with a cache, this is inefficient.
-    @property uint line () @safe
-    {
+    @property uint line() @safe {
         return expansion.line;
     }
 
     /// Get the column represented by this source location.
     /// TODO implement with a cache, this is inefficient.
-    @property uint column () @safe
-    {
+    @property uint column() @safe {
         return expansion.column;
     }
 
     /// Get the file offset represented by this source location.
     /// TODO implement with a cache, this is inefficient.
-    @property uint offset () @safe
-    {
+    @property uint offset() @safe {
         return expansion.offset;
     }
 
@@ -137,11 +126,11 @@ struct SourceLocation
      * offset [out] if non-NULL, will be set to the offset into the
      * buffer to which the given source location points.
      */
-    @property Location expansion () @trusted
-    {
+    @property Location expansion() @trusted {
         Location data;
 
-        clang_getExpansionLocation(cx, &data.file.cx, &data.line, &data.column, &data.offset);
+        clang_getExpansionLocation(cx, &data.file.cx, &data.line, &data.column,
+            &data.offset);
 
         return data;
     }
@@ -181,8 +170,7 @@ struct SourceLocation
      *  column = [out] if non-NULL, will be set to the column number of the
      * source location. For an invalid source location, zero is returned.
      */
-    void presumed (out string filename, out uint line, out uint column) @trusted
-    {
+    void presumed (out string filename, out uint line, out uint column) @trusted {
         CXString cxstring;
 
         clang_getPresumedLocation(cx, &cxstring, &line, &column);
@@ -210,8 +198,7 @@ struct SourceLocation
      * offset [out] if non-NULL, will be set to the offset into the
      * buffer to which the given source location points.
      */
-    @property Location spelling () @trusted
-    {
+    @property Location spelling () @trusted {
         Location data;
 
         clang_getSpellingLocation(cx, &data.file.cx, &data.line, &data.column, &data.offset);

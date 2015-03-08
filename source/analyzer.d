@@ -11,6 +11,7 @@ import std.stdio;
 import std.string;
 import std.typecons;
 import std.experimental.logger;
+
 alias logger = std.experimental.logger;
 
 import tested;
@@ -29,7 +30,9 @@ import translator.Type;
 version (unittest) {
     shared static this() {
         import std.exception;
-        enforce(runUnitTests!analyzer(new ConsoleTestResultWriter), "Unit tests failed.");
+
+        enforce(runUnitTests!analyzer(new ConsoleTestResultWriter),
+            "Unit tests failed.");
     }
 }
 
@@ -39,7 +42,8 @@ class Context {
     this(string input_file) {
         this.input_file = input_file;
         this.index = Index(false, false);
-        this.translation_unit = TranslationUnit.parse(this.index, this.input_file, this.args);
+        this.translation_unit = TranslationUnit.parse(this.index,
+            this.input_file, this.args);
     }
 
     ~this() {
@@ -67,13 +71,13 @@ void diagnostic(Context context) {
     auto dia = context.translation_unit.diagnostics;
     if (dia.length > 0) {
         bool translate = true;
-        foreach (diag ; dia)
-        {
+        foreach (diag; dia) {
             auto severity = diag.severity;
 
             with (CXDiagnosticSeverity)
                 if (translate)
-                    translate = !(severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal);
+                    translate = !(severity == CXDiagnostic_Error
+                    || severity == CXDiagnostic_Fatal);
             writeln(stderr, diag.format);
         }
     }
@@ -92,21 +96,17 @@ void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
     v.decr();
 }
 
-void log_node(int line = __LINE__, string file = __FILE__, string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__, string moduleName = __MODULE__)(ref Cursor c, int level) {
-    auto indent_str = new char[level*2];
-    foreach (ref ch ; indent_str) ch = ' ';
+void log_node(int line = __LINE__, string file = __FILE__, string funcName = __FUNCTION__,
+    string prettyFuncName = __PRETTY_FUNCTION__, string moduleName = __MODULE__)(
+    ref Cursor c, int level) {
+    auto indent_str = new char[level * 2];
+    foreach (ref ch; indent_str)
+        ch = ' ';
 
     logf!(line, file, funcName, prettyFuncName, moduleName)(LogLevel.trace,
-         "%s|%s [%s %s line=%d, col=%d, def=%d] %s",
-         indent_str,
-         c.spelling,
-         c.kind,
-         c.type,
-         c.location.spelling.line,
-         c.location.spelling.column,
-         c.isDefinition,
-         c.type.declaration
-         );
+        "%s|%s [%s %s line=%d, col=%d, def=%d] %s", indent_str, c.spelling, c.kind,
+            c.type, c.location.spelling.line, c.location.spelling.column,
+            c.isDefinition, c.type.declaration);
 }
 
 /// T is module type.
@@ -122,7 +122,7 @@ mixin template VisitNodeModule(Tmodule) {
 
     void decr() {
         // remove node leaving the level
-        if (stack.length > 1 && stack[$-1].level == level) {
+        if (stack.length > 1 && stack[$ - 1].level == level) {
             //logger.trace(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]), level);
             stack.length = stack.length - 1;
         }
@@ -132,7 +132,7 @@ mixin template VisitNodeModule(Tmodule) {
     ref Tmodule current() {
         //if (stack.length > 0)
         //    logger.trace(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
-        return stack[$-1].node;
+        return stack[$ - 1].node;
     }
 
     T push(T)(T c) {
@@ -161,11 +161,11 @@ struct TranslateContext {
 
         with (CXCursorKind) {
             switch (c.kind) {
-                case CXCursor_ClassDecl:
-                    if (c.isDefinition)
-                        output_ ~= (ClassTranslatorHdr(c)).translate;
-                    decend = false;
-                    break;
+            case CXCursor_ClassDecl:
+                if (c.isDefinition)
+                    output_ ~= (ClassTranslatorHdr(c)).translate;
+                decend = false;
+                break;
 
                 //case CXCursor_StructDecl:
                 //    if (cursor.isDefinition)
@@ -176,7 +176,8 @@ struct TranslateContext {
                 //case CXCursor_VarDecl: output.variables ~= code; break;
                 //case CXCursor_FunctionDecl: output.functions ~= code; break;
                 //case CXCursor_TypedefDecl: output.typedefs ~= code; break;
-                default: break;
+            default:
+                break;
             }
         }
 
@@ -218,39 +219,34 @@ struct ClassTranslatorHdr {
         log_node(c, level);
         with (CXCursorKind) {
             switch (c.kind) {
-                case CXCursor_ClassDecl:
-                    with(current) {
-                        push(class_(c.spelling));
-                        sep();
-                    }
-                    break;
-                case CXCursor_Constructor:
-                    CtorTranslator!CppModule(c, current)[
-                        $.begin = "",
-                        $.end = ";" ~ newline,
-                        $.noindent = true];
-                    descend = false;
-                    break;
-                case CXCursor_Destructor:
-                    DtorTranslator!CppModule(c, current)[
-                        $.begin = "",
-                        $.end = ";" ~ newline,
-                        $.noindent = true];
-                    descend = false;
-                    current.sep();
-                    break;
-                case CXCursor_CXXMethod:
-                    FunctionTranslator!CppModule(c, current)[
-                        $.begin = "",
-                        $.end = ";" ~ newline,
-                        $.noindent = true];
-                    descend = false;
-                    break;
-                case CXCursor_CXXAccessSpecifier:
-                    push(AccessSpecifierTranslator!CppModule(c, current));
-                    break;
+            case CXCursor_ClassDecl:
+                with (current) {
+                    push(class_(c.spelling));
+                    sep();
+                }
+                break;
+            case CXCursor_Constructor:
+                CtorTranslator!CppModule(c, current)[$.begin = "",
+                    $.end = ";" ~ newline, $.noindent = true];
+                descend = false;
+                break;
+            case CXCursor_Destructor:
+                DtorTranslator!CppModule(c, current)[$.begin = "",
+                    $.end = ";" ~ newline, $.noindent = true];
+                descend = false;
+                current.sep();
+                break;
+            case CXCursor_CXXMethod:
+                FunctionTranslator!CppModule(c, current)[$.begin = "",
+                    $.end = ";" ~ newline, $.noindent = true];
+                descend = false;
+                break;
+            case CXCursor_CXXAccessSpecifier:
+                push(AccessSpecifierTranslator!CppModule(c, current));
+                break;
 
-                default: break;
+            default:
+                break;
             }
         }
         return descend;
@@ -267,9 +263,10 @@ T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
 
     with (CXCursorKind) {
         final switch (cursor.access.accessSpecifier) {
-            with(CX_CXXAccessSpecifier) {
+            with (CX_CXXAccessSpecifier) {
                 case CX_CXXInvalidAccessSpecifier:
-                    logger.trace(cursor.access.accessSpecifier); break;
+                    logger.trace(cursor.access.accessSpecifier);
+                    break;
                 case CX_CXXPublic:
                     node = top.public_;
                     break;
@@ -327,9 +324,7 @@ string[] ParmDeclToString(Cursor cursor) {
         log_node(param, 0);
         auto type = translateType(param.type);
         trace(type);
-        params ~= format("%s %s",
-                         type.ToString,
-                         param.spelling);
+        params ~= format("%s %s", type.ToString, param.spelling);
     }
 
     logger.trace(params);
@@ -349,28 +344,24 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     return node;
 }
 
-@name("Test creating a Context instance")
-unittest {
+@name("Test creating a Context instance") unittest {
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/arrays.h");
 }
 
-@name("Test diagnostic on a Context, file exist")
-unittest {
+@name("Test diagnostic on a Context, file exist") unittest {
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/arrays.h");
     x.diagnostic();
 }
 
-@name("Test diagnostic on a Context, no file")
-unittest {
+@name("Test diagnostic on a Context, no file") unittest {
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("foobarfailnofile.h");
     x.diagnostic();
 }
 
-@name("Test visit_ast with VisitorFoo")
-unittest {
+@name("Test visit_ast with VisitorFoo") unittest {
     logger.globalLogLevel(LogLevel.info);
     struct VisitorFoo {
         public int count;
@@ -400,8 +391,7 @@ unittest {
     assert(v.count == 40);
 }
 
-@name("Test of ClassTranslatorHdr, class_many.hpp")
-unittest {
+@name("Test of ClassTranslatorHdr, class_many.hpp") unittest {
     // Contains many class definitions, nesting etc.
     // Basically most things one could expect from c++.
     // Expecting... reconstruction of public parts.
@@ -463,8 +453,7 @@ unittest {
     assert(rval == expect, rval);
 }
 
-@name("Test of ClassTranslatorHdr, class_empty.hpp")
-unittest {
+@name("Test of ClassTranslatorHdr, class_empty.hpp") unittest {
     /// Empty class
     string expect = """    class Simple {
     public:
@@ -484,8 +473,7 @@ unittest {
     assert(rval == expect, rval);
 }
 
-@name("Test of ClassTranslatorHdr, class_nested.hpp")
-unittest {
+@name("Test of ClassTranslatorHdr, class_nested.hpp") unittest {
     // Nested classes.
     // Expecting a correct reconstruction with the correct nesting.
     string expect = """    class OuterClass {
@@ -527,8 +515,7 @@ unittest {
     assert(rval == expect, rval);
 }
 
-@name("Test of ClassTranslatorHdr, class_impl.hpp")
-unittest {
+@name("Test of ClassTranslatorHdr, class_impl.hpp") unittest {
     // A class that have:
     // - implementation in the header.
     // - variables.
@@ -558,8 +545,7 @@ unittest {
     assert(rval == expect, rval);
 }
 
-@name("Test of ClassTranslatorHdr, class_funcs.hpp")
-unittest {
+@name("Test of ClassTranslatorHdr, class_funcs.hpp") unittest {
     string expect = """    class Simple {
     public:
         Simple();
@@ -589,8 +575,7 @@ unittest {
     assert(rval == expect, rval);
 }
 
-@name("Test of ClassTranslatorHdr, class_interface.hpp")
-unittest {
+@name("Test of ClassTranslatorHdr, class_interface.hpp") unittest {
     // Contains a C++ interface. Pure virtual.
     // Expecting an implementation.
     string expect = """    class Simple {

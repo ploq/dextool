@@ -4,6 +4,7 @@
  * Version: Initial created: Jan 29, 2012
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
  */
+
 module clang.Type;
 
 import std.conv;
@@ -12,17 +13,14 @@ import clang.c.index;
 import clang.Cursor;
 import clang.Util;
 
-struct Type
-{
+struct Type {
     mixin CX;
 
-    @property string spelling ()
-    {
+    @property string spelling() {
         return declaration.spelling;
     }
 
-    @property string typeKindSpelling ()
-    {
+    @property string typeKindSpelling() {
         auto r = clang_getTypeKindSpelling(cx.kind);
         return toD(r);
     }
@@ -34,107 +32,87 @@ struct Type
      * type with all the "sugar" removed.  For example, if 'T' is a typedef
      * for 'int', the canonical type for 'T' would be 'int'.
      */
-    @property Type canonicalType ()
-    {
+    @property Type canonicalType() {
         auto r = clang_getCanonicalType(cx);
         return Type(r);
     }
 
     /// For pointer types, returns the type of the pointee.
-    @property Type pointeeType ()
-    {
+    @property Type pointeeType() {
         auto r = clang_getPointeeType(cx);
         return Type(r);
     }
 
     /// Return: the cursor for the declaration of the given type.
-    @property Cursor declaration ()
-    {
+    @property Cursor declaration() {
         auto r = clang_getTypeDeclaration(cx);
         return Cursor(r);
     }
 
-    @property FuncType func ()
-    {
+    @property FuncType func() {
         return FuncType(this);
     }
 
-    @property ArrayType array ()
-    {
+    @property ArrayType array() {
         return ArrayType(this);
     }
 
     /// Determine whether two CXTypes represent the same type.
-    equals_t opEquals (const ref Type type_) const
-    {
+    equals_t opEquals(const ref Type type_) const {
         return clang_equalTypes(cast(CXType) type_.cx, cast(CXType) cx) != 0;
     }
 
-    @property bool isTypedef ()
-    {
+    @property bool isTypedef() {
         return kind == CXTypeKind.CXType_Typedef;
     }
 
-    @property bool isEnum ()
-    {
+    @property bool isEnum() {
         return kind == CXTypeKind.CXType_Enum;
     }
 
-    @property bool isValid ()
-    {
+    @property bool isValid() {
         return kind != CXTypeKind.CXType_Invalid;
     }
 
-    @property bool isFunctionType ()
-    {
+    @property bool isFunctionType() {
         with (CXTypeKind)
-            return kind == CXType_FunctionNoProto ||
-                kind == CXType_FunctionProto ||
-                // FIXME: This "hack" shouldn't be needed.
-                func.resultType.isValid;
+            return kind == CXType_FunctionNoProto || kind == CXType_FunctionProto
+            ||  // FIXME: This "hack" shouldn't be needed.
+            func.resultType.isValid;
     }
 
-    @property bool isFunctionPointerType ()
-    {
+    @property bool isFunctionPointerType() {
         with (CXTypeKind)
             return kind == CXType_Pointer && pointeeType.isFunctionType;
     }
 
-    @property bool isObjCIdType ()
-    {
-        return isTypedef &&
-            canonicalType.kind ==  CXTypeKind.CXType_ObjCObjectPointer &&
-            spelling == "id";
+    @property bool isObjCIdType() {
+        return isTypedef
+            && canonicalType.kind == CXTypeKind.CXType_ObjCObjectPointer
+            && spelling == "id";
     }
 
-    @property bool isObjCClassType ()
-    {
-        return isTypedef &&
-            canonicalType.kind ==  CXTypeKind.CXType_ObjCObjectPointer &&
-            spelling == "Class";
+    @property bool isObjCClassType() {
+        return isTypedef
+            && canonicalType.kind == CXTypeKind.CXType_ObjCObjectPointer
+            && spelling == "Class";
     }
 
-    @property bool isObjCSelType ()
-    {
-        with(CXTypeKind)
-            if (isTypedef)
-            {
+    @property bool isObjCSelType() {
+        with (CXTypeKind)
+            if (isTypedef) {
                 auto c = canonicalType;
-                return c.kind == CXType_Pointer &&
-                    c.pointeeType.kind == CXType_ObjCSel;
+                return c.kind == CXType_Pointer && c.pointeeType.kind == CXType_ObjCSel;
             }
-
             else
                 return false;
     }
 
-    @property bool isObjCBuiltinType ()
-    {
+    @property bool isObjCBuiltinType() {
         return isObjCIdType || isObjCClassType || isObjCSelType;
     }
 
-    @property bool isWideCharType ()
-    {
+    @property bool isWideCharType() {
         with (CXTypeKind)
             return kind == CXType_WChar;
     }
@@ -142,18 +120,15 @@ struct Type
     /** Determine whether a CXType has the "const" qualifier set,
      *  without looking through aliases that may have added "const" at a different level.
      */
-    @property bool isConst ()
-    {
+    @property bool isConst() {
         return clang_isConstQualifiedType(cx) == 1;
     }
 
-    @property bool isExposed ()
-    {
+    @property bool isExposed() {
         return kind != CXTypeKind.CXType_Unexposed;
     }
 
-    @property bool isAnonymous ()
-    {
+    @property bool isAnonymous() {
         return spelling.length == 0;
     }
 
@@ -177,30 +152,25 @@ struct Type
     }
 }
 
-struct FuncType
-{
+struct FuncType {
     Type type;
     alias type this;
 
-    @property Type resultType ()
-    {
+    @property Type resultType() {
         auto r = clang_getResultType(type.cx);
         return Type(r);
     }
 
-    @property Arguments arguments ()
-    {
+    @property Arguments arguments() {
         return Arguments(this);
     }
 
-    @property bool isVariadic ()
-    {
+    @property bool isVariadic() {
         return clang_isFunctionTypeVariadic(type.cx) == 1;
     }
 }
 
-struct ArrayType
-{
+struct ArrayType {
     Type type;
     alias type this;
 
@@ -209,7 +179,7 @@ struct ArrayType
      * If a type is passed in that is not an array, complex, or vector type,
      * an invalid type is returned.
      */
-    @property Type elementType () {
+    @property Type elementType() {
         auto r = clang_getElementType(cx);
         return Type(r);
     }
@@ -219,7 +189,7 @@ struct ArrayType
      * If a type is passed in that is not an array or vector type,
      * -1 is returned.
      */
-    @property auto numElements () {
+    @property auto numElements() {
         return clang_getNumElements(cx);
     }
 
@@ -227,37 +197,30 @@ struct ArrayType
      *
      * If a non-array type is passed in, an invalid type is returned.
      */
-    @property Type elementArrayType ()
-    {
+    @property Type elementArrayType() {
         auto r = clang_getArrayElementType(cx);
         return Type(r);
     }
 
-    @property long size ()
-    {
+    @property long size() {
         return clang_getArraySize(cx);
     }
 }
 
-struct Arguments
-{
+struct Arguments {
     FuncType type;
 
-    @property uint length ()
-    {
+    @property uint length() {
         return clang_getNumArgTypes(type.type.cx);
     }
 
-    Type opIndex (uint i)
-    {
+    Type opIndex(uint i) {
         auto r = clang_getArgType(type.type.cx, i);
         return Type(r);
     }
 
-    int opApply (int delegate (ref Type) dg)
-    {
-        foreach (i ; 0 .. length)
-        {
+    int opApply(int delegate(ref Type) dg) {
+        foreach (i; 0 .. length) {
             auto type = this[i];
 
             if (auto result = dg(type))
@@ -268,19 +231,24 @@ struct Arguments
     }
 }
 
-@property bool isUnsigned (CXTypeKind kind)
-{
-    with (CXTypeKind)
-        switch (kind)
-        {
-            case CXType_Char_U: return true;
-            case CXType_UChar: return true;
-            case CXType_UShort: return true;
-            case CXType_UInt: return true;
-            case CXType_ULong: return true;
-            case CXType_ULongLong: return true;
-            case CXType_UInt128: return true;
+@property bool isUnsigned(CXTypeKind kind) {
+    with (CXTypeKind) switch (kind) {
+    case CXType_Char_U:
+        return true;
+    case CXType_UChar:
+        return true;
+    case CXType_UShort:
+        return true;
+    case CXType_UInt:
+        return true;
+    case CXType_ULong:
+        return true;
+    case CXType_ULongLong:
+        return true;
+    case CXType_UInt128:
+        return true;
 
-            default: return false;
-        }
+    default:
+        return false;
+    }
 }

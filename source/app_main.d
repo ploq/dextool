@@ -6,6 +6,7 @@ module app_main;
 import std.conv;
 import std.stdio;
 import std.experimental.logger;
+
 alias logger = std.experimental.logger;
 
 import docopt;
@@ -28,9 +29,11 @@ options:
 shared static this() {
     version (unittest) {
         import core.runtime;
+
         Runtime.moduleUnitTester = () => true;
         //runUnitTests!app(new JsonTestResultWriter("results.json"));
-        assert(runUnitTests!app_main(new ConsoleTestResultWriter), "Unit tests failed.");
+        assert(runUnitTests!app_main(new ConsoleTestResultWriter),
+            "Unit tests failed.");
     }
 }
 
@@ -44,10 +47,11 @@ int rmain(string[] args) {
     bool optionsFirst = true;
     auto version_ = "clang fun 0.1";
 
-    auto parsed = docopt.docopt(doc, args[1..$], help, version_, optionsFirst);
+    auto parsed = docopt.docopt(doc, args[1 .. $], help, version_, optionsFirst);
     if (parsed["--debug"].isTrue) {
         logger.globalLogLevel(LogLevel.all);
-    } else {
+    }
+    else {
         logger.globalLogLevel(LogLevel.warning);
     }
     info(to!string(args));

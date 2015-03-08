@@ -6,6 +6,7 @@
  *  1.1 additional features missing compared to cindex.py. 2015-03-06 $(BR)
  *    Joakim Brännström
  */
+
 module clang.SourceRange;
 
 import std.conv;
@@ -21,58 +22,52 @@ import tested;
 version (unittest) {
     shared static this() {
         import std.exception;
-        enforce(runUnitTests!(clang.SourceRange)(new ConsoleTestResultWriter), "Unit tests failed.");
+
+        enforce(runUnitTests!(clang.SourceRange)(new ConsoleTestResultWriter),
+            "Unit tests failed.");
     }
 }
 
 ///
-struct SourceRange
-{
+struct SourceRange {
     mixin CX;
 
     /// Retrieve a NULL (invalid) source range.
-    static SourceRange empty ()
-    {
+    static SourceRange empty() {
         auto r = clang_getNullRange();
         return SourceRange(r);
     }
 
     /// Retrieve a source location representing the first character within a source range.
-    @property SourceLocation start ()
-    {
+    @property SourceLocation start() {
         auto r = clang_getRangeStart(cx);
         return SourceLocation(r);
     }
 
     /// Retrieve a source location representing the last character within a source range.
-    @property SourceLocation end ()
-    {
+    @property SourceLocation end() {
         auto r = clang_getRangeEnd(cx);
         return SourceLocation(r);
     }
 
     ///
-    bool isNull ()
-    {
+    bool isNull() {
         return clang_Range_isNull(cx) != 0;
     }
 
     ///
-    equals_t opEquals (const ref SourceRange range2) const
-    {
+    equals_t opEquals(const ref SourceRange range2) const {
         return clang_equalRanges(cast(CXSourceRange) cx, cast(CXSourceRange) range2) != 0;
     }
 }
 
 /// Retrieve a source range given the beginning and ending source locations.
-SourceRange range (ref SourceLocation begin, SourceLocation end)
-{
+SourceRange range(ref SourceLocation begin, SourceLocation end) {
     auto r = clang_getRange(begin.cx, end.cx);
     return SourceRange(r);
 }
 
-@name("Test of null range")
-unittest {
+@name("Test of null range") unittest {
     auto r = SourceRange.empty();
 
     assert(r.isNull == true);

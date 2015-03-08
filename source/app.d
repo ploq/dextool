@@ -9,9 +9,9 @@ import std.stdio;
 import app_main : rmain;
 
 version (unittest) {
-    shared static this()
-    {
+    shared static this() {
         import core.runtime;
+
         Runtime.moduleUnitTester = () => true;
     }
 }
