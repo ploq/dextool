@@ -8,6 +8,7 @@
 module clang.Cursor;
 
 import std.conv;
+import std.string;
 import std.typecons;
 
 import clang.c.index;
@@ -19,6 +20,68 @@ import clang.TranslationUnit;
 import clang.Token;
 import clang.Util;
 import clang.Visitor;
+
+/** Cursor isX represented as a string of letters
+ *
+ * a = isAttribute
+ * d = isDeclaration
+ * D = isDefinition
+ * e = isExpression
+ * n = isEmpty aka isNull
+ * p = isPreprocessing
+ * r = isReference
+ * s = isStatement
+ * t = isTranslationUnit
+ * u = isUnexposed
+ * v = isValid
+ * V = isVirtualBase
+ */
+string abilities(ref Cursor c) {
+    string s = format("%s%s%s%s%s%s%s%s%s%s%s%s",
+                      c.isAttribute ? "a" : "",
+                      c.isDeclaration ? "d" : "",
+                      c.isDefinition ? "D" : "",
+                      c.isExpression ? "e" : "",
+                      c.isEmpty ? "n" : "",
+                      c.isPreprocessing ? "p" : "",
+                      c.isReference ? "r" : "",
+                      c.isStatement ? "s" : "",
+                      c.isTranslationUnit ? "t" : "",
+                      c.isUnexposed ? "u" : "",
+                      c.isVirtualBase ? "v" : "",
+                      c.isValid ? "V" : "",
+                      );
+
+    return s;
+}
+
+/** FunctionCursor isX represented as a string of letters
+ *
+ * s = isStatic
+ * v = isVariadic
+ */
+string abilities(ref FunctionCursor c) {
+    string s = abilities(c.cursor);
+    s ~= format(" %s%s",
+                c.isStatic ? "s" : "",
+                c.isVariadic? "v" : "");
+
+    return s;
+}
+
+/** EnumCursor isX represented as a string of letters
+ *
+ * s = isSigned
+ * u = isUnderlyingTypeEnum
+ */
+string abilities(ref EnumCursor c) {
+    string s = abilities(c.cursor);
+    s ~= format(" %s%s",
+                c.isSigned ? "s" : "",
+                c.isUnderlyingTypeEnum? "u" : "");
+
+    return s;
+}
 
 /** The Cursor class represents a reference to an element within the AST. It
  *  acts as a kind of iterator.
