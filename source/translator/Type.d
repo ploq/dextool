@@ -44,6 +44,8 @@ in {
 body {
     TypeKind result;
 
+    //nameFromToken(type);
+
     with (CXTypeKind) {
         if (type.kind == CXType_BlockPointer || type.isFunctionPointerType)
             error("Implement missing translation of function pointer");
@@ -89,6 +91,20 @@ body {
 }
 
 private:
+
+/** The name of the type is retrieved from the token it is derived from.
+ *
+ * Needed in those cases a Diagnostic error occur complaining about unknown type name.
+ */
+string nameFromToken(Type type) {
+    auto tokens = type.declaration.tokens();
+
+    foreach (t; tokens) {
+        trace(clang.Token.toString(t));
+    }
+
+    return "foobar";
+}
 
 string translateTypedef(Type type)
 in {

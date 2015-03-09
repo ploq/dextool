@@ -1,10 +1,15 @@
 /**
  * Copyright: Copyright (c) 2011 Jacob Carlborg. All rights reserved.
- * Authors: Jacob Carlborg
- * Version: Initial created: Jan 1, 2012
+ * Authors: Jacob Carlborg, Joakim Brännström (joakim.brannstrom dottli gmx.com)
+ * Version: 1.1
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
+ * History:
+ *  1.0 initial release. 2012-01-29 $(BR)
+ *    Jacob Carlborg
+ *
+ *  1.1 additional features missing compared to cindex.py. 2015-03-07 $(BR)
+ *    Joakim Brännström
  */
-
 module clang.Cursor;
 
 import std.conv;

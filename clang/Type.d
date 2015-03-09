@@ -1,17 +1,68 @@
 /**
  * Copyright: Copyright (c) 2011 Jacob Carlborg. All rights reserved.
- * Authors: Jacob Carlborg
- * Version: Initial created: Jan 29, 2012
+ * Authors: Jacob Carlborg, Joakim Brännström (joakim.brannstrom dottli gmx.com)
+ * Version: 1.1
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
+ * History:
+ *  1.0 initial release. 2012-01-29 $(BR)
+ *    Jacob Carlborg
+ *
+ *  1.1 additional features missing compared to cindex.py. 2015-03-07 $(BR)
+ *    Joakim Brännström
  */
 
 module clang.Type;
 
 import std.conv;
+import std.string;
 
 import clang.c.index;
 import clang.Cursor;
 import clang.Util;
+
+/** Type isX represented as a string of letters
+ *
+ * a = isAnonymous
+ * c = isConst
+ * e = isEnum
+ * E = isExposed
+ * f = isFunctionPointerType
+ * p = isPOD
+ * r = isRestrict
+ * t = isTypedef
+ * v = isValid
+ * V = isVolatile
+ * w = isWideCharType
+ */
+string abilities(ref Type t) {
+    string s = format("%s%s%s%s%s%s%s%s%s%s%s",
+                      t.isAnonymous ? "a" : "",
+                      t.isConst ? "c" : "",
+                      t.isEnum ? "e" : "",
+                      t.isExposed ? "E" : "",
+                      t.isFunctionPointerType ? "f" : "",
+                      t.isPOD ? "p" : "",
+                      t.isRestrict ? "r" : "",
+                      t.isTypedef ? "t" : "",
+                      t.isValid ? "v" : "",
+                      t.isVolatile ? "V" : "",
+                      t.isWideCharType ? "w" : "",
+                      );
+
+    return s;
+}
+
+/** FuncType isX represented as a string of letters
+ *
+ * v = isVariadic
+ */
+string abilities(ref FuncType t) {
+    string s = format("%s %s",
+                      abilities(t.type),
+                      t.isVariadic ? "v" : "",
+                      );
+    return s;
+}
 
 struct Type {
     mixin CX;
@@ -146,7 +197,7 @@ struct Type {
         return clang_isRestrictQualifiedType(cx) == 1;
     }
 
-    /// Return: true if the CXType is a POD (plain old data)
+    /// Return: if the CXType is a POD (plain old data)
     @property bool isPOD() {
         return clang_isPODType(cx) == 1;
     }

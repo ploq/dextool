@@ -105,9 +105,9 @@ void log_node(int line = __LINE__, string file = __FILE__, string funcName = __F
         ch = ' ';
 
     logf!(line, file, funcName, prettyFuncName, moduleName)(LogLevel.trace,
-        "%s|%s [%s %s line=%d, col=%d, def=%d] %s", indent_str, c.spelling, c.kind,
+        "%s|%s [%s %s line=%d, col=%d %s] %s", indent_str, c.spelling, c.kind,
             c.type, c.location.spelling.line, c.location.spelling.column,
-            c.isDefinition, c.type.declaration);
+            c.abilities, c.type.declaration);
 }
 
 /// T is module type.
@@ -323,8 +323,9 @@ string[] ParmDeclToString(Cursor cursor) {
 
     foreach (param; cursor.func.parameters) {
         log_node(param, 0);
+        auto type_spelling = param.tokens.toString;
         auto type = translateType(param.type);
-        trace(type);
+        trace(type_spelling, " ", type.name);
         params ~= format("%s %s", type.toString, param.spelling);
     }
 
@@ -564,7 +565,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
 
 """;
 
-    logger.globalLogLevel(LogLevel.info);
+    logger.globalLogLevel(LogLevel.trace);
     auto x = new Context("test_files/class_funcs.hpp");
     x.diagnostic();
 

@@ -10,7 +10,6 @@
  *  1.1 additional features missing compared to cindex.py. 2015-03-07 $(BR)
  *    Joakim Brännström
  */
-
 module clang.SourceLocation;
 
 import std.typecons;
