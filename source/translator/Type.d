@@ -92,6 +92,8 @@ body {
 
 private:
 
+
+
 /** The name of the type is retrieved from the token it is derived from.
  *
  * Needed in those cases a Diagnostic error occur complaining about unknown type name.

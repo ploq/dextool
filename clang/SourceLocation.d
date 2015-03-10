@@ -27,7 +27,7 @@ string toString(SourceLocation value) {
         auto spell = value.spelling;
         return format("%s(%s) [file=%s('%s') line=%d column=%d offset=%d]", text(
             typeid(value)), text(value.cx), text(spell.file), text(
-            spell.file.name), spell.line, spell.column, spell.offset);
+                spell.file.name), spell.line, spell.column, spell.offset);
     }
 
     return format("%s(%s)", text(typeid(value)), text(value.cx));
@@ -178,7 +178,7 @@ struct SourceLocation {
      *  column [out] if non-NULL, will be set to the column number of the
      * source location. For an invalid source location, zero is returned.
      */
-    auto presumed () @trusted {
+    auto presumed() @trusted {
         Location2 data;
         CXString cxstring;
 
@@ -209,10 +209,11 @@ struct SourceLocation {
      * offset [out] if non-NULL, will be set to the offset into the
      * buffer to which the given source location points.
      */
-    @property Location spelling () @trusted {
+    @property Location spelling() @trusted {
         Location data;
 
-        clang_getSpellingLocation(cx, &data.file.cx, &data.line, &data.column, &data.offset);
+        clang_getSpellingLocation(cx, &data.file.cx, &data.line, &data.column,
+            &data.offset);
 
         return data;
     }

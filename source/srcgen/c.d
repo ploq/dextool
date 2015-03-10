@@ -236,7 +236,6 @@ string stmt_append_end(string s, in ref string[string] attrs) pure nothrow@safe 
  * stmt ~ end
  *    <recursive>
  */
-
 class Stmt(T) : T {
     string stmt;
 
@@ -257,7 +256,6 @@ class Stmt(T) : T {
  * noindent affects post_recursive. If set no indention there.
  * r.length > 0 catches the case when begin or end is empty string. Used in switch/case.
  */
-
 class Suite(T) : T {
     string headline;
 

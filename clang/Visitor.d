@@ -76,10 +76,13 @@ struct DeclarationVisitor {
     mixin Visitor.Constructors;
 
     int opApply(Visitor.Delegate dg) {
-        foreach (cursor, parent; visitor)
-            if (cursor.isDeclaration)
-                if (auto result = dg(cursor, parent))
+        foreach (cursor, parent; visitor) {
+            if (cursor.isDeclaration) {
+                if (auto result = dg(cursor, parent)) {
                     return result;
+                }
+            }
+        }
 
         return 0;
     }
@@ -101,10 +104,13 @@ struct TypedVisitor(CXCursorKind kind) {
     }
 
     int opApply(Visitor.Delegate dg) {
-        foreach (cursor, parent; visitor)
-            if (cursor.kind == kind)
-                if (auto result = dg(cursor, parent))
+        foreach (cursor, parent; visitor) {
+            if (cursor.kind == kind) {
+                if (auto result = dg(cursor, parent)) {
                     return result;
+                }
+            }
+        }
 
         return 0;
     }
@@ -123,12 +129,13 @@ struct ParamVisitor {
     mixin Visitor.Constructors;
 
     int opApply(int delegate(ref ParamCursor) dg) {
-        foreach (cursor, parent; visitor)
+        foreach (cursor, parent; visitor) {
             if (cursor.kind == CXCursorKind.CXCursor_ParmDecl) {
                 auto paramCursor = ParamCursor(cursor);
 
-            if (auto result = dg(paramCursor))
-                return result;
+                if (auto result = dg(paramCursor))
+                    return result;
+            }
         }
 
         return 0;

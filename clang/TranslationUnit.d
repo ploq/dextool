@@ -26,8 +26,8 @@ import clang.Visitor;
 struct TranslationUnit {
     mixin CX;
 
-    static RefCounted!TranslationUnit parse(Index index, string sourceFilename, string[] commandLineArgs,
-        UnsavedFile[] unsavedFiles = null,
+    static RefCounted!TranslationUnit parse(Index index, string sourceFilename,
+        string[] commandLineArgs, UnsavedFile[] unsavedFiles = null,
             uint options = CXTranslationUnit_Flags.CXTranslationUnit_None) {
         auto r = RefCounted!TranslationUnit();
         r = TranslationUnit(clang_parseTranslationUnit(index.cx,

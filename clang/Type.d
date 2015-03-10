@@ -35,19 +35,11 @@ import clang.Util;
  * w = isWideCharType
  */
 string abilities(ref Type t) {
-    string s = format("%s%s%s%s%s%s%s%s%s%s%s",
-                      t.isAnonymous ? "a" : "",
-                      t.isConst ? "c" : "",
-                      t.isEnum ? "e" : "",
-                      t.isExposed ? "E" : "",
-                      t.isFunctionPointerType ? "f" : "",
-                      t.isPOD ? "p" : "",
-                      t.isRestrict ? "r" : "",
-                      t.isTypedef ? "t" : "",
-                      t.isValid ? "v" : "",
-                      t.isVolatile ? "V" : "",
-                      t.isWideCharType ? "w" : "",
-                      );
+    string s = format("%s%s%s%s%s%s%s%s%s%s%s", t.isAnonymous ? "a" : "",
+        t.isConst ? "c" : "", t.isEnum ? "e" : "", t.isExposed ? "E" : "",
+            t.isFunctionPointerType ? "f" : "", t.isPOD ? "p" : "",
+            t.isRestrict ? "r" : "", t.isTypedef ? "t" : "", t.isValid ? "v" : "",
+            t.isVolatile ? "V" : "", t.isWideCharType ? "w" : "",);
 
     return s;
 }
@@ -57,10 +49,7 @@ string abilities(ref Type t) {
  * v = isVariadic
  */
 string abilities(ref FuncType t) {
-    string s = format("%s %s",
-                      abilities(t.type),
-                      t.isVariadic ? "v" : "",
-                      );
+    string s = format("%s %s", abilities(t.type), t.isVariadic ? "v" : "",);
     return s;
 }
 
@@ -128,8 +117,8 @@ struct Type {
     @property bool isFunctionType() {
         with (CXTypeKind)
             return kind == CXType_FunctionNoProto || kind == CXType_FunctionProto
-            ||  // FIXME: This "hack" shouldn't be needed.
-            func.resultType.isValid;
+                ||  // FIXME: This "hack" shouldn't be needed.
+                func.resultType.isValid;
     }
 
     @property bool isFunctionPointerType() {
@@ -140,20 +129,21 @@ struct Type {
     @property bool isObjCIdType() {
         return isTypedef
             && canonicalType.kind == CXTypeKind.CXType_ObjCObjectPointer
-            && spelling == "id";
+                && spelling == "id";
     }
 
     @property bool isObjCClassType() {
         return isTypedef
             && canonicalType.kind == CXTypeKind.CXType_ObjCObjectPointer
-            && spelling == "Class";
+                && spelling == "Class";
     }
 
     @property bool isObjCSelType() {
         with (CXTypeKind)
             if (isTypedef) {
                 auto c = canonicalType;
-                return c.kind == CXType_Pointer && c.pointeeType.kind == CXType_ObjCSel;
+                return c.kind == CXType_Pointer
+                    && c.pointeeType.kind == CXType_ObjCSel;
             }
             else
                 return false;

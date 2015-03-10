@@ -262,23 +262,20 @@ struct ClassTranslatorHdr {
 T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
     T node;
 
-    with (CXCursorKind) {
-        final switch (cursor.access.accessSpecifier) {
-            with (CX_CXXAccessSpecifier) {
-                case CX_CXXInvalidAccessSpecifier:
-                    logger.trace(cursor.access.accessSpecifier);
-                    break;
-                case CX_CXXPublic:
-                    node = top.public_;
-                    break;
-                case CX_CXXProtected:
-                    node = top.protected_;
-                    break;
-                case CX_CXXPrivate:
-                    node = top.private_;
-                    break;
-            }
-        }
+    with (CXCursorKind)
+        with (CX_CXXAccessSpecifier) final switch (cursor.access.accessSpecifier) {
+        case CX_CXXInvalidAccessSpecifier:
+            logger.trace(cursor.access.accessSpecifier);
+        break;
+    case CX_CXXPublic:
+        node = top.public_;
+        break;
+    case CX_CXXProtected:
+        node = top.protected_;
+        break;
+    case CX_CXXPrivate:
+        node = top.private_;
+        break;
     }
 
     node.suppress_indent(1);

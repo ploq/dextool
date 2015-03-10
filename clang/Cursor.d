@@ -42,20 +42,11 @@ import clang.Visitor;
  * V = isVirtualBase
  */
 string abilities(ref Cursor c) {
-    string s = format("%s%s%s%s%s%s%s%s%s%s%s%s",
-                      c.isAttribute ? "a" : "",
-                      c.isDeclaration ? "d" : "",
-                      c.isDefinition ? "D" : "",
-                      c.isExpression ? "e" : "",
-                      c.isEmpty ? "n" : "",
-                      c.isPreprocessing ? "p" : "",
-                      c.isReference ? "r" : "",
-                      c.isStatement ? "s" : "",
-                      c.isTranslationUnit ? "t" : "",
-                      c.isUnexposed ? "u" : "",
-                      c.isVirtualBase ? "v" : "",
-                      c.isValid ? "V" : "",
-                      );
+    string s = format("%s%s%s%s%s%s%s%s%s%s%s%s", c.isAttribute ? "a" : "",
+        c.isDeclaration ? "d" : "", c.isDefinition ? "D" : "", c.isExpression ? "e" : "",
+            c.isEmpty ? "n" : "", c.isPreprocessing ? "p" : "", c.isReference ? "r" : "",
+            c.isStatement ? "s" : "", c.isTranslationUnit ? "t" : "",
+            c.isUnexposed ? "u" : "", c.isVirtualBase ? "v" : "", c.isValid ? "V" : "",);
 
     return s;
 }
@@ -67,9 +58,7 @@ string abilities(ref Cursor c) {
  */
 string abilities(ref FunctionCursor c) {
     string s = abilities(c.cursor);
-    s ~= format(" %s%s",
-                c.isStatic ? "s" : "",
-                c.isVariadic? "v" : "");
+    s ~= format(" %s%s", c.isStatic ? "s" : "", c.isVariadic ? "v" : "");
 
     return s;
 }
@@ -81,9 +70,7 @@ string abilities(ref FunctionCursor c) {
  */
 string abilities(ref EnumCursor c) {
     string s = abilities(c.cursor);
-    s ~= format(" %s%s",
-                c.isSigned ? "s" : "",
-                c.isUnderlyingTypeEnum? "u" : "");
+    s ~= format(" %s%s", c.isSigned ? "s" : "", c.isUnderlyingTypeEnum ? "u" : "");
 
     return s;
 }
@@ -418,7 +405,6 @@ struct Cursor {
         return clang_isCursorDefinition(cast(CXCursor) cx) != 0;
     }
 
-
     /// Returns: if the base class specified by the cursor with kind CX_CXXBaseSpecifier is virtual.
     @property bool isVirtualBase() {
         return clang_isVirtualBase(cx) == 1;
@@ -577,21 +563,19 @@ struct EnumCursor {
             t = Type(clang_getCursorType(cx));
         }
 
-        with(CXTypeKind) {
-            switch (t.kind) {
-                case CXType_Char_U:
-                case CXType_UChar:
-                case CXType_Char16:
-                case CXType_Char32:
-                case CXType_UShort:
-                case CXType_UInt:
-                case CXType_ULong:
-                case CXType_ULongLong:
-                case CXType_UInt128:
-                    return false;
-                default:
-                    return true;
-            }
+        with (CXTypeKind) switch (t.kind) {
+        case CXType_Char_U:
+        case CXType_UChar:
+        case CXType_Char16:
+        case CXType_Char32:
+        case CXType_UShort:
+        case CXType_UInt:
+        case CXType_ULong:
+        case CXType_ULongLong:
+        case CXType_UInt128:
+            return false;
+        default:
+            return true;
         }
     }
 }

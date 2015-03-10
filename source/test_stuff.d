@@ -5,6 +5,7 @@
 import std.conv;
 import std.stdio;
 import std.experimental.logger;
+
 alias logger = std.experimental.logger;
 
 import docopt;
@@ -19,26 +20,26 @@ import clang.Cursor;
 shared static this() {
     version (unittest) {
         import core.runtime;
+
         Runtime.moduleUnitTester = () => true;
         //runUnitTests!app(new JsonTestResultWriter("results.json"));
         //assert(runUnitTests!test_stuff(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 
-@name("Test creating clang types")
-unittest {
+@name("Test creating clang types") unittest {
     Index index;
     TranslationUnit translationUnit;
     DiagnosticVisitor diagnostics;
 }
 
-@name("Test using clang types")
-unittest {
+@name("Test using clang types") unittest {
     string[] args;
     args ~= "-xc++";
 
     auto index = Index(false, false);
-    auto translationUnit = TranslationUnit.parse(index, "test_files/arrays.h", args);
+    auto translationUnit = TranslationUnit.parse(index, "test_files/arrays.h",
+        args);
     scope(exit) translationUnit.dispose;
     scope(exit) index.dispose;
 
@@ -49,14 +50,14 @@ unittest {
 
     auto diagnostics = translationUnit.diagnostics;
     if (diagnostics.length > 0) {
-	    bool translate = true;
-        foreach (diag ; diagnostics)
-        {
+        bool translate = true;
+        foreach (diag; diagnostics) {
             auto severity = diag.severity;
 
             with (CXDiagnosticSeverity)
                 if (translate)
-                    translate = !(severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal);
+                    translate = !(severity == CXDiagnostic_Error
+                    || severity == CXDiagnostic_Fatal);
             writeln(stderr, diag.format);
         }
     }
@@ -67,7 +68,8 @@ class Context {
     this(string inputFile) {
         this.inputFile = inputFile;
         this.index = Index(false, false);
-        this.translationUnit = TranslationUnit.parse(this.index, this.inputFile, this.args);
+        this.translationUnit = TranslationUnit.parse(this.index, this.inputFile,
+            this.args);
     }
 
     ~this() {
@@ -82,8 +84,7 @@ private:
     TranslationUnit translationUnit;
 }
 
-@name("Test creating a Context instance")
-unittest {
+@name("Test creating a Context instance") unittest {
     auto x = new Context("test_files/arrays.h");
 }
 
@@ -97,52 +98,48 @@ void diagnostic(Context context) {
 
     auto dia = context.translationUnit.diagnostics;
     if (dia.length > 0) {
-	    bool translate = true;
-        foreach (diag ; dia)
-        {
+        bool translate = true;
+        foreach (diag; dia) {
             auto severity = diag.severity;
 
             with (CXDiagnosticSeverity)
                 if (translate)
-                    translate = !(severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal);
+                    translate = !(severity == CXDiagnostic_Error
+                    || severity == CXDiagnostic_Fatal);
             writeln(stderr, diag.format);
         }
     }
 }
 
-@name("Test diagnostic on a Context, file exist")
-unittest {
+@name("Test diagnostic on a Context, file exist") unittest {
     auto x = new Context("test_files/arrays.h");
     x.diagnostic();
 }
 
-@name("Test diagnostic on a Context, no file")
-unittest {
+@name("Test diagnostic on a Context, no file") unittest {
     auto x = new Context("foobarfailnofile.h");
     x.diagnostic();
 }
 
 void visitor1(Context c) {
-    foreach (cursor, parent ; c.translationUnit.declarations) {
+    foreach (cursor, parent; c.translationUnit.declarations) {
         visitor1(cursor, parent, 0);
     }
 }
 
 void visitor1(T1, T2)(T1 cursor, T2 parent, int column) {
-    auto indent_str = new char[column*2];
-    foreach (ref c ; indent_str) c = ' ';
+    auto indent_str = new char[column * 2];
+    foreach (ref c; indent_str)
+        c = ' ';
 
     //writeln(indent_str, "|", to!string(cursor), " # ", to!string(parent));
 
-    writefln("%s|visiting %s [%s line=%d, col=%d]",
-             indent_str,
-             cursor.spelling,
-             cursor.kind,
-             cursor.location.spelling.line,
-             cursor.location.spelling.column);
+    writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, cursor.spelling,
+        cursor.kind, cursor.location.spelling.line,
+            cursor.location.spelling.column);
 
-    foreach(c, p ; cursor.declarations) {
-        visitor1(c, p, column+1);
+    foreach (c, p; cursor.declarations) {
+        visitor1(c, p, column + 1);
     }
 
     //auto children = cursor.get_children();
@@ -163,8 +160,7 @@ void visitor1(T1, T2)(T1 cursor, T2 parent, int column) {
     //    }
 }
 
-@name("Test visitor1")
-unittest {
+@name("Test visitor1") unittest {
     auto x = new Context("test_files/typedef_struct.h");
     x.diagnostic();
     x.visitor1();
@@ -172,19 +168,14 @@ unittest {
 
 void visitor2(ref Cursor c, ref Cursor p) {
     string indent_str = "";
-    writefln("%s|visiting %s [%s line=%d, col=%d]",
-             indent_str,
-             c.spelling,
-             c.kind,
-             c.location.spelling.line,
-             c.location.spelling.column);
+    writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, c.spelling, c.kind,
+        c.location.spelling.line, c.location.spelling.column);
 }
 
-@name("Test Visitor")
-unittest {
+@name("Test Visitor") unittest {
     auto x = new Context("test_files/typedef_struct.h");
     Visitor v = x.translationUnit.cursor;
-    foreach (cursor, parent ; v) {
+    foreach (cursor, parent; v) {
         visitor2(cursor, parent);
     }
 }
@@ -195,17 +186,17 @@ struct VisitorData {
 }
 
 struct MyVisitor {
-    alias int delegate (ref Cursor, ref Cursor) Delegate;
+    alias int delegate(ref Cursor, ref Cursor) Delegate;
 
     mixin Visitor.Constructors;
 
-    int opApply (Delegate dg) {
-        foreach (cursor, parent ; visitor) {
+    int opApply(Delegate dg) {
+        foreach (cursor, parent; visitor) {
             if (auto result = dg(cursor, parent))
                 return result;
 
             if (!cursor.isEmpty) {
-                foreach (cursor, parent ; Visitor(cursor)) {
+                foreach (cursor, parent; Visitor(cursor)) {
                     dg(cursor, parent);
                 }
             }
@@ -215,25 +206,23 @@ struct MyVisitor {
     }
 }
 
-@name("Test my visitor")
-unittest {
+@name("Test my visitor") unittest {
     auto x = new Context("test_files/class.h");
     x.diagnostic();
 
     VisitorData data;
     auto visitor3 = delegate void(ref Cursor c, ref Cursor p) {
-        auto indent_str = new char[data.column*2];
-        foreach (ref ch ; indent_str) ch = ' ';
+        auto indent_str = new char[data.column * 2];
+        foreach (ref ch; indent_str)
+            ch = ' ';
 
-        writefln("%s|visiting %s [%s line=%d, col=%d]",
-                 indent_str,
-                 c.spelling,
-                 c.kind,
-                 c.location.spelling.line,
-                 c.location.spelling.column);
+        writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, c.spelling,
+            c.kind, c.location.spelling.line, c.location.spelling.column);
         if (!p.isEmpty)
-            data.column +=1;
-    };
+            data.column += 1;
+    }
+
+    ;
 
     MyVisitor v = x.translationUnit.cursor;
     foreach (cursor, parent; v) {
@@ -242,19 +231,19 @@ unittest {
 }
 
 struct MyVisitor2(Env) {
-    alias int delegate (ref Cursor, ref Cursor) Delegate;
+    alias int delegate(ref Cursor, ref Cursor) Delegate;
     // last parameter is the functions environment
     alias void function(ref Cursor cursor, ref Cursor parent, ref Env) ApplyFunc;
 
     mixin Visitor.Constructors;
 
-    int opApply (Delegate dg) {
-        foreach (cursor, parent ; visitor) {
+    int opApply(Delegate dg) {
+        foreach (cursor, parent; visitor) {
             if (auto result = dg(cursor, parent))
                 return result;
 
             if (!cursor.isEmpty) {
-                foreach (cursor, parent ; Visitor(cursor)) {
+                foreach (cursor, parent; Visitor(cursor)) {
                     dg(cursor, parent);
                 }
             }
@@ -264,18 +253,14 @@ struct MyVisitor2(Env) {
     }
 }
 
-@name("Test MyVisitor2 with foreach")
-unittest {
+@name("Test MyVisitor2 with foreach") unittest {
     auto x = new Context("test_files/class.h");
     x.diagnostic();
 
     auto v = MyVisitor2!VisitorData(x.translationUnit.cursor);
     foreach (c, parent; v) {
-        writefln("visiting %s [%s line=%d, col=%d]",
-                 c.spelling,
-                 c.kind,
-                 c.location.spelling.line,
-                 c.location.spelling.column);
+        writefln("visiting %s [%s line=%d, col=%d]", c.spelling, c.kind,
+            c.location.spelling.line, c.location.spelling.column);
     }
 }
 
@@ -291,15 +276,12 @@ struct VisitorFoo {
     }
 
     void apply(ref Cursor c) {
-        auto indent_str = new char[level*2];
-        foreach (ref ch ; indent_str) ch = ' ';
+        auto indent_str = new char[level * 2];
+        foreach (ref ch; indent_str)
+            ch = ' ';
 
-        writefln("%s|visiting %s [%s line=%d, col=%d]",
-                 indent_str,
-                 c.spelling,
-                 c.kind,
-                 c.location.spelling.line,
-                 c.location.spelling.column);
+        writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, c.spelling,
+            c.kind, c.location.spelling.line, c.location.spelling.column);
     }
 }
 
@@ -315,8 +297,7 @@ void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
     }
 }
 
-@name("Test visit_ast with VisitorFoo")
-unittest {
+@name("Test visit_ast with VisitorFoo") unittest {
     auto x = new Context("test_files/class.h");
     x.diagnostic();
 
@@ -324,4 +305,3 @@ unittest {
     auto c = x.translationUnit.cursor;
     visit_ast!VisitorFoo(c, v);
 }
-
