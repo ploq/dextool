@@ -336,8 +336,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     T node;
 
     string[] params = ParmDeclToString(c);
-    //auto return_type = translateReturnCursor(c).toString;
-    auto return_type = translateReturnCursor(c).toString;
+    auto return_type = translateTypeCursor(c).toString;
     auto tmp_return_type = translateType(c.func.resultType).toString;
     trace(return_type, "|", tmp_return_type);
     if (params.length == 0)

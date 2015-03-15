@@ -21,23 +21,13 @@ import translator.Translator;
 
 struct TypeKind {
     string name;
-    string prefix; // const
-    string suffix; // *, &, **, const
     bool isConst;
     bool isRef;
     bool isPointer;
 }
 
 string toString(in TypeKind type) {
-    string sep;
-    if (type.prefix.length > 0 && type.suffix.length > 0) {
-        sep = " ";
-    }
-    else if (type.prefix.length > 0 && type.name.length > 0) {
-        sep = " ";
-    }
-
-    return format("%s%s%s%s", type.prefix, sep, type.name, type.suffix);
+    return type.name;
 }
 
 /** Translate a cursors type to a struct representation.
@@ -124,83 +114,6 @@ TypeKind toProperty(ref Cursor cursor) {
     return result;
 }
 
-/** Translate a cursor for a return type (function) to a TypeKind with all properties.
- *
- * Note that the .name is the empty string.
- *
- * TODO break the foreach loop when state is Done.
- *
- * Params:
- *  cursor = A cursor to a return type.
- */
-TypeKind translateReturnCursor(Cursor cursor) {
-    import std.algorithm : among;
-    import clang.Token : toString;
-    import clang.SourceRange : toString;
-
-    trace(clang.SourceRange.toString(cursor.extent));
-
-    enum State {
-        Prefix,
-        Suffix,
-        Done
-    }
-
-    TypeKind r = cursor.toProperty();
-    auto tokens = cursor.tokens();
-    trace(tokens.length, " ", tokens.toString, " ", cursor.type.spelling);
-
-    State st;
-    foreach (t; tokens) {
-        trace(clang.Token.toString(t), " ", text(st));
-
-        final switch (st) {
-        case State.Prefix:
-            switch (t.kind) {
-            case CXTokenKind.CXToken_Identifier:
-                st = State.Done;
-                break;
-            case CXTokenKind.CXToken_Punctuation:
-                if (t.spelling.among("&", "*")) {
-                    r.prefix ~= t.spelling;
-                }
-                else
-                    st = State.Done;
-                break;
-            case CXTokenKind.CXToken_Keyword:
-                r.prefix ~= (r.prefix.length == 0 ? "" : " ") ~ t.spelling;
-                break;
-            default:
-            }
-            break;
-        case State.Suffix:
-            switch (t.kind) {
-            case CXTokenKind.CXToken_Identifier:
-                st = State.Done;
-                break;
-            case CXTokenKind.CXToken_Punctuation:
-                if (t.spelling.among("&", "*")) {
-                    r.suffix ~= t.spelling;
-                }
-                else
-                    st = State.Done;
-                break;
-            case CXTokenKind.CXToken_Keyword:
-                r.suffix ~= " " ~ t.spelling;
-                break;
-            default:
-            }
-            break;
-        case State.Done: // do nothing
-            break;
-        }
-    }
-
-    tracef("%s '%s'", r, translator.Type.toString(r));
-
-    return r;
-}
-
 /** Translate a cursor for a type to a TypeKind.
  *
  * Useful when a diagnostic error is detected. Then the translation must be
@@ -208,13 +121,8 @@ TypeKind translateReturnCursor(Cursor cursor) {
  * assuemed to be int's.
  *
  * Assumtion made:
- * The cursor's spelling returns the token denoting "the middle".
- * Before "spelling" is assigned to prefix.
- * Post "spelling" is assigned to suffix.
- * isX is set from the cursors isX-properties.
- *
- * Before "spelling" can only be of type qualifier, aka const.
- * Post "spelling" can be both qualifier and attribute, aka const|&|*.
+ * The cursor's spelling returns the token denoting "the variable name".
+ * Everything up to "the variable name" is "the type".
  *
  * Params:
  *  cursor = Cursor to translate.
@@ -249,15 +157,15 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
                     st = State.Done;
                 }
                 else {
-                    r.name = t.spelling;
+                    r.name ~= (r.name.length == 0 ? "" : " ") ~ t.spelling;
                     st = State.Suffix;
                 }
                 break;
             case CXTokenKind.CXToken_Punctuation:
-                r.prefix ~= t.spelling;
+                r.name ~= t.spelling;
                 break;
             case CXTokenKind.CXToken_Keyword:
-                r.prefix ~= (r.prefix.length == 0 ? "" : " ") ~ t.spelling;
+                r.name ~= (r.name.length == 0 ? "" : " ") ~ t.spelling;
                 break;
             default:
             }
@@ -266,13 +174,13 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
             switch (t.kind) {
             case CXTokenKind.CXToken_Punctuation:
                 if (t.spelling.among("&", "*")) {
-                    r.suffix ~= t.spelling;
+                    r.name ~= t.spelling;
                 }
                 else
                     st = State.Done;
                 break;
             case CXTokenKind.CXToken_Keyword:
-                r.suffix ~= " " ~ t.spelling;
+                r.name ~= " " ~ t.spelling;
                 break;
             default:
             }
@@ -324,12 +232,13 @@ in {
 }
 body {
     TypeKind result;
-    result.name = type.spelling;
 
     if (type.isConst) {
         result.isConst = true;
-        result.prefix = "const";
+        result.name = "const ";
     }
+
+    result.name ~= type.spelling;
 
     return result;
 }
@@ -374,14 +283,14 @@ body {
     }
 
     TypeKind result;
-    result.name = translateType(type.pointeeType).name;
     result.isPointer = true;
-    result.suffix = "*";
 
     if (valueTypeIsConst(type)) {
         result.isConst = true;
-        result.prefix = "const";
+        result.name = "const ";
     }
+
+    result.name ~= translateType(type.pointeeType).name ~ "*";
 
     return result;
 }
@@ -401,14 +310,14 @@ body {
     }
 
     TypeKind result;
-    result.name = translateType(type.pointeeType).name;
     result.isRef = true;
-    result.suffix = "&";
 
     if (valueTypeIsConst(type)) {
         result.isConst = true;
-        result.prefix = "const";
+        result.name = "const ";
     }
+
+    result.name ~= translateType(type.pointeeType).name ~ "&";
 
     return result;
 }
