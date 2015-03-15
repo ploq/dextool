@@ -81,12 +81,6 @@ struct Token {
      */
     @property string spelling() {
         auto r = clang_getTokenSpelling(group.tu, cx);
-
-        auto cstr = clang_getCString(r);
-        auto str = text(cstr).idup;
-        trace(group.tu, "|", text(r), "|", cstr, "|", str, str.length, "|", text(
-            cstr[0]), "|", this.extent);
-
         return toD(r);
     }
 
@@ -142,7 +136,6 @@ RefCounted!TokenGroup tokenize(TranslationUnit tu, SourceRange range) {
 
     foreach (i; 0 .. tokens.length) {
         auto t = Token(tg, tokens.tokens[i]);
-        trace(t.toString);
         tg.tokens ~= t;
     }
 

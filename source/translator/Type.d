@@ -29,8 +29,15 @@ struct TypeKind {
 }
 
 string toString(in TypeKind type) {
-    return format("%s%s%s", type.prefix.length == 0 ? "" : type.prefix ~ " ",
-        type.name, type.suffix.length == 0 ? "" : " " ~ type.suffix);
+    string sep;
+    if (type.prefix.length > 0 && type.suffix.length > 0) {
+        sep = " ";
+    }
+    else if (type.prefix.length > 0 && type.name.length > 0) {
+        sep = " ";
+    }
+
+    return format("%s%s%s%s", type.prefix, sep, type.name, type.suffix);
 }
 
 /** Translate a cursors type to a struct representation.
@@ -104,17 +111,14 @@ TypeKind toProperty(ref Cursor cursor) {
 
     if (cursor.type.isConst) {
         result.isConst = true;
-        result.prefix = "const";
     }
 
     if (cursor.type.declaration.isReference) {
         result.isRef = true;
-        result.suffix = "&";
     }
 
     if (cursor.type.kind == CXTypeKind.CXType_Pointer) {
         result.isPointer = true;
-        result.suffix = "*";
     }
 
     return result;
@@ -124,15 +128,77 @@ TypeKind toProperty(ref Cursor cursor) {
  *
  * Note that the .name is the empty string.
  *
+ * TODO break the foreach loop when state is Done.
+ *
  * Params:
  *  cursor = A cursor to a return type.
  */
 TypeKind translateReturnCursor(Cursor cursor) {
-    TypeKind result = cursor.toProperty();
+    import std.algorithm : among;
+    import clang.Token : toString;
+    import clang.SourceRange : toString;
 
-    result.name = cursor.spelling;
+    trace(clang.SourceRange.toString(cursor.extent));
 
-    return result;
+    enum State {
+        Prefix,
+        Suffix,
+        Done
+    }
+
+    TypeKind r = cursor.toProperty();
+    auto tokens = cursor.tokens();
+    trace(tokens.length, " ", tokens.toString, " ", cursor.type.spelling);
+
+    State st;
+    foreach (t; tokens) {
+        trace(clang.Token.toString(t), " ", text(st));
+
+        final switch (st) {
+        case State.Prefix:
+            switch (t.kind) {
+            case CXTokenKind.CXToken_Identifier:
+                st = State.Done;
+                break;
+            case CXTokenKind.CXToken_Punctuation:
+                if (t.spelling.among("&", "*")) {
+                    r.prefix ~= t.spelling;
+                }
+                else
+                    st = State.Done;
+                break;
+            case CXTokenKind.CXToken_Keyword:
+                r.prefix ~= (r.prefix.length == 0 ? "" : " ") ~ t.spelling;
+                break;
+            default:
+            }
+            break;
+        case State.Suffix:
+            switch (t.kind) {
+            case CXTokenKind.CXToken_Identifier:
+                st = State.Done;
+                break;
+            case CXTokenKind.CXToken_Punctuation:
+                if (t.spelling.among("&", "*")) {
+                    r.suffix ~= t.spelling;
+                }
+                else
+                    st = State.Done;
+                break;
+            case CXTokenKind.CXToken_Keyword:
+                r.suffix ~= " " ~ t.spelling;
+                break;
+            default:
+            }
+            break;
+        case State.Done: // do nothing
+            break;
+        }
+    }
+
+    tracef("%s '%s'", r, translator.Type.toString(r));
+
+    return r;
 }
 
 /** Translate a cursor for a type to a TypeKind.
@@ -154,28 +220,11 @@ TypeKind translateReturnCursor(Cursor cursor) {
  *  cursor = Cursor to translate.
  */
 TypeKind translateTypeCursor(ref Cursor cursor) {
+    import std.algorithm : among;
     import clang.Token : toString;
     import clang.SourceRange : toString;
 
     trace(clang.SourceRange.toString(cursor.extent));
-
-    bool isQualifier(string value) {
-        if (value == "const") {
-            return true;
-        }
-        return false;
-    }
-
-    bool isPointerRef(string value) {
-        if (inPattern('*', value)) {
-            return true;
-        }
-        else if (inPattern('&', value)) {
-            return true;
-        }
-
-        return false;
-    }
 
     enum State {
         Prefix,
@@ -185,31 +234,47 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
 
     TypeKind r = cursor.toProperty();
     auto tokens = cursor.tokens();
-    trace(tokens.length, " ", tokens.toString, " ", cursor.type.spelling);
+    auto cursor_identifier = cursor.spelling; // name of the cursors identifier but NOT the type.
+    trace(tokens.length, "|", tokens.toString, "|", cursor.type.spelling, "|", cursor_identifier);
 
     State st;
-    string sep = "";
     foreach (t; tokens) {
         trace(clang.Token.toString(t), " ", text(st));
+
         final switch (st) {
         case State.Prefix:
-            if (isQualifier(t.spelling)) {
-                r.prefix ~= sep ~ t.spelling;
-                sep = " ";
-            }
-            else if (t.spelling.length > 0) { // middle detected
-                r.name = t.spelling;
-                sep = "";
-                st = State.Suffix;
+            switch (t.kind) {
+            case CXTokenKind.CXToken_Identifier:
+                if (t.spelling == cursor_identifier) {
+                    st = State.Done;
+                }
+                else {
+                    r.name = t.spelling;
+                    st = State.Suffix;
+                }
+                break;
+            case CXTokenKind.CXToken_Punctuation:
+                r.prefix ~= t.spelling;
+                break;
+            case CXTokenKind.CXToken_Keyword:
+                r.prefix ~= (r.prefix.length == 0 ? "" : " ") ~ t.spelling;
+                break;
+            default:
             }
             break;
         case State.Suffix:
-            if (isPointerRef(t.spelling)) {
-                r.suffix ~= sep ~ t.spelling;
-                sep = " ";
-            }
-            else if (t.spelling.length > 0) {
-                st = State.Done;
+            switch (t.kind) {
+            case CXTokenKind.CXToken_Punctuation:
+                if (t.spelling.among("&", "*")) {
+                    r.suffix ~= t.spelling;
+                }
+                else
+                    st = State.Done;
+                break;
+            case CXTokenKind.CXToken_Keyword:
+                r.suffix ~= " " ~ t.spelling;
+                break;
+            default:
             }
             break;
         case State.Done: // do nothing

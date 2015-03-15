@@ -324,8 +324,7 @@ string[] ParmDeclToString(Cursor cursor) {
         auto tok_group = param.tokens;
         auto type_spelling = tok_group.toString;
         auto type = translateTypeCursor(param);
-        trace(type_spelling, " ", type, " ", param.spelling, "|",
-            param.type.spelling, "|", param.type.spelling2);
+        trace(type_spelling, " ", type, " ", param.spelling, "|", param.type.spelling);
         params ~= format("%s %s", type.toString, param.spelling);
     }
 
@@ -337,6 +336,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     T node;
 
     string[] params = ParmDeclToString(c);
+    //auto return_type = translateReturnCursor(c).toString;
     auto return_type = translateReturnCursor(c).toString;
     auto tmp_return_type = translateType(c.func.resultType).toString;
     trace(return_type, "|", tmp_return_type);

@@ -68,11 +68,12 @@ struct Type {
         this.cx = cx;
     }
 
+    /** Pretty-print the underlying type using the rules of the language of the
+     * translation unit from which it came.
+     *
+     * If the type is invalid, an empty string is returned.
+     */
     @property string spelling() {
-        return declaration.spelling;
-    }
-
-    @property string spelling2() {
         auto r = toD(clang_getTypeSpelling(cx));
         return r;
     }
