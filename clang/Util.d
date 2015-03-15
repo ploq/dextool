@@ -8,6 +8,7 @@
 module clang.Util;
 
 import clang.c.index;
+import clang.c.cxstring;
 
 import std.string;
 import std.conv;
