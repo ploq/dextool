@@ -38,8 +38,7 @@ shared static this() {
     args ~= "-xc++";
 
     auto index = Index(false, false);
-    auto translationUnit = TranslationUnit.parse(index, "test_files/arrays.h",
-        args);
+    auto translationUnit = TranslationUnit.parse(index, "test_files/arrays.h", args);
     scope(exit) translationUnit.dispose;
     scope(exit) index.dispose;
 
@@ -56,8 +55,7 @@ shared static this() {
 
             with (CXDiagnosticSeverity)
                 if (translate)
-                    translate = !(severity == CXDiagnostic_Error
-                    || severity == CXDiagnostic_Fatal);
+                    translate = !(severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal);
             writeln(stderr, diag.format);
         }
     }
@@ -68,8 +66,7 @@ class Context {
     this(string inputFile) {
         this.inputFile = inputFile;
         this.index = Index(false, false);
-        this.translationUnit = TranslationUnit.parse(this.index, this.inputFile,
-            this.args);
+        this.translationUnit = TranslationUnit.parse(this.index, this.inputFile, this.args);
     }
 
     ~this() {
@@ -104,8 +101,7 @@ void diagnostic(Context context) {
 
             with (CXDiagnosticSeverity)
                 if (translate)
-                    translate = !(severity == CXDiagnostic_Error
-                    || severity == CXDiagnostic_Fatal);
+                    translate = !(severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal);
             writeln(stderr, diag.format);
         }
     }
@@ -135,8 +131,7 @@ void visitor1(T1, T2)(T1 cursor, T2 parent, int column) {
     //writeln(indent_str, "|", to!string(cursor), " # ", to!string(parent));
 
     writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, cursor.spelling,
-        cursor.kind, cursor.location.spelling.line,
-            cursor.location.spelling.column);
+        cursor.kind, cursor.location.spelling.line, cursor.location.spelling.column);
 
     foreach (c, p; cursor.declarations) {
         visitor1(c, p, column + 1);
@@ -211,18 +206,15 @@ struct MyVisitor {
     x.diagnostic();
 
     VisitorData data;
-    auto visitor3 = delegate void(ref Cursor c, ref Cursor p) {
-        auto indent_str = new char[data.column * 2];
-        foreach (ref ch; indent_str)
-            ch = ' ';
+    auto visitor3 = delegate void(ref Cursor c, ref Cursor p) { auto indent_str = new char[
+        data.column * 2];
+    foreach (ref ch; indent_str)
+        ch = ' ';
 
-        writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, c.spelling,
-            c.kind, c.location.spelling.line, c.location.spelling.column);
-        if (!p.isEmpty)
-            data.column += 1;
-    }
-
-    ;
+    writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, c.spelling, c.kind,
+        c.location.spelling.line, c.location.spelling.column);
+    if (!p.isEmpty)
+        data.column += 1;  };
 
     MyVisitor v = x.translationUnit.cursor;
     foreach (cursor, parent; v) {

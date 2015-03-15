@@ -32,8 +32,7 @@ version (unittest) {
     shared static this() {
         import std.exception;
 
-        enforce(runUnitTests!analyzer(new ConsoleTestResultWriter),
-            "Unit tests failed.");
+        enforce(runUnitTests!analyzer(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 
@@ -44,16 +43,12 @@ class Context {
         this.input_file = input_file;
         this.index = Index(false, false);
 
-        uint options = cast(uint)
-            CXTranslationUnit_Flags.CXTranslationUnit_Incomplete |
-            CXTranslationUnit_Flags.CXTranslationUnit_IncludeBriefCommentsInCodeCompletion |
-            CXTranslationUnit_Flags.CXTranslationUnit_DetailedPreprocessingRecord;
+        uint options = cast(uint) CXTranslationUnit_Flags.CXTranslationUnit_Incomplete | CXTranslationUnit_Flags
+            .CXTranslationUnit_IncludeBriefCommentsInCodeCompletion | CXTranslationUnit_Flags
+            .CXTranslationUnit_DetailedPreprocessingRecord;
 
-        this.translation_unit = TranslationUnit.parse(this.index,
-                                                      this.input_file,
-                                                      this.args,
-                                                      null,
-                                                      options);
+        this.translation_unit = TranslationUnit.parse(this.index, this.input_file,
+            this.args, null, options);
     }
 
     ~this() {
@@ -86,8 +81,7 @@ void diagnostic(Context context) {
 
             with (CXDiagnosticSeverity)
                 if (translate)
-                    translate = !(severity == CXDiagnostic_Error
-                    || severity == CXDiagnostic_Fatal);
+                    translate = !(severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal);
             writeln(stderr, diag.format);
         }
     }
@@ -236,13 +230,13 @@ struct ClassTranslatorHdr {
                 }
                 break;
             case CXCursor_Constructor:
-                CtorTranslator!CppModule(c, current)[$.begin = "",
-                    $.end = ";" ~ newline, $.noindent = true];
+                CtorTranslator!CppModule(c, current)[$.begin = "", $.end = ";" ~ newline,
+                    $.noindent = true];
                 descend = false;
                 break;
             case CXCursor_Destructor:
-                DtorTranslator!CppModule(c, current)[$.begin = "",
-                    $.end = ";" ~ newline, $.noindent = true];
+                DtorTranslator!CppModule(c, current)[$.begin = "", $.end = ";" ~ newline,
+                    $.noindent = true];
                 descend = false;
                 current.sep();
                 break;
@@ -271,21 +265,21 @@ struct ClassTranslatorHdr {
 T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
     T node;
 
-    with (CXCursorKind)
-        with (CX_CXXAccessSpecifier) final switch (cursor.access.accessSpecifier) {
+    with (CXCursorKind) with (CX_CXXAccessSpecifier)
+            final switch (cursor.access.accessSpecifier) {
         case CX_CXXInvalidAccessSpecifier:
             logger.trace(cursor.access.accessSpecifier);
-        break;
-    case CX_CXXPublic:
-        node = top.public_;
-        break;
-    case CX_CXXProtected:
-        node = top.protected_;
-        break;
-    case CX_CXXPrivate:
-        node = top.private_;
-        break;
-    }
+            break;
+            case CX_CXXPublic:
+            node = top.public_;
+            break;
+            case CX_CXXProtected:
+            node = top.protected_;
+            break;
+            case CX_CXXPrivate:
+            node = top.private_;
+            break;
+        }
 
     node.suppress_indent(1);
     return node;
@@ -334,7 +328,8 @@ string[] ParmDeclToString(Cursor cursor) {
         auto tok_group = param.tokens;
         auto type_spelling = tok_group.toString;
         auto type = translateTypeCursor(param);
-        trace(type_spelling, " ", type, " ", param.spelling, "|", param.type.spelling, "|", param.type.spelling2);
+        trace(type_spelling, " ", type, " ", param.spelling, "|", param.type.spelling,
+            "|", param.type.spelling2);
         params ~= format("%s %s", type.toString, param.spelling);
     }
 

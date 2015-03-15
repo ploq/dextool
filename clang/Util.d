@@ -35,7 +35,9 @@ string toD(CXString cxString) {
 }
 
 template isCX(T) {
-    enum bool isCX = __traits(hasMember, T, "cx");
+    enum bool isCX = __traits(hasMember,
+        T,
+        "cx");
 }
 
 template cxName(T) {

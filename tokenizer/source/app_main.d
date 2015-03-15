@@ -12,39 +12,45 @@ import clang.c.index;
 import clang.c.cxstring;
 
 auto _getTokenKindSpelling(CXTokenKind kind) {
-  with (CXTokenKind) switch (kind) {
-    case CXToken_Punctuation: return "Punctuation";
-    case CXToken_Keyword:     return "Keyword";
-    case CXToken_Identifier:  return "Identifier";
-    case CXToken_Literal:     return "Literal";
-    case CXToken_Comment:     return "Comment";
-    default:                  return "Unknown";
-  }
+    with (CXTokenKind) switch (kind) {
+    case CXToken_Punctuation:
+        return "Punctuation";
+        case CXToken_Keyword:
+        return "Keyword";
+        case CXToken_Identifier:
+        return "Identifier";
+        case CXToken_Literal:
+        return "Literal";
+        case CXToken_Comment:
+        return "Comment";
+        default:
+        return "Unknown";
+    }
 }
 
-void show_all_tokens(ref CXTranslationUnit tu, CXToken *tokens, uint numTokens) {
-  writeln("=== show tokens ===");
-  writef("NumTokens: %d\n", numTokens);
-  for (auto i = 0U; i < numTokens; i++) {
-    CXToken *token = &tokens[i];
-    CXTokenKind kind = clang_getTokenKind(*token);
-    CXString spell = clang_getTokenSpelling(tu, *token);
-    CXSourceLocation loc = clang_getTokenLocation(tu, *token);
+void show_all_tokens(ref CXTranslationUnit tu, CXToken* tokens, uint numTokens) {
+    writeln("=== show tokens ===");
+    writef("NumTokens: %d\n", numTokens);
+    for (auto i = 0U; i < numTokens; i++) {
+        CXToken* token = &tokens[i];
+        CXTokenKind kind = clang_getTokenKind(*token);
+        CXString spell = clang_getTokenSpelling(tu, *token);
+        CXSourceLocation loc = clang_getTokenLocation(tu, *token);
 
-    CXFile file;
-    uint line, column, offset;
-    clang_getFileLocation(loc, &file, &line, &column, &offset);
-    CXString fileName = clang_getFileName(file);
+        CXFile file;
+        uint line, column, offset;
+        clang_getFileLocation(loc, &file, &line, &column, &offset);
+        CXString fileName = clang_getFileName(file);
 
-    writef("Token: %d\n", i);
-    writef(" Text: %s\n", toD(spell));
-    writef(" Kind: %s\n", _getTokenKindSpelling(kind));
-    writef(" Location: %s:%d:%d:%d\n",
-           clang_getCString(fileName), line, column, offset);
-    writef("\n");
+        writef("Token: %d\n", i);
+        writef(" Text: %s\n", toD(spell));
+        writef(" Kind: %s\n", _getTokenKindSpelling(kind));
+        writef(" Location: %s:%d:%d:%d\n", clang_getCString(fileName), line, column,
+            offset);
+        writef("\n");
 
-    clang_disposeString(fileName);
-  }
+        clang_disposeString(fileName);
+    }
 }
 
 string toD(CXString cxString) {
@@ -88,31 +94,31 @@ auto get_filesize(in string fileName) {
 }
 
 CXSourceRange get_filerange(ref CXTranslationUnit tu, in string filename) {
-  CXFile file = clang_getFile(tu, filename.toStringz);
-  uint fileSize = cast(uint) get_filesize(filename);
+    CXFile file = clang_getFile(tu, filename.toStringz);
+    uint fileSize = cast(uint) get_filesize(filename);
 
-  // get top/last location of the file
-  CXSourceLocation topLoc  = clang_getLocationForOffset(tu, file, 0);
-  CXSourceLocation lastLoc = clang_getLocationForOffset(tu, file, fileSize);
-  if (clang_equalLocations(topLoc,  clang_getNullLocation()) ||
-      clang_equalLocations(lastLoc, clang_getNullLocation()) ) {
-    writef("cannot retrieve location\n");
-    throw new Exception("location");
-  }
+    // get top/last location of the file
+    CXSourceLocation topLoc = clang_getLocationForOffset(tu, file, 0);
+    CXSourceLocation lastLoc = clang_getLocationForOffset(tu, file, fileSize);
+    if (clang_equalLocations(topLoc, clang_getNullLocation())
+            || clang_equalLocations(lastLoc, clang_getNullLocation())) {
+        writef("cannot retrieve location\n");
+        throw new Exception("location");
+    }
 
-  // make a range from locations
-  CXSourceRange range = clang_getRange(topLoc, lastLoc);
-  if (clang_Range_isNull(range)) {
-    writef("cannot retrieve range\n");
-    throw new Exception("range");
-  }
+    // make a range from locations
+    CXSourceRange range = clang_getRange(topLoc, lastLoc);
+    if (clang_Range_isNull(range)) {
+        writef("cannot retrieve range\n");
+        throw new Exception("range");
+    }
 
-  return range;
+    return range;
 }
 
 void show_clang_version() {
-  CXString version_ = clang_getClangVersion();
-  writef("%s\n", toD(version_));
+    CXString version_ = clang_getClangVersion();
+    writef("%s\n", toD(version_));
 }
 
 int rmain(string[] args) {
@@ -128,7 +134,8 @@ int rmain(string[] args) {
     CXIndex index = clang_createIndex(1, 1);
 
     // create Translation Unit
-    CXTranslationUnit tu = clang_parseTranslationUnit(index, filename.toStringz, null, 0, null, 0, 0);
+    CXTranslationUnit tu = clang_parseTranslationUnit(index, filename.toStringz, null,
+        0, null, 0, 0);
     if (tu == null) {
         writef("Cannot parse translation unit\n");
         return 1;
@@ -138,7 +145,7 @@ int rmain(string[] args) {
     CXSourceRange range = get_filerange(tu, filename);
 
     // tokenize in the range
-    CXToken *tokens;
+    CXToken* tokens;
     uint numTokens;
     clang_tokenize(tu, range, &tokens, &numTokens);
 

@@ -116,14 +116,10 @@ struct TypedVisitor(CXCursorKind kind) {
     }
 }
 
-alias ObjCInstanceMethodVisitor = TypedVisitor!(
-    CXCursorKind.CXCursor_ObjCInstanceMethodDecl);
-alias ObjCClassMethodVisitor = TypedVisitor!(
-    CXCursorKind.CXCursor_ObjCClassMethodDecl);
-alias ObjCPropertyVisitor = TypedVisitor!(
-    CXCursorKind.CXCursor_ObjCPropertyDecl);
-alias ObjCProtocolVisitor = TypedVisitor!(
-    CXCursorKind.CXCursor_ObjCProtocolRef);
+alias ObjCInstanceMethodVisitor = TypedVisitor!(CXCursorKind.CXCursor_ObjCInstanceMethodDecl);
+alias ObjCClassMethodVisitor = TypedVisitor!(CXCursorKind.CXCursor_ObjCClassMethodDecl);
+alias ObjCPropertyVisitor = TypedVisitor!(CXCursorKind.CXCursor_ObjCPropertyDecl);
+alias ObjCProtocolVisitor = TypedVisitor!(CXCursorKind.CXCursor_ObjCProtocolRef);
 
 struct ParamVisitor {
     mixin Visitor.Constructors;

@@ -32,8 +32,7 @@ shared static this() {
 
         Runtime.moduleUnitTester = () => true;
         //runUnitTests!app(new JsonTestResultWriter("results.json"));
-        assert(runUnitTests!app_main(new ConsoleTestResultWriter),
-            "Unit tests failed.");
+        assert(runUnitTests!app_main(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 

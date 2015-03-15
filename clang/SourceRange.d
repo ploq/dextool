@@ -23,8 +23,7 @@ version (unittest) {
     shared static this() {
         import std.exception;
 
-        enforce(runUnitTests!(clang.SourceRange)(new ConsoleTestResultWriter),
-            "Unit tests failed.");
+        enforce(runUnitTests!(clang.SourceRange)(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 

@@ -43,10 +43,11 @@ import clang.Visitor;
  */
 string abilities(ref Cursor c) {
     string s = format("%s%s%s%s%s%s%s%s%s%s%s%s", c.isAttribute ? "a" : "",
-        c.isDeclaration ? "d" : "", c.isDefinition ? "D" : "", c.isExpression ? "e" : "",
-            c.isEmpty ? "n" : "", c.isPreprocessing ? "p" : "", c.isReference ? "r" : "",
-            c.isStatement ? "s" : "", c.isTranslationUnit ? "t" : "",
-            c.isUnexposed ? "u" : "", c.isVirtualBase ? "v" : "", c.isValid ? "V" : "",);
+        c.isDeclaration ? "d" : "", c.isDefinition ? "D" : "",
+        c.isExpression ? "e" : "", c.isEmpty ? "n" : "", c.isPreprocessing ? "p" : "",
+        c.isReference ? "r" : "", c.isStatement ? "s" : "", c.isTranslationUnit ? "t" : "",
+        c.isUnexposed ? "u" : "", c.isVirtualBase ? "v" : "", c.isValid ? "V" : "",
+        );
 
     return s;
 }
@@ -428,7 +429,8 @@ struct ObjcCursor {
     }
 
     @property Cursor superClass() {
-        foreach (cursor, parent; TypedVisitor!(CXCursorKind.CXCursor_ObjCSuperClassRef)(cursor))
+        foreach (cursor, parent; TypedVisitor!(CXCursorKind.CXCursor_ObjCSuperClassRef)(
+                cursor))
             return cursor;
 
         return Cursor.empty;
@@ -574,7 +576,7 @@ struct EnumCursor {
         case CXType_ULongLong:
         case CXType_UInt128:
             return false;
-        default:
+            default:
             return true;
         }
     }

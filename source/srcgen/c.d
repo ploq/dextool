@@ -17,8 +17,7 @@ version (unittest) {
         import std.exception;
 
         //runUnitTests!app(new JsonTestResultWriter("results.json"));
-        enforce(runUnitTests!(srcgen.c)(new ConsoleTestResultWriter),
-            "Unit tests failed.");
+        enforce(runUnitTests!(srcgen.c)(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 
@@ -130,8 +129,8 @@ mixin template CModuleX() {
     }
 
     auto for_(T0, T1, T2)(T0 init, T1 cond, T2 next) {
-        return suite(format("for (%s; %s; %s)", to!string(init), to!string(cond),
-            to!string(next)));
+        return suite(format("for (%s; %s; %s)", to!string(init), to!string(cond), to!string(
+            next)));
     }
 
     auto while_(T)(T cond) {
@@ -161,8 +160,7 @@ mixin template CModuleX() {
     }
 
     auto func(T0, T1)(T0 return_type, T1 name) {
-        auto e = suite(format("%s %s()", to!string(return_type), to!string(
-            name)));
+        auto e = suite(format("%s %s()", to!string(return_type), to!string(name)));
         return e;
     }
 
@@ -177,8 +175,8 @@ mixin template CModuleX() {
             }
         }
 
-        auto e = suite(format("%s %s(%s)", to!string(return_type), to!string(
-            name), params));
+        auto e = suite(format("%s %s(%s)", to!string(return_type), to!string(name),
+            params));
         return e;
     }
 
@@ -213,7 +211,7 @@ class CModule : BaseModule {
     mixin CModuleX;
 }
 
-string stmt_append_end(string s, in ref string[string] attrs) pure nothrow@safe {
+string stmt_append_end(string s, in ref string[string] attrs) pure nothrow @safe {
     bool in_pattern = false;
     try {
         in_pattern = inPattern(s[$ - 1], ";:,{");

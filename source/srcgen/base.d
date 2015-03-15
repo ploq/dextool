@@ -13,8 +13,7 @@ version (unittest) {
     shared static this() {
         import std.exception;
 
-        enforce(runUnitTests!(srcgen.base)(new ConsoleTestResultWriter),
-            "Unit tests failed.");
+        enforce(runUnitTests!(srcgen.base)(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 

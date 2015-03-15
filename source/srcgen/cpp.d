@@ -17,8 +17,7 @@ version (unittest) {
     shared static this() {
         import std.exception;
 
-        enforce(runUnitTests!(srcgen.cpp)(new ConsoleTestResultWriter),
-            "Unit tests failed.");
+        enforce(runUnitTests!(srcgen.cpp)(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 
@@ -45,7 +44,8 @@ mixin template CppModuleX() {
     }
 
     auto dtor(T)(T class_name) {
-        auto e = suite(format("%s%s()", class_name[0] == '~' ? "" : "~", to!string(class_name)));
+        auto e = suite(format("%s%s()", class_name[0] == '~' ? "" : "~", to!string(
+            class_name)));
         return e;
     }
 

@@ -23,8 +23,7 @@ version (unittest) {
     shared static this() {
         import std.exception;
 
-        enforce(runUnitTests!(clang.Token)(new ConsoleTestResultWriter),
-            "Unit tests failed.");
+        enforce(runUnitTests!(clang.Token)(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 
@@ -32,11 +31,7 @@ version (unittest) {
     import std.conv;
 
     if (tok.isValid) {
-        return format("%s [%s %s]",
-                      tok.spelling,
-                      tok.kind,
-                      text(tok.cx),
-                     );
+        return format("%s [%s %s]", tok.spelling, tok.kind, text(tok.cx),);
     }
 
     return text(tok);
@@ -251,8 +246,8 @@ struct TokenGroup {
 
     globalLogLevel(LogLevel.trace);
     auto index = Index(false, false);
-    auto translation_unit = TranslationUnit.parse(index,
-        "test_files/class_interface.hpp", ["-xc++"]);
+    auto translation_unit = TranslationUnit.parse(index, "test_files/class_interface.hpp",
+        ["-xc++"]);
 
     struct StupidVisitor {
         void incr() {

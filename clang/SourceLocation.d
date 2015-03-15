@@ -26,9 +26,9 @@ string toString(SourceLocation value) {
 
     if (value.isValid) {
         auto spell = value.spelling;
-        return format("%s(%s) [file=%s('%s') line=%d column=%d offset=%d]", text(
-            typeid(value)), text(value.cx), text(spell.file), text(
-                spell.file.name), spell.line, spell.column, spell.offset);
+        return format("%s(%s) [file=%s('%s') line=%d column=%d offset=%d]",
+            text(typeid(value)), text(value.cx), text(spell.file), text(spell.file.name),
+            spell.line, spell.column, spell.offset);
     }
 
     return format("%s(%s)", text(typeid(value)), text(value.cx));
@@ -69,8 +69,8 @@ struct SourceLocation {
      *  line = text line. Starting at 1.
      *  offset = offset into the line. Starting at 1.
      */
-    static Nullable!SourceLocation fromPosition(ref TranslationUnit tu,
-        ref File file, uint line, uint offset) {
+    static Nullable!SourceLocation fromPosition(ref TranslationUnit tu, ref File file,
+        uint line, uint offset) {
 
         auto rval = Nullable!SourceLocation();
         auto r = SourceLocation(clang_getLocation(tu, file, line, offset));
@@ -85,8 +85,7 @@ struct SourceLocation {
      * in a particular translation unit.
      * TODO consider moving to TranslationUnit instead
      */
-    static SourceLocation fromOffset(ref TranslationUnit tu, ref File file,
-        uint offset) {
+    static SourceLocation fromOffset(ref TranslationUnit tu, ref File file, uint offset) {
         auto r = clang_getLocationForOffset(tu, file, offset);
         return SourceLocation(r);
     }
@@ -138,8 +137,7 @@ struct SourceLocation {
     @property Location expansion() @trusted {
         Location data;
 
-        clang_getExpansionLocation(cx, &data.file.cx, &data.line, &data.column,
-            &data.offset);
+        clang_getExpansionLocation(cx, &data.file.cx, &data.line, &data.column, &data.offset);
 
         return data;
     }
@@ -213,8 +211,7 @@ struct SourceLocation {
     @property Location spelling() @trusted {
         Location data;
 
-        clang_getSpellingLocation(cx, &data.file.cx, &data.line, &data.column,
-            &data.offset);
+        clang_getSpellingLocation(cx, &data.file.cx, &data.line, &data.column, &data.offset);
 
         return data;
     }

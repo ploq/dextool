@@ -29,7 +29,8 @@ struct TypeKind {
 }
 
 string toString(in TypeKind type) {
-    return format("%s%s%s", type.prefix.length == 0 ? "" : type.prefix ~ " ", type.name, type.suffix.length == 0 ? "" : " " ~ type.suffix);
+    return format("%s%s%s", type.prefix.length == 0 ? "" : type.prefix ~ " ",
+        type.name, type.suffix.length == 0 ? "" : " " ~ type.suffix);
 }
 
 /** Translate a cursors type to a struct representation.
@@ -46,7 +47,8 @@ body {
 
     auto tmp_c = type.declaration;
     auto tmp_t = tmp_c.typedefUnderlyingType;
-    trace(format("%s %s c:%s t:%s", tmp_c.spelling, abilities(tmp_t), abilities(tmp_c), abilities(type)));
+    trace(format("%s %s c:%s t:%s", tmp_c.spelling, abilities(tmp_t),
+        abilities(tmp_c), abilities(type)));
 
     with (CXTypeKind) {
         if (type.kind == CXType_BlockPointer || type.isFunctionPointerType)
@@ -160,17 +162,22 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
         }
         return false;
     }
+
     bool isPointerRef(string value) {
         if (inPattern('*', value)) {
             return true;
-        } else if (inPattern('&', value)) {
+        }
+        else if (inPattern('&', value)) {
             return true;
         }
 
         return false;
     }
+
     enum State {
-        Prefix, Suffix, Done
+        Prefix,
+        Suffix,
+        Done
     }
 
     TypeKind r = cursor.toProperty();
@@ -182,26 +189,28 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
     foreach (t; tokens) {
         trace(clang.Token.toString(t), " ", text(st));
         final switch (st) {
-            case State.Prefix:
-                if (isQualifier(t.spelling)) {
-                    r.prefix ~= sep ~ t.spelling;
-                    sep = " ";
-                } else if (t.spelling.length > 0) { // middle detected
-                    r.name = t.spelling;
-                    sep = "";
-                    st = State.Suffix;
-                }
-                break;
-            case State.Suffix:
-                if (isPointerRef(t.spelling)) {
-                    r.suffix ~= sep ~ t.spelling;
-                    sep = " ";
-                } else if (t.spelling.length > 0) {
-                    st = State.Done;
-                }
-                break;
-            case State.Done: // do nothing
-                break;
+        case State.Prefix:
+            if (isQualifier(t.spelling)) {
+                r.prefix ~= sep ~ t.spelling;
+                sep = " ";
+            }
+            else if (t.spelling.length > 0) { // middle detected
+                r.name = t.spelling;
+                sep = "";
+                st = State.Suffix;
+            }
+            break;
+        case State.Suffix:
+            if (isPointerRef(t.spelling)) {
+                r.suffix ~= sep ~ t.spelling;
+                sep = " ";
+            }
+            else if (t.spelling.length > 0) {
+                st = State.Done;
+            }
+            break;
+        case State.Done: // do nothing
+            break;
         }
     }
 
@@ -218,6 +227,7 @@ private:
  */
 string nameFromToken(Cursor type) {
     import clang.Token : toString;
+
     auto tokens = type.tokens();
     string name;
 
@@ -226,14 +236,14 @@ string nameFromToken(Cursor type) {
     foreach (t; tokens) {
         trace(clang.Token.toString(t));
         switch (t.spelling) {
-            case "":
-                break;
-            case "const":
-                break;
-            default:
-                if (name.length == 0) {
-                    name = t.spelling;
-                }
+        case "":
+            break;
+        case "const":
+            break;
+        default:
+            if (name.length == 0) {
+                name = t.spelling;
+            }
         }
     }
 
@@ -359,88 +369,87 @@ string translateCursorType(CXTypeKind kind) {
     with (CXTypeKind) switch (kind) {
     case CXType_Invalid:
         return "<unimplemented>";
-    case CXType_Unexposed:
+        case CXType_Unexposed:
         return "<unimplemented>";
-    case CXType_Void:
+        case CXType_Void:
         return "void";
-    case CXType_Bool:
+        case CXType_Bool:
         return "bool";
-    case CXType_Char_U:
+        case CXType_Char_U:
         return "<unimplemented>";
-    case CXType_UChar:
+        case CXType_UChar:
         return "ubyte";
-    case CXType_Char16:
+        case CXType_Char16:
         return "wchar";
-    case CXType_Char32:
+        case CXType_Char32:
         return "dchar";
-    case CXType_UShort:
+        case CXType_UShort:
         return "ushort";
-    case CXType_UInt:
+        case CXType_UInt:
         return "uint";
 
-    case CXType_ULong:
+        case CXType_ULong:
         //includeHandler.addCompatible();
         return "c_ulong";
 
-    case CXType_ULongLong:
+        case CXType_ULongLong:
         return "ulong";
-    case CXType_UInt128:
+        case CXType_UInt128:
         return "<unimplemented>";
-    case CXType_Char_S:
+        case CXType_Char_S:
         return "char";
-    case CXType_SChar:
+        case CXType_SChar:
         return "byte";
-    case CXType_WChar:
+        case CXType_WChar:
         return "wchar";
-    case CXType_Short:
+        case CXType_Short:
         return "short";
-    case CXType_Int:
+        case CXType_Int:
         return "int";
 
-    case CXType_Long:
+        case CXType_Long:
         //includeHandler.addCompatible();
         return "c_long";
 
-    case CXType_LongLong:
+        case CXType_LongLong:
         return "long";
-    case CXType_Int128:
+        case CXType_Int128:
         return "<unimplemented>";
-    case CXType_Float:
+        case CXType_Float:
         return "float";
-    case CXType_Double:
+        case CXType_Double:
         return "double";
-    case CXType_LongDouble:
+        case CXType_LongDouble:
         return "real";
-    case CXType_NullPtr:
+        case CXType_NullPtr:
         return "null";
-    case CXType_Overload:
+        case CXType_Overload:
         return "<unimplemented>";
-    case CXType_Dependent:
+        case CXType_Dependent:
         return "<unimplemented>";
-    case CXType_Complex:
+        case CXType_Complex:
         return "<unimplemented>";
-    case CXType_Pointer:
+        case CXType_Pointer:
         return "<unimplemented>";
-    case CXType_BlockPointer:
+        case CXType_BlockPointer:
         return "<unimplemented>";
-    case CXType_LValueReference:
+        case CXType_LValueReference:
         return "<unimplemented>";
-    case CXType_RValueReference:
+        case CXType_RValueReference:
         return "<unimplemented>";
-    case CXType_Record:
+        case CXType_Record:
         return "<unimplemented>";
-    case CXType_Enum:
+        case CXType_Enum:
         return "<unimplemented>";
-    case CXType_Typedef:
+        case CXType_Typedef:
         return "<unimplemented>";
-    case CXType_FunctionNoProto:
+        case CXType_FunctionNoProto:
         return "<unimplemented>";
-    case CXType_FunctionProto:
+        case CXType_FunctionProto:
         return "<unimplemented>";
-    case CXType_Vector:
+        case CXType_Vector:
         return "<unimplemented>";
-    default:
+        default:
         assert(0, "Unhandled type kind " ~ to!string(kind));
     }
 }
-
