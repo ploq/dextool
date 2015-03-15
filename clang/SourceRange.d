@@ -27,6 +27,24 @@ version (unittest) {
     }
 }
 
+string toString(SourceRange value) {
+    import std.string;
+    import std.conv;
+
+    auto start = value.start;
+    auto end = value.end;
+
+    if (value.isValid) {
+        return format("%s [start='%s' end='%s']",
+            text(value.cx),
+            text(start.presumed),
+            text(end.presumed)
+            );
+    }
+
+    return format("%s(%s)", text(typeid(value)), text(value.cx));
+}
+
 ///
 struct SourceRange {
     mixin CX;

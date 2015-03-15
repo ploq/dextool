@@ -56,6 +56,18 @@ string abilities(ref FuncType t) {
 struct Type {
     mixin CX;
 
+    private Cursor cursor;
+
+    this(Type type) {
+        cursor = type.cursor;
+        cx = type.cx;
+    }
+
+    this(Cursor c, CXType cx) {
+        cursor = c;
+        this.cx = cx;
+    }
+
     @property string spelling() {
         return declaration.spelling;
     }
@@ -79,19 +91,19 @@ struct Type {
      */
     @property Type canonicalType() {
         auto r = clang_getCanonicalType(cx);
-        return Type(r);
+        return Type(cursor, r);
     }
 
     /// For pointer types, returns the type of the pointee.
     @property Type pointeeType() {
         auto r = clang_getPointeeType(cx);
-        return Type(r);
+        return Type(cursor, r);
     }
 
     /// Return: the cursor for the declaration of the given type.
     @property Cursor declaration() @trusted {
         auto r = clang_getTypeDeclaration(cx);
-        return Cursor(r);
+        return Cursor(cursor.translationUnit, r);
     }
 
     @property FuncType func() {
@@ -201,7 +213,7 @@ struct FuncType {
 
     @property Type resultType() {
         auto r = clang_getResultType(type.cx);
-        return Type(r);
+        return Type(type.cursor, r);
     }
 
     @property Arguments arguments() {
@@ -224,7 +236,7 @@ struct ArrayType {
      */
     @property Type elementType() {
         auto r = clang_getElementType(cx);
-        return Type(r);
+        return Type(type.cursor, r);
     }
 
     /** Return the number of elements of an array or vector type.
@@ -242,7 +254,7 @@ struct ArrayType {
      */
     @property Type elementArrayType() {
         auto r = clang_getArrayElementType(cx);
-        return Type(r);
+        return Type(type.cursor, r);
     }
 
     @property long size() {
@@ -259,7 +271,7 @@ struct Arguments {
 
     Type opIndex(uint i) {
         auto r = clang_getArgType(type.type.cx, i);
-        return Type(r);
+        return Type(type.cursor, r);
     }
 
     int opApply(int delegate(ref Type) dg) {

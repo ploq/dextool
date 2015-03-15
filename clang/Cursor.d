@@ -82,10 +82,25 @@ string abilities(ref EnumCursor c) {
 struct Cursor {
     mixin CX;
 
+    private TranslationUnit translation_unit;
+
+    /// disallowed
+    private this(CXCursor c) {}
+
+    this(Cursor cursor) {
+        translation_unit = cursor.translation_unit;
+        cx = cursor.cx;
+    }
+
+    this(TranslationUnit tu, CXCursor cx) {
+        this.translation_unit = tu;
+        this.cx = cx;
+    }
+
     /// Retrieve the NULL cursor, which represents no entity.
-    @property static Cursor empty() {
+    @property static Cursor empty(TranslationUnit tu) {
         auto r = clang_getNullCursor();
-        return Cursor(r);
+        return Cursor(tu, r);
     }
 
     /// Return: the spelling of the entity pointed at by the cursor.
@@ -124,7 +139,7 @@ struct Cursor {
     /// Return: Retrieve the Type (if any) of the entity pointed at by the cursor.
     @property Type type() @trusted {
         auto r = clang_getCursorType(cx);
-        return Type(r);
+        return Type(this, r);
     }
 
     /** Return the underlying type of a typedef declaration.
@@ -134,7 +149,7 @@ struct Cursor {
      */
     @property Type typedefUnderlyingType() @trusted {
         auto r = clang_getTypedefDeclUnderlyingType(cx);
-        return Type(r);
+        return Type(this, r);
     }
 
     /** If the cursor is a reference to a declaration or a declaration of
@@ -143,7 +158,7 @@ struct Cursor {
      */
     @property Cursor definition() {
         auto r = clang_getCursorDefinition(cx);
-        return Cursor(r);
+        return Cursor(translation_unit, r);
     }
 
     /** Determine the semantic parent of the given cursor.
@@ -181,7 +196,7 @@ struct Cursor {
      */
     @property Cursor semanticParent() {
         auto r = clang_getCursorSemanticParent(cx);
-        return Cursor(r);
+        return Cursor(translation_unit, r);
     }
 
     /** Determine the lexical parent of the given cursor.
@@ -220,7 +235,7 @@ struct Cursor {
      */
     @property Cursor lexicalParent() {
         auto r = clang_getCursorLexicalParent(cx);
-        return Cursor(r);
+        return Cursor(translation_unit, r);
     }
 
     /** For a cursor that is a reference, retrieve a cursor representing the
@@ -235,11 +250,11 @@ struct Cursor {
      */
     @property Cursor referenced() {
         auto r = clang_getCursorReferenced(cx);
-        return Cursor(r);
+        return Cursor(translation_unit, r);
     }
 
     @property DeclarationVisitor declarations() {
-        return DeclarationVisitor(cx);
+        return DeclarationVisitor(this);
     }
 
     /** Retrieve the physical extent of the source construct referenced by the
@@ -283,7 +298,7 @@ struct Cursor {
      */
     @property Cursor canonical() @trusted {
         auto r = clang_getCanonicalCursor(cx);
-        return Cursor(r);
+        return Cursor(translation_unit, r);
     }
 
     /// Determine the "language" of the entity referred to by a given cursor.
@@ -292,8 +307,8 @@ struct Cursor {
     }
 
     /// Returns: the translation unit that a cursor originated from.
-    @property RefCounted!TranslationUnit translationUnit() @trusted {
-        return RefCounted!TranslationUnit(translationUnitFromCursor(cx));
+    @property TranslationUnit translationUnit() {
+        return translation_unit;
     }
 
     /** Obtain Token instances formulating that compose this Cursor.
@@ -304,10 +319,9 @@ struct Cursor {
      * Returns: A RefCounted TokenGroup.
      */
     @property auto tokens() {
-        auto tu = translationUnit;
         auto range = extent;
 
-        return tokenize(tu, range);
+        return tokenize(translation_unit, range);
     }
 
     @property ObjcCursor objc() {
@@ -433,7 +447,7 @@ struct ObjcCursor {
                 cursor))
             return cursor;
 
-        return Cursor.empty;
+        return Cursor.empty(translation_unit);
     }
 
     @property ObjCProtocolVisitor protocols() {
@@ -457,11 +471,11 @@ struct FunctionCursor {
     /// Return: Retrieve the Type of the result for this Cursor.
     @property Type resultType() {
         auto r = clang_getCursorResultType(cx);
-        return Type(r);
+        return Type(cursor, r);
     }
 
     @property ParamVisitor parameters() {
-        return ParamVisitor(cx);
+        return ParamVisitor(cursor);
     }
 
     @property bool isVariadic() {
@@ -522,7 +536,7 @@ struct EnumCursor {
      */
     @property Type type() @trusted {
         auto r = clang_getEnumDeclIntegerType(cx);
-        return Type(r);
+        return Type(cursor, r);
     }
 
     /** Retrieve the integer value of an enum constant declaration as a signed
@@ -549,7 +563,7 @@ struct EnumCursor {
     }
 
     /// Return: if the underlying type is an enum.
-    @property bool isUnderlyingTypeEnum() @safe {
+    @property bool isUnderlyingTypeEnum() {
         auto t = typedefUnderlyingType.declaration.enum_;
         return t.kind == CXTypeKind.CXType_Enum;
     }
@@ -562,7 +576,7 @@ struct EnumCursor {
             t = typedefUnderlyingType.declaration.enum_.type;
         }
         else {
-            t = Type(clang_getCursorType(cx));
+            t = Type(cursor, clang_getCursorType(cx));
         }
 
         with (CXTypeKind) switch (t.kind) {

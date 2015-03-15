@@ -38,7 +38,7 @@ struct CXString {
 /**
  * \brief Retrieve the character data associated with the given string.
  */
-const(char)* clang_getCString(CXString string);
+immutable(char)* clang_getCString(CXString string);
 
 /**
  * \brief Free the given string.

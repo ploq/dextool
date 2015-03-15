@@ -9,23 +9,20 @@ module clang.Visitor;
 
 import clang.c.index;
 import clang.Cursor;
+import clang.TranslationUnit;
 
 struct Visitor {
     alias Delegate = int delegate(ref Cursor, ref Cursor);
     alias OpApply = int delegate(Delegate dg);
 
-    private CXCursor cursor;
+    private Cursor cursor;
 
-    this(CXCursor cursor) {
+    this(Cursor cursor) {
         this.cursor = cursor;
     }
 
-    this(Cursor cursor) {
-        this.cursor = cursor.cx;
-    }
-
     int opApply(Delegate dg) {
-        auto data = OpApplyData(dg);
+        auto data = OpApplyData(dg, cursor.translationUnit);
         clang_visitChildren(cursor, &visitorFunction, cast(CXClientData)&data);
 
         return data.returnCode;
@@ -38,8 +35,8 @@ private:
         auto tmp = cast(OpApplyData*) data;
 
         with (CXChildVisitResult) {
-            auto dCursor = Cursor(cursor);
-            auto dParent = Cursor(parent);
+            auto dCursor = Cursor(tmp.tu, cursor);
+            auto dParent = Cursor(tmp.tu, parent);
             auto r = tmp.dg(dCursor, dParent);
             tmp.returnCode = r;
             return r ? CXChildVisit_Break : CXChildVisit_Continue;
@@ -49,9 +46,11 @@ private:
     static struct OpApplyData {
         int returnCode;
         Delegate dg;
+        TranslationUnit tu;
 
-        this(Delegate dg) {
+        this(Delegate dg, TranslationUnit tu) {
             this.dg = dg;
+            this.tu = tu;
         }
     }
 
@@ -60,10 +59,6 @@ private:
 
         this(Visitor visitor) {
             this.visitor = visitor;
-        }
-
-        this(CXCursor cursor) {
-            visitor = Visitor(cursor);
         }
 
         this(Cursor cursor) {
@@ -95,12 +90,8 @@ struct TypedVisitor(CXCursorKind kind) {
         this.visitor = visitor;
     }
 
-    this(CXCursor cursor) {
-        this(Visitor(cursor));
-    }
-
     this(Cursor cursor) {
-        this(cursor.cx);
+        this.visitor = Visitor(cursor);
     }
 
     int opApply(Visitor.Delegate dg) {

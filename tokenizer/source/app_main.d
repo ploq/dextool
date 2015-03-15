@@ -45,7 +45,7 @@ void show_all_tokens(ref CXTranslationUnit tu, CXToken* tokens, uint numTokens) 
         writef("Token: %d\n", i);
         writef(" Text: %s\n", toD(spell));
         writef(" Kind: %s\n", _getTokenKindSpelling(kind));
-        writef(" Location: %s:%d:%d:%d\n", clang_getCString(fileName), line, column,
+        writef(" Location: %s:%d:%d:%d\n", toD(fileName), line, column,
             offset);
         writef("\n");
 
@@ -134,8 +134,8 @@ int rmain(string[] args) {
     CXIndex index = clang_createIndex(1, 1);
 
     // create Translation Unit
-    CXTranslationUnit tu = clang_parseTranslationUnit(index, filename.toStringz, null,
-        0, null, 0, 0);
+    CXTranslationUnit tu = clang_parseTranslationUnit(index, filename.toStringz,
+        null, 0, null, 0, 0);
     if (tu == null) {
         writef("Cannot parse translation unit\n");
         return 1;

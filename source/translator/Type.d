@@ -155,6 +155,9 @@ TypeKind translateReturnCursor(Cursor cursor) {
  */
 TypeKind translateTypeCursor(ref Cursor cursor) {
     import clang.Token : toString;
+    import clang.SourceRange : toString;
+
+    trace(clang.SourceRange.toString(cursor.extent));
 
     bool isQualifier(string value) {
         if (value == "const") {

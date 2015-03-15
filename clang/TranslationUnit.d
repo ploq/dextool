@@ -45,7 +45,8 @@ struct TranslationUnit {
     }
 
     @property DeclarationVisitor declarations() {
-        return DeclarationVisitor(clang_getTranslationUnitCursor(cx));
+        auto c = Cursor(this, clang_getTranslationUnitCursor(cx));
+        return DeclarationVisitor(c);
     }
 
     Nullable!File file(string filename) @trusted {
@@ -61,7 +62,7 @@ struct TranslationUnit {
 
     @property Cursor cursor() {
         auto r = clang_getTranslationUnitCursor(cx);
-        return Cursor(r);
+        return Cursor(this, r);
     }
 }
 

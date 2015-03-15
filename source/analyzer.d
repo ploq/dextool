@@ -43,9 +43,11 @@ class Context {
         this.input_file = input_file;
         this.index = Index(false, false);
 
-        uint options = cast(uint) CXTranslationUnit_Flags.CXTranslationUnit_Incomplete | CXTranslationUnit_Flags
-            .CXTranslationUnit_IncludeBriefCommentsInCodeCompletion | CXTranslationUnit_Flags
-            .CXTranslationUnit_DetailedPreprocessingRecord;
+        uint options = 0;
+
+        //uint options = cast(uint) CXTranslationUnit_Flags.CXTranslationUnit_Incomplete | CXTranslationUnit_Flags
+        //    .CXTranslationUnit_IncludeBriefCommentsInCodeCompletion | CXTranslationUnit_Flags
+        //    .CXTranslationUnit_DetailedPreprocessingRecord;
 
         this.translation_unit = TranslationUnit.parse(this.index, this.input_file,
             this.args, null, options);
@@ -196,17 +198,11 @@ struct TranslateContext {
 struct ClassTranslatorHdr {
     mixin VisitNodeModule!CppModule;
 
-    private CXCursor cursor;
+    private Cursor cursor;
     private CppModule top; // top code generator node
 
-    this(CXCursor cursor) {
-        this.cursor = cursor;
-        top = new CppModule;
-        push(top);
-    }
-
     this(Cursor cursor) {
-        this.cursor = cursor.cx;
+        this.cursor = cursor;
         top = new CppModule;
         push(top);
     }

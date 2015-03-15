@@ -10,6 +10,7 @@ import std.typecons;
 import std.experimental.logger;
 
 import clang.c.index;
+import clang.c.cxstring;
 import clang.Cursor;
 import clang.SourceLocation;
 import clang.SourceRange;
@@ -65,8 +66,8 @@ struct Token {
     private RefCounted!TokenGroup group;
 
     this(RefCounted!TokenGroup group, ref CXToken token) {
-        group = group;
-        cx = token;
+        this.group = group;
+        this.cx = token;
     }
 
     /// Obtain the TokenKind of the current token.
@@ -79,7 +80,13 @@ struct Token {
      *  This is the textual representation of the token in source.
      */
     @property string spelling() {
-        return toD(clang_getTokenSpelling(group.tu, cx));
+        auto r = clang_getTokenSpelling(group.tu, cx);
+
+        auto cstr = clang_getCString(r);
+        auto str = text(cstr).idup;
+        trace(group.tu, "|", text(r), "|", cstr, "|", str, str.length, "|", text(cstr[0]), "|", this.extent);
+
+        return toD(r);
     }
 
     /// The SourceLocation this Token occurs at.
@@ -96,7 +103,7 @@ struct Token {
 
     /// The Cursor this Token corresponds to.
     @property Cursor cursor() {
-        Cursor c = Cursor.empty;
+        Cursor c = Cursor.empty(group.tu);
 
         clang_annotateTokens(group.tu, &cx, 1, &c.cx);
 
@@ -111,7 +118,6 @@ struct Token {
 /** Tokenize the source code described by the given range into raw
  * lexical tokens.
  *
- * Params:
  *  TU = the translation unit whose text is being tokenized.
  *
  *  Range = the source range in which text should be tokenized. All of the
@@ -124,17 +130,19 @@ struct Token {
  *  NumTokens = will be set to the number of tokens in the \c* Tokens
  * array.
  */
-RefCounted!TokenGroup tokenize(RefCounted!TranslationUnit tu, SourceRange range) {
+RefCounted!TokenGroup tokenize(TranslationUnit tu, SourceRange range) {
     TokenGroup.CXTokenArray tokens;
     auto tg = RefCounted!TokenGroup(tu);
 
-    trace("TU tokenize: ", tu.refCountedPayload);
+    trace("TU tokenize: ", tu, "|", tg.tu);
 
     clang_tokenize(tu, range, &tokens.tokens, &tokens.length);
     tg.cxtokens = tokens;
 
     foreach (i; 0 .. tokens.length) {
-        tg.tokens ~= Token(tg, tokens.tokens[i]);
+        auto t = Token(tg, tokens.tokens[i]);
+        trace(t.toString);
+        tg.tokens ~= t;
     }
 
     return tg;
@@ -159,7 +167,7 @@ private:
 struct TokenGroup {
     alias Delegate = int delegate(ref Token);
 
-    private RefCounted!TranslationUnit tu;
+    private TranslationUnit tu;
     private CXTokenArray cxtokens;
     private Token[] tokens;
 
@@ -168,8 +176,8 @@ struct TokenGroup {
         uint length;
     }
 
-    this(RefCounted!TranslationUnit tu) {
-        tu = tu;
+    this(TranslationUnit tu) {
+        this.tu = tu;
     }
 
     ~this() {
