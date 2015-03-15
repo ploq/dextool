@@ -557,16 +557,16 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
 
         void func1();
         int func2();
-        int func3(int x);
-        int func3(int x, char* y);
-        int func4(MadeUp z);
-        char* func5(some_pointer w);
+        char* func6(some_pointer w);
+        float func7(int& y, char* yy);
+        const double func3(int x, const int xx);
+        const void* const func4(MadeUp z, const MadeUp zz, const MadeUp& zzz, const MadeUp** const zzzz);
     private:
     };
 
 """;
 
-    logger.globalLogLevel(LogLevel.trace);
+    logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/class_funcs.hpp");
     x.diagnostic();
 
