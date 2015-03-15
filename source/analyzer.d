@@ -49,8 +49,8 @@ class Context {
         //    .CXTranslationUnit_IncludeBriefCommentsInCodeCompletion | CXTranslationUnit_Flags
         //    .CXTranslationUnit_DetailedPreprocessingRecord;
 
-        this.translation_unit = TranslationUnit.parse(this.index, this.input_file,
-            this.args, null, options);
+        this.translation_unit = TranslationUnit.parse(this.index,
+            this.input_file, this.args, null, options);
     }
 
     ~this() {
@@ -226,13 +226,13 @@ struct ClassTranslatorHdr {
                 }
                 break;
             case CXCursor_Constructor:
-                CtorTranslator!CppModule(c, current)[$.begin = "", $.end = ";" ~ newline,
-                    $.noindent = true];
+                CtorTranslator!CppModule(c, current)[$.begin = "",
+                    $.end = ";" ~ newline, $.noindent = true];
                 descend = false;
                 break;
             case CXCursor_Destructor:
-                DtorTranslator!CppModule(c, current)[$.begin = "", $.end = ";" ~ newline,
-                    $.noindent = true];
+                DtorTranslator!CppModule(c, current)[$.begin = "",
+                    $.end = ";" ~ newline, $.noindent = true];
                 descend = false;
                 current.sep();
                 break;
@@ -324,8 +324,8 @@ string[] ParmDeclToString(Cursor cursor) {
         auto tok_group = param.tokens;
         auto type_spelling = tok_group.toString;
         auto type = translateTypeCursor(param);
-        trace(type_spelling, " ", type, " ", param.spelling, "|", param.type.spelling,
-            "|", param.type.spelling2);
+        trace(type_spelling, " ", type, " ", param.spelling, "|",
+            param.type.spelling, "|", param.type.spelling2);
         params ~= format("%s %s", type.toString, param.spelling);
     }
 

@@ -45,8 +45,7 @@ void show_all_tokens(ref CXTranslationUnit tu, CXToken* tokens, uint numTokens) 
         writef("Token: %d\n", i);
         writef(" Text: %s\n", toD(spell));
         writef(" Kind: %s\n", _getTokenKindSpelling(kind));
-        writef(" Location: %s:%d:%d:%d\n", toD(fileName), line, column,
-            offset);
+        writef(" Location: %s:%d:%d:%d\n", toD(fileName), line, column, offset);
         writef("\n");
 
         clang_disposeString(fileName);

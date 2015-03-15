@@ -44,8 +44,9 @@ import clang.Visitor;
 string abilities(ref Cursor c) {
     string s = format("%s%s%s%s%s%s%s%s%s%s%s%s", c.isAttribute ? "a" : "",
         c.isDeclaration ? "d" : "", c.isDefinition ? "D" : "",
-        c.isExpression ? "e" : "", c.isEmpty ? "n" : "", c.isPreprocessing ? "p" : "",
-        c.isReference ? "r" : "", c.isStatement ? "s" : "", c.isTranslationUnit ? "t" : "",
+        c.isExpression ? "e" : "", c.isEmpty ? "n" : "",
+        c.isPreprocessing ? "p" : "", c.isReference ? "r" : "",
+        c.isStatement ? "s" : "", c.isTranslationUnit ? "t" : "",
         c.isUnexposed ? "u" : "", c.isVirtualBase ? "v" : "", c.isValid ? "V" : "",
         );
 
@@ -85,7 +86,8 @@ struct Cursor {
     private TranslationUnit translation_unit;
 
     /// disallowed
-    private this(CXCursor c) {}
+    private this(CXCursor c) {
+    }
 
     this(Cursor cursor) {
         translation_unit = cursor.translation_unit;
