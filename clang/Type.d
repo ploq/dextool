@@ -60,6 +60,11 @@ struct Type {
         return declaration.spelling;
     }
 
+    @property string spelling2() {
+        auto r = toD(clang_getTypeSpelling(cx));
+        return r;
+    }
+
     @property string typeKindSpelling() {
         auto r = clang_getTypeKindSpelling(cx.kind);
         return toD(r);

@@ -8,10 +8,10 @@ public:
 
     void func1();
     int func2();
-    int func3(int x);
-    int func3(int x, char* y);
-    int func4(MadeUp z);
-    char* func5(some_pointer w);
+    char* func6(some_pointer w);
+    float func7(int& y, char* yy);
+    const double func3(int x, const int xx);
+    const void* const func4(MadeUp z, const MadeUp zz, const MadeUp& zzz, const MadeUp** const zzzz);
 
 private:
     int x;

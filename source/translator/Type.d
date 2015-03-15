@@ -13,6 +13,7 @@ import std.string;
 import std.experimental.logger;
 
 import clang.c.index;
+import clang.Cursor;
 import clang.Token;
 import clang.Type;
 
@@ -21,18 +22,17 @@ import translator.Translator;
 struct TypeKind {
     string name;
     string prefix; // const
-    string suffix; // *, &, **
+    string suffix; // *, &, **, const
     bool isConst;
     bool isRef;
     bool isPointer;
 }
 
 string toString(in TypeKind type) {
-    return format("%s%s%s", type.prefix.length == 0 ? "" : type.prefix ~ " ", type.name,
-        type.suffix);
+    return format("%s%s%s", type.prefix.length == 0 ? "" : type.prefix ~ " ", type.name, type.suffix.length == 0 ? "" : " " ~ type.suffix);
 }
 
-/** Translate a clang CXTypeKind to a string representation.
+/** Translate a cursors type to a struct representation.
  * Params:
  *   type = a clang cursor to the type node
  * Returns: Struct of metadata about the type.
@@ -44,7 +44,9 @@ in {
 body {
     TypeKind result;
 
-    //nameFromToken(type);
+    auto tmp_c = type.declaration;
+    auto tmp_t = tmp_c.typedefUnderlyingType;
+    trace(format("%s %s c:%s t:%s", tmp_c.spelling, abilities(tmp_t), abilities(tmp_c), abilities(type)));
 
     with (CXTypeKind) {
         if (type.kind == CXType_BlockPointer || type.isFunctionPointerType)
@@ -59,11 +61,12 @@ body {
                 result = translatePointer(type);
                 break;
             case CXType_Typedef:
-                result.name = translateTypedef(type);
+                result = translateTypedef(type);
                 break;
 
             case CXType_Record:
             case CXType_Enum:
+                // fix suffix and isConst
                 result.name = type.spelling;
                 if (result.name.length == 0)
                     result.name = getAnonymousName(type.declaration);
@@ -82,12 +85,127 @@ body {
             default:
                 trace(format("%s|%s|%s|%s", type.kind, type.declaration,
                     type.isValid, type.typeKindSpelling));
-                result.name = translateCursorType(type.kind);
+                result.name = type.spelling;
             }
         }
     }
 
     return result;
+}
+
+/** Extract properties from a Cursor for a Type like const, pointer, reference.
+ * Params:
+ *  cursor = A cursor that have a type property.
+ */
+TypeKind toProperty(ref Cursor cursor) {
+    TypeKind result;
+
+    if (cursor.type.isConst) {
+        result.isConst = true;
+        result.prefix = "const";
+    }
+
+    if (cursor.type.declaration.isReference) {
+        result.isRef = true;
+        result.suffix = "&";
+    }
+
+    if (cursor.type.kind == CXTypeKind.CXType_Pointer) {
+        result.isPointer = true;
+        result.suffix = "*";
+    }
+
+    return result;
+}
+
+/** Translate a cursor for a return type (function) to a TypeKind with all properties.
+ *
+ * Note that the .name is the empty string.
+ *
+ * Params:
+ *  cursor = A cursor to a return type.
+ */
+TypeKind translateReturnCursor(Cursor cursor) {
+    TypeKind result = cursor.toProperty();
+
+    result.name = cursor.spelling;
+
+    return result;
+}
+
+/** Translate a cursor for a type to a TypeKind.
+ *
+ * Useful when a diagnostic error is detected. Then the translation must be
+ * done on the tokens. At least for the undefined types. Otherwise they will be
+ * assuemed to be int's.
+ *
+ * Assumtion made:
+ * The cursor's spelling returns the token denoting "the middle".
+ * Before "spelling" is assigned to prefix.
+ * Post "spelling" is assigned to suffix.
+ * isX is set from the cursors isX-properties.
+ *
+ * Before "spelling" can only be of type qualifier, aka const.
+ * Post "spelling" can be both qualifier and attribute, aka const|&|*.
+ *
+ * Params:
+ *  cursor = Cursor to translate.
+ */
+TypeKind translateTypeCursor(ref Cursor cursor) {
+    import clang.Token : toString;
+
+    bool isQualifier(string value) {
+        if (value == "const") {
+            return true;
+        }
+        return false;
+    }
+    bool isPointerRef(string value) {
+        if (inPattern('*', value)) {
+            return true;
+        } else if (inPattern('&', value)) {
+            return true;
+        }
+
+        return false;
+    }
+    enum State {
+        Prefix, Suffix, Done
+    }
+
+    TypeKind r = cursor.toProperty();
+    auto tokens = cursor.tokens();
+    trace(tokens.length, " ", tokens.toString, " ", cursor.type.spelling);
+
+    State st;
+    string sep = "";
+    foreach (t; tokens) {
+        trace(clang.Token.toString(t), " ", text(st));
+        final switch (st) {
+            case State.Prefix:
+                if (isQualifier(t.spelling)) {
+                    r.prefix ~= sep ~ t.spelling;
+                    sep = " ";
+                } else if (t.spelling.length > 0) { // middle detected
+                    r.name = t.spelling;
+                    sep = "";
+                    st = State.Suffix;
+                }
+                break;
+            case State.Suffix:
+                if (isPointerRef(t.spelling)) {
+                    r.suffix ~= sep ~ t.spelling;
+                    sep = " ";
+                } else if (t.spelling.length > 0) {
+                    st = State.Done;
+                }
+                break;
+            case State.Done: // do nothing
+                break;
+        }
+    }
+
+    return r;
 }
 
 private:
@@ -98,65 +216,44 @@ private:
  *
  * Needed in those cases a Diagnostic error occur complaining about unknown type name.
  */
-string nameFromToken(Type type) {
-    auto tokens = type.declaration.tokens();
+string nameFromToken(Cursor type) {
+    import clang.Token : toString;
+    auto tokens = type.tokens();
+    string name;
+
+    trace(tokens.length, " ", tokens.toString, " ", type.spelling);
 
     foreach (t; tokens) {
         trace(clang.Token.toString(t));
+        switch (t.spelling) {
+            case "":
+                break;
+            case "const":
+                break;
+            default:
+                if (name.length == 0) {
+                    name = t.spelling;
+                }
+        }
     }
 
-    return "foobar";
+    return name;
 }
 
-string translateTypedef(Type type)
+TypeKind translateTypedef(Type type)
 in {
     assert(type.kind == CXTypeKind.CXType_Typedef);
 }
 body {
-    auto spelling = type.spelling;
+    TypeKind result;
+    result.name = type.spelling;
 
-    with (CXTypeKind) switch (spelling) {
-    case "BOOL":
-        return translateCursorType(CXType_Bool);
-
-    case "int64_t":
-        return translateCursorType(CXType_LongLong);
-    case "int32_t":
-        return translateCursorType(CXType_Int);
-    case "int16_t":
-        return translateCursorType(CXType_Short);
-    case "int8_t":
-        return "byte";
-
-    case "uint64_t":
-        return translateCursorType(CXType_ULongLong);
-    case "uint32_t":
-        return translateCursorType(CXType_UInt);
-    case "uint16_t":
-        return translateCursorType(CXType_UShort);
-    case "uint8_t":
-        return translateCursorType(CXType_UChar);
-
-    case "size_t":
-    case "ptrdiff_t":
-    case "sizediff_t":
-        return spelling;
-
-    case "wchar_t":
-        auto kind = type.canonicalType.kind;
-
-        if (kind == CXType_Int)
-            return "dchar";
-
-        else if (kind == CXType_Short)
-            return "wchar";
-        break;
-
-    default:
-        break;
+    if (type.isConst) {
+        result.isConst = true;
+        result.prefix = "const";
     }
 
-    return spelling;
+    return result;
 }
 
 string translateUnexposed(Type type, bool rewriteIdToObject)
@@ -346,3 +443,4 @@ string translateCursorType(CXTypeKind kind) {
         assert(0, "Unhandled type kind " ~ to!string(kind));
     }
 }
+
