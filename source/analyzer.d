@@ -586,8 +586,8 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
         Simple();
         ~Simple();
 
-        void operator=(const Simple& other);
         void func1();
+        void operator=(const Simple& other);
     private:
         char* func3();
     };
@@ -603,5 +603,5 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     visit_ast!TranslateContext(cursor, ctx);
 
     auto rval = ctx.render;
-    //assert(rval == expect, rval);
+    assert(rval == expect, rval);
 }
