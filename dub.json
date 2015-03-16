@@ -3,7 +3,7 @@
     "description": "Fun with LLVM/Clang",
     "copyright": "Copyright © 2014, Joakim Brännström",
     "authors": ["Joakim Brännström"],
-    "license": "MIT",
+    "license": "BSL-1.0",
     "dependencies": {
         "tested": {"version": ">=0.9.4"},
         "docopt": {"version": ">=0.6.1-b.1"},
@@ -12,8 +12,8 @@
 
     "targetPath": "build",
     "mainSourceFile": "source/app.d",
-	"sourcePaths": ["source", "clang"],
-	"importPaths": ["source", "clang"],
+	"sourcePaths": ["source", "clang", "dsrcgen"],
+	"importPaths": ["source", "clang", "dsrcgen"],
 
 	"lflags-posix": ["-lclang", "-rpath", ".", "-L."],
     "targetType": "executable",
