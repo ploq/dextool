@@ -24,7 +24,7 @@ import clang.TranslationUnit;
 import clang.Visitor;
 import clang.UnsavedFile;
 
-import srcgen.cpp;
+import dsrcgen.cpp;
 
 import translator.Type;
 
