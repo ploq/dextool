@@ -41,15 +41,12 @@ int CINDEX_VERSION_ENCODE(int major, int minor) {
 
 const int CINDEX_VERSION = CINDEX_VERSION_ENCODE(CINDEX_VERSION_MAJOR, CINDEX_VERSION_MINOR);
 
-private string concat_version() {
+private string concat_version() @safe pure {
     import std.conv;
     return text(CINDEX_VERSION_MAJOR) ~ "." ~ text(CINDEX_VERSION_MINOR);
 }
 
 const string CINDEX_VERSION_STRING = concat_version();
-
-
-
 
 
 
@@ -78,7 +75,7 @@ const string CINDEX_VERSION_STRING = concat_version();
  * \brief An "index" that consists of a set of translation units that would
  * typically be linked together into an executable or library.
  */
-alias void* CXIndex;
+alias CXIndex = void*;
 
 ///
 struct CXTranslationUnitImpl;
@@ -86,13 +83,13 @@ struct CXTranslationUnitImpl;
 /**
  * \brief A single translation unit, which resides in an index.
  */
-alias CXTranslationUnitImpl* CXTranslationUnit;
+alias CXTranslationUnit = CXTranslationUnitImpl*;
 
 /**
  * \brief Opaque pointer representing client data that will be passed through
  * to various callbacks and visitors.
  */
-alias void* CXClientData;
+alias CXClientData = void*;
 
 /**
  * \brief Provides the contents of a file that has not yet been saved to disk.
@@ -286,7 +283,7 @@ uint clang_CXIndex_getGlobalOptions(CXIndex);
 /**
  * \brief A particular source file that is part of a translation unit.
  */
-alias void* CXFile;
+alias CXFile = void*;
 
 
 /**
@@ -678,12 +675,12 @@ enum CXDiagnosticSeverity {
  * \brief A single diagnostic, containing the diagnostic's severity,
  * location, text, source ranges, and fix-it hints.
  */
-alias void* CXDiagnostic;
+alias CXDiagnostic = void*;
 
 /**
  * \brief A group of CXDiagnostics.
  */
-alias void* CXDiagnosticSet;
+alias CXDiagnosticSet = void*;
 
 /**
  * \brief Determine the number of diagnostics in a CXDiagnosticSet.
@@ -727,7 +724,7 @@ enum CXLoadDiag_Error {
 
   /**
    * \brief Indicates that the serialized diagnostics file is invalid or
-   *  corrupt.
+   * corrupt.
    */
   CXLoadDiag_InvalidFile = 3
 }
@@ -945,6 +942,7 @@ uint clang_getDiagnosticCategory(CXDiagnostic);
  *
  * \returns The name of the given diagnostic category.
  */
+
 CXString clang_getDiagnosticCategoryName(uint Category);
 
 /**
@@ -1085,10 +1083,11 @@ CXTranslationUnit clang_createTranslationUnitFromSourceFile(
  * routine returns a \c NULL \c CXTranslationUnit, without further detailed
  * error codes.
  */
-CXTranslationUnit clang_createTranslationUnit(CXIndex CIdx,
-                                             const(char)* ast_filename);
+CXTranslationUnit clang_createTranslationUnit(
+    CXIndex CIdx,
+    const(char)* ast_filename);
 
-/** TODO add CXErrorCode
+/**
  * \brief Create a translation unit from an AST file (\c -emit-ast).
  *
  * \param[out] out_TU A non-NULL pointer to store the created
@@ -1096,9 +1095,10 @@ CXTranslationUnit clang_createTranslationUnit(CXIndex CIdx,
  *
  * \returns Zero on success, otherwise returns an error code.
  */
-//CXErrorCode clang_createTranslationUnit2(CXIndex CIdx,
-//                                         const(char)* ast_filename,
-//                                         CXTranslationUnit* out_TU);
+CXErrorCode clang_createTranslationUnit2(
+    CXIndex CIdx,
+    const(char)* ast_filename,
+    CXTranslationUnit* out_TU);
 
 /**
  * \brief Flags that control the creation of translation units.
@@ -1197,7 +1197,7 @@ enum CXTranslationUnit_Flags {
    * unit.
    */
   CXTranslationUnit_IncludeBriefCommentsInCodeCompletion = 0x80
-};
+}
 
 /**
  * \brief Returns the set of flags that is suitable for parsing a translation
@@ -1219,14 +1219,14 @@ uint clang_defaultEditingTranslationUnitOptions();
  * routine returns a \c NULL \c CXTranslationUnit, without further detailed
  * error codes.
  */
-
-CXTranslationUnit clang_parseTranslationUnit(CXIndex CIdx,
-                                             const(char)* source_filename,
-                                             const(char*)* command_line_args,
-                                             int num_command_line_args,
-                                             CXUnsavedFile* unsaved_files,
-                                             uint num_unsaved_files,
-                                             uint options);
+CXTranslationUnit
+clang_parseTranslationUnit(CXIndex CIdx,
+                           const(char)* source_filename,
+                           const(char*)* command_line_args,
+                           int num_command_line_args,
+                           CXUnsavedFile* unsaved_files,
+                           uint num_unsaved_files,
+                           uint options);
 
 /**
  * \brief Parse the given source file and the translation unit corresponding
@@ -1474,6 +1474,7 @@ enum CXTUResourceUsageKind {
   * \brief Returns the human-readable null-terminated C string that represents
   *  the name of the memory category.  This string should never be freed.
   */
+
 const(char)* clang_getTUResourceUsageName(CXTUResourceUsageKind kind);
 
 struct CXTUResourceUsageEntry {
@@ -2245,7 +2246,7 @@ enum CXCursorKind {
   CXCursor_ModuleImportDecl              = 600,
   CXCursor_FirstExtraDecl                = CXCursor_ModuleImportDecl,
   CXCursor_LastExtraDecl                 = CXCursor_ModuleImportDecl
-};
+}
 
 /**
  * \brief A cursor representing some element in the abstract syntax tree for
@@ -2515,7 +2516,7 @@ struct CXCursorSetImpl;
 /**
  * \brief A fast container representing a set of CXCursors.
  */
-alias CXCursorSetImpl* CXCursorSet;
+alias CXCursorSet = CXCursorSetImpl*;
 
 /**
  * \brief Creates an empty CXCursorSet.
@@ -2723,7 +2724,7 @@ CXSourceLocation clang_getCursorLocation(CXCursor);
  *
  * The extent of a cursor starts with the file/line/column pointing at the
  * first character within the source construct that the cursor refers to and
- * ends with the last character withinin that source construct. For a
+ * ends with the last character within that source construct. For a
  * declaration, the extent covers the declaration itself. For a reference,
  * the extent covers the location of the reference (e.g., where the referenced
  * entity was actually used).
@@ -2805,7 +2806,7 @@ enum CXTypeKind {
   CXType_VariableArray = 115,
   CXType_DependentSizedArray = 116,
   CXType_MemberPointer = 117
-};
+}
 
 /**
  * \brief Describes the calling convention of a function type
@@ -2869,7 +2870,7 @@ CXType clang_getEnumDeclIntegerType(CXCursor C);
 
 /**
  * \brief Retrieve the integer value of an enum constant declaration as a signed
- *  long.
+ *  long long.
  *
  * If the cursor does not reference an enum constant declaration, LLONG_MIN is returned.
  * Since this is also potentially a valid constant value, the kind of the cursor
@@ -2879,7 +2880,7 @@ long clang_getEnumConstantDeclValue(CXCursor C);
 
 /**
  * \brief Retrieve the integer value of an enum constant declaration as an unsigned
- *  long.
+ *  long long.
  *
  * If the cursor does not reference an enum constant declaration, ULLONG_MAX is returned.
  * Since this is also potentially a valid constant value, the kind of the cursor
@@ -3289,9 +3290,9 @@ enum CXChildVisitResult {
  * The visitor should return one of the \c CXChildVisitResult values
  * to direct clang_visitCursorChildren().
  */
-alias CXChildVisitResult function (CXCursor cursor,
+alias CXCursorVisitor = CXChildVisitResult function (CXCursor cursor,
                                                    CXCursor parent,
-                                                   CXClientData client_data) CXCursorVisitor;
+                                                   CXClientData client_data);
 
 /**
  * \brief Visit the children of a particular cursor.
@@ -3933,7 +3934,7 @@ CXSourceRange clang_getTokenExtent(CXTranslationUnit, CXToken);
  * that occur within the given source range. The returned pointer must be
  * freed with clang_disposeTokens() before the translation unit is destroyed.
  *
- * \param NumTokens will be set to the number of tokens in the \c* Tokens
+ * \param NumTokens will be set to the number of tokens in the \c *Tokens
  * array.
  *
  */
@@ -3971,14 +3972,14 @@ void clang_tokenize(CXTranslationUnit TU, CXSourceRange Range,
  * replaced with the cursors corresponding to each token.
  */
 void clang_annotateTokens(CXTranslationUnit TU,
-                                         CXToken* Tokens, uint NumTokens,
-                                         CXCursor* Cursors);
+                                         CXToken *Tokens, uint NumTokens,
+                                         CXCursor *Cursors);
 
 /**
  * \brief Free the given set of tokens.
  */
 void clang_disposeTokens(CXTranslationUnit TU,
-                                        CXToken* Tokens, uint NumTokens);
+                                        CXToken *Tokens, uint NumTokens);
 
 /**
  * @}
@@ -4035,7 +4036,7 @@ void clang_executeOnThread(void function (void*) fn, void* user_data,
  * with actual code,of a specific kind. See \c CXCompletionChunkKind for a
  * description of the different kinds of chunks.
  */
-alias void* CXCompletionString;
+alias CXCompletionString = void*;
 
 /**
  * \brief A single result of code completion.
@@ -4343,15 +4344,14 @@ clang_getCompletionAnnotation(CXCompletionString completion_string,
  * \param completion_string The code completion string whose parent is
  * being queried.
  *
- * \param kind If non-NULL, will be set to the kind of the parent context,
- * or CXCursor_NotImplemented if there is no context.
+ * \param kind DEPRECATED: always set to CXCursor_NotImplemented if non-NULL.
  *
- * \param Returns the name of the completion parent, e.g., "NSObject" if
+ * \returns The name of the completion parent, e.g., "NSObject" if
  * the completion string represents a method in the NSObject class.
  */
 CXString
 clang_getCompletionParent(CXCompletionString completion_string,
-                          CXCursorKind* kind);
+                          CXCursorKind *kind);
 
 /**
  * \brief Retrieve the brief documentation comment attached to the declaration
@@ -4383,7 +4383,7 @@ struct CXCodeCompleteResults {
   /**
    * \brief The code-completion results.
    */
-  CXCompletionResult* Results;
+  CXCompletionResult *Results;
 
   /**
    * \brief The number of code-completion results stored in the
@@ -4639,19 +4639,21 @@ CXCodeCompleteResults* clang_codeCompleteAt(CXTranslationUnit TU,
  * \param Results The set of results to sort.
  * \param NumResults The number of results in \p Results.
  */
-void clang_sortCodeCompletionResults(CXCompletionResult* Results,
+void clang_sortCodeCompletionResults(CXCompletionResult *Results,
                                      uint NumResults);
 
 /**
  * \brief Free the given set of code-completion results.
  */
-void clang_disposeCodeCompleteResults(CXCodeCompleteResults* Results);
+
+void clang_disposeCodeCompleteResults(CXCodeCompleteResults *Results);
 
 /**
  * \brief Determine the number of diagnostics produced prior to the
  * location where code completion was performed.
  */
-uint clang_codeCompleteGetNumDiagnostics(CXCodeCompleteResults* Results);
+
+uint clang_codeCompleteGetNumDiagnostics(CXCodeCompleteResults *Results);
 
 /**
  * \brief Retrieve a diagnostic associated with the given code completion.
@@ -4662,7 +4664,8 @@ uint clang_codeCompleteGetNumDiagnostics(CXCodeCompleteResults* Results);
  * \returns the requested diagnostic. This diagnostic must be freed
  * via a call to \c clang_disposeDiagnostic().
  */
-CXDiagnostic clang_codeCompleteGetDiagnostic(CXCodeCompleteResults* Results,
+
+CXDiagnostic clang_codeCompleteGetDiagnostic(CXCodeCompleteResults *Results,
                                              uint Index);
 
 /**
@@ -4674,8 +4677,9 @@ CXDiagnostic clang_codeCompleteGetDiagnostic(CXCodeCompleteResults* Results,
  * \returns the kinds of completions that are appropriate for use
  * along with the given code completion results.
  */
+
 ulong clang_codeCompleteGetContexts(
-                                                CXCodeCompleteResults* Results);
+                                                CXCodeCompleteResults *Results);
 
 /**
  * \brief Returns the cursor kind for the container for the current code
@@ -4693,8 +4697,9 @@ ulong clang_codeCompleteGetContexts(
  * \returns the container kind, or CXCursor_InvalidCode if there is not a
  * container
  */
+
 CXCursorKind clang_codeCompleteGetContainerKind(
-                                                 CXCodeCompleteResults* Results,
+                                                 CXCodeCompleteResults *Results,
                                                      uint* IsIncomplete);
 
 /**
@@ -4706,7 +4711,8 @@ CXCursorKind clang_codeCompleteGetContainerKind(
  *
  * \returns the USR for the container
  */
-CXString clang_codeCompleteGetContainerUSR(CXCodeCompleteResults* Results);
+
+CXString clang_codeCompleteGetContainerUSR(CXCodeCompleteResults *Results);
 
 
 /**
@@ -4720,7 +4726,8 @@ CXString clang_codeCompleteGetContainerUSR(CXCodeCompleteResults* Results);
  * \returns the selector (or partial selector) that has been entered thus far
  * for an Objective-C message send.
  */
-CXString clang_codeCompleteGetObjCSelector(CXCodeCompleteResults* Results);
+
+CXString clang_codeCompleteGetObjCSelector(CXCodeCompleteResults *Results);
 
 /**
  * @}
@@ -4759,10 +4766,10 @@ void clang_toggleCrashRecovery(uint isEnabled);
   * array is sorted in order of immediate inclusion.  For example,
   * the first element refers to the location that included 'included_file'.
   */
-alias void function (CXFile included_file,
+alias CXInclusionVisitor = void function (CXFile included_file,
                                    CXSourceLocation* inclusion_stack,
                                    uint include_len,
-                                   CXClientData client_data) CXInclusionVisitor;
+                                   CXClientData client_data);
 
 /**
  * \brief Visit the set of preprocessor inclusions in a translation unit.
@@ -4786,7 +4793,7 @@ void clang_getInclusions(CXTranslationUnit tu,
 /**
  * \brief A remapping of original source files and their translated files.
  */
-alias void* CXRemapping;
+alias CXRemapping = void*;
 
 /**
  * \brief Retrieve a remapping.
@@ -4808,6 +4815,7 @@ CXRemapping clang_getRemappings(const(char)* path);
  * \returns the requested remapping. This remapping must be freed
  * via a call to \c clang_remap_dispose(). Can return NULL if an error occurred.
  */
+
 CXRemapping clang_getRemappingsFromFileList(const(char)** filePaths,
                                             uint numFiles);
 
@@ -4847,7 +4855,7 @@ enum CXVisitorResult {
 }
 
 struct CXCursorAndRangeVisitor {
-  void* context;
+  void *context;
   CXVisitorResult function (void* context, CXCursor, CXSourceRange) visit;
 }
 
@@ -4912,35 +4920,39 @@ void clang_findReferencesInFileWithBlock(CXCursor, CXFile,
 CXResult clang_findIncludesInFileWithBlock(CXTranslationUnit, CXFile,
                                            CXCursorAndRangeVisitorBlock);
 
+
+
+
 #  endif
 #endif+/
+
 /**
  * \brief The client's data object that is associated with a CXFile.
  */
-alias void* CXIdxClientFile;
+alias CXIdxClientFile = void*;
 
 /**
  * \brief The client's data object that is associated with a semantic entity.
  */
-alias void* CXIdxClientEntity;
+alias CXIdxClientEntity = void*;
 
 /**
  * \brief The client's data object that is associated with a semantic container
  * of entities.
  */
-alias void* CXIdxClientContainer;
+alias CXIdxClientContainer = void*;
 
 /**
  * \brief The client's data object that is associated with an AST file (PCH
  * or module).
  */
-alias void* CXIdxClientASTFile;
+alias CXIdxClientASTFile = void*;
 
 /**
  * \brief Source location passed to index callbacks.
  */
 struct CXIdxLoc {
-  void* ptr_data[2];
+  void *ptr_data[2];
   uint int_data;
 }
 
@@ -5233,10 +5245,10 @@ struct IndexerCallbacks {
    * \brief Called at the end of indexing; passes the complete diagnostic set.
    */
   void function (CXClientData client_data,
-                     CXDiagnosticSet, void* reserved) diagnostic;
+                     CXDiagnosticSet, void *reserved) diagnostic;
 
   CXIdxClientFile function (CXClientData client_data,
-                               CXFile mainFile, void* reserved) enteredMainFile;
+                               CXFile mainFile, void *reserved) enteredMainFile;
 
   /**
    * \brief Called when a file gets \#included/\#imported.
@@ -5259,7 +5271,7 @@ struct IndexerCallbacks {
    * \brief Called at the beginning of indexing a translation unit.
    */
   CXIdxClientContainer function (CXClientData client_data,
-                                                 void* reserved) startedTranslationUnit;
+                                                 void *reserved) startedTranslationUnit;
 
   void function (CXClientData client_data,
                            const(CXIdxDeclInfo)*) indexDeclaration;
@@ -5278,6 +5290,7 @@ clang_index_getObjCContainerDeclInfo(const(CXIdxDeclInfo)*);
 
 const(CXIdxObjCInterfaceDeclInfo)*
 clang_index_getObjCInterfaceDeclInfo(const(CXIdxDeclInfo)*);
+
 
 const(CXIdxObjCCategoryDeclInfo)*
 clang_index_getObjCCategoryDeclInfo(const(CXIdxDeclInfo)*);
@@ -5324,7 +5337,7 @@ clang_index_setClientEntity(const(CXIdxEntityInfo)*, CXIdxClientEntity);
  * \brief An indexing action/session, to be applied to one or multiple
  * translation units.
  */
-alias void* CXIndexAction;
+alias CXIndexAction = void*;
 
 /**
  * \brief An indexing action/session, to be applied to one or multiple
@@ -5462,3 +5475,13 @@ void clang_indexLoc_getFileLocation(CXIdxLoc loc,
  */
 
 CXSourceLocation clang_indexLoc_getCXSourceLocation(CXIdxLoc loc);
+
+/**
+ * @}
+ */
+
+/**
+ * @}
+ */
+
+/* Include the comment API for compatibility. This will eventually go away. */
