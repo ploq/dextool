@@ -4,15 +4,26 @@
 /// @author Joakim Brännström (joakim.brannstrom@gmx.com)
 module app_main;
 
-import std.ascii;
 import std.conv;
+import std.exception;
 import std.file;
 import std.stdio;
 import std.string;
 import std.experimental.logger;
 
 import docopt;
+import argvalue; // from docopt
 import tested;
+
+static string doc = "
+usage:
+  gen-test-double stub [options] <infile> <outfile>
+  gen-test-double mock [options] <infile> <outfile>
+
+options:
+ -h, --help     show this
+ -d, --debug    turn on debug output for tracing of generator flow
+";
 
 class SimpleLogger : Logger {
     int line = -1;
@@ -34,66 +45,71 @@ class SimpleLogger : Logger {
         this.lvl = payload.logLevel;
         this.msg = payload.msg;
 
-        writef("%s: %s%s", text(this.lvl), this.msg, newline);
+        stderr.writefln("%s: %s", text(this.lvl), this.msg);
     }
 }
-
-static string doc = "
-usage:
-  gen-test-double stub [options] <filename>
-  gen-test-double mock [options] <filename>
-
-options:
- -h, --help     show this
- -d, --debug    turn on debug output for tracing of generator flow
-";
 
 shared static this() {
     version (unittest) {
         import core.runtime;
 
         Runtime.moduleUnitTester = () => true;
-        //runUnitTests!app(new JsonTestResultWriter("results.json"));
         assert(runUnitTests!app_main(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 
-int gen_stub(string filename) {
+int gen_stub(in string infile, in string outfile) {
+    import std.exception;
     import analyzer;
 
-    if (!exists(filename)) {
-        errorf("File '%s' do not exist", filename);
+    if (!exists(infile)) {
+        errorf("File '%s' do not exist", infile);
         return -1;
     }
 
-    writefln("Generating stub from file '%s'", filename);
+    infof("Generating stub from file '%s'", infile);
 
-    auto ctx = new Context(filename);
-    ctx.diagnostic();
+    auto file_ctx = new Context(infile);
+    file_ctx.diagnostic();
+
+    TranslateContext ctx;
+    auto cursor = file_ctx.cursor;
+    visit_ast!TranslateContext(cursor, ctx);
+
+    try {
+        auto open_outfile = File(outfile, "w");
+        scope(exit) open_outfile.close();
+    }
+    catch (ErrnoException ex) {
+        trace(ex);
+        errorf("Unable to write to file '%s'", outfile);
+        return -1;
+    }
 
     return 0;
 }
 
-int rmain(string[] args) {
+int dostuff(ref ArgValue[string] parsed) {
     int exit_status = -1;
-    bool help = true;
-    bool optionsFirst = false;
-    auto version_ = "gen-test-double v0.1";
 
-    auto parsed = docopt.docopt(doc, args[1 .. $], help, version_, optionsFirst);
-    if (parsed["--debug"].isTrue) {
-        globalLogLevel(LogLevel.all);
-        info(to!string(args));
-        info(prettyPrintArgs(parsed));
+    try {
+        if (parsed["--debug"].isTrue) {
+            globalLogLevel(LogLevel.all);
+        }
+        else {
+            globalLogLevel(LogLevel.info);
+            auto simple_logger = new SimpleLogger();
+            stdlog = simple_logger;
+        }
     }
-    else {
-        globalLogLevel(LogLevel.warning);
-        auto simple_logger = new SimpleLogger();
-        stdlog = simple_logger;
+    catch (Exception ex) {
+        trace(ex);
+        error("Failed to configure logging level");
+        return -1;
     }
 
     if (parsed["stub"].isTrue) {
-        exit_status = gen_stub(parsed["<filename>"].toString);
+        exit_status = gen_stub(parsed["<infile>"].toString, parsed["<outfile>"].toString);
     }
     else if (parsed["mock"].isTrue) {
         error("Mock generation not implemented yet");
@@ -101,6 +117,34 @@ int rmain(string[] args) {
     else {
         error("Usage error");
         writeln(doc);
+    }
+
+    return exit_status;
+}
+
+int rmain(string[] args) nothrow {
+    string errmsg, tracemsg;
+    int exit_status = 0;
+    bool help = true;
+    bool optionsFirst = false;
+    auto version_ = "gen-test-double v0.1";
+
+    try {
+        trace(to!string(args));
+
+        auto parsed = docopt.docopt(doc, args[1 .. $], help, version_, optionsFirst);
+        trace(prettyPrintArgs(parsed));
+
+        Exception ex = collectException(dostuff(parsed), exit_status);
+        if (ex) {
+            trace(ex);
+            error("Unknown error");
+        }
+    }
+    catch (Exception ex) {
+        collectException(trace(ex));
+        collectException(error("Failed to parse arguments"));
+        exit_status = -1;
     }
 
     return exit_status;

@@ -58,6 +58,11 @@ class Context {
         index.dispose;
     }
 
+    /// Return: Cursor of the translation unit.
+    @property Cursor cursor() {
+        return translation_unit.cursor;
+    }
+
 private:
     static string[] args = ["-xc++"];
     string input_file;
@@ -346,24 +351,28 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     return node;
 }
 
-@name("Test creating a Context instance") unittest {
+@name("Test creating a Context instance")
+unittest {
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/arrays.h");
 }
 
-@name("Test diagnostic on a Context, file exist") unittest {
+@name("Test diagnostic on a Context, file exist")
+unittest {
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/arrays.h");
     x.diagnostic();
 }
 
-@name("Test diagnostic on a Context, no file") unittest {
+@name("Test diagnostic on a Context, no file")
+unittest {
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("foobarfailnofile.h");
     x.diagnostic();
 }
 
-@name("Test visit_ast with VisitorFoo") unittest {
+@name("Test visit_ast with VisitorFoo")
+unittest {
     logger.globalLogLevel(LogLevel.info);
     struct VisitorFoo {
         public int count;
@@ -393,7 +402,8 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     assert(v.count == 40);
 }
 
-@name("Test of ClassTranslatorHdr, class_many.hpp") unittest {
+@name("Test of ClassTranslatorHdr, class_many.hpp")
+unittest {
     // Contains many class definitions, nesting etc.
     // Basically most things one could expect from c++.
     // Expecting... reconstruction of public parts.
@@ -455,7 +465,8 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     assert(rval == expect, rval);
 }
 
-@name("Test of ClassTranslatorHdr, class_empty.hpp") unittest {
+@name("Test of ClassTranslatorHdr, class_empty.hpp")
+unittest {
     /// Empty class
     string expect = "    class Simple {
     public:
@@ -475,7 +486,8 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     assert(rval == expect, rval);
 }
 
-@name("Test of ClassTranslatorHdr, class_nested.hpp") unittest {
+@name("Test of ClassTranslatorHdr, class_nested.hpp")
+unittest {
     // Nested classes.
     // Expecting a correct reconstruction with the correct nesting.
     string expect = "    class OuterClass {
@@ -517,7 +529,8 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     assert(rval == expect, rval);
 }
 
-@name("Test of ClassTranslatorHdr, class_impl.hpp") unittest {
+@name("Test of ClassTranslatorHdr, class_impl.hpp")
+unittest {
     // A class that have:
     // - implementation in the header.
     // - variables.
@@ -547,7 +560,8 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     assert(rval == expect, rval);
 }
 
-@name("Test of ClassTranslatorHdr, class_funcs.hpp") unittest {
+@name("Test of ClassTranslatorHdr, class_funcs.hpp")
+unittest {
     string expect = "    class Simple {
     public:
         Simple();
@@ -577,7 +591,8 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     assert(rval == expect, rval);
 }
 
-@name("Test of ClassTranslatorHdr, class_interface.hpp") unittest {
+@name("Test of ClassTranslatorHdr, class_interface.hpp")
+unittest {
     // Contains a C++ interface. Pure virtual.
     // Expecting an implementation.
     string expect = "    class Simple {
