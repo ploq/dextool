@@ -7,23 +7,17 @@ import std.conv;
 import std.stdio;
 import std.experimental.logger;
 
-alias logger = std.experimental.logger;
-
 import docopt;
 import tested;
 
-import clang.c.index;
-import clang.Index;
-import clang.TranslationUnit;
-import clang.Visitor;
-import clang.Cursor;
-
 static string doc = "
-usage: autobuilder [options]
+usage:
+  gen-test-double stub [options] <filename>
+  gen-test-double mock [options] <filename>
 
 options:
  -h, --help     show this
- -d, --debug    turn on debug output for tracing of program flow
+ -d, --debug    turn on debug output for tracing of generator flow
 ";
 
 shared static this() {
@@ -36,25 +30,36 @@ shared static this() {
     }
 }
 
+int gen_stub() {
+    return 0;
+}
+
 int rmain(string[] args) {
-    // open file and parse all settings with @option 1|option 2| option 3@
-    // print them all to the user
-    // go through them and ask user to answer question
-    writeln("foo");
     int exit_status = -1;
     bool help = true;
-    bool optionsFirst = true;
-    auto version_ = "clang fun 0.1";
+    bool optionsFirst = false;
+    auto version_ = "gen-test-double v0.1";
 
     auto parsed = docopt.docopt(doc, args[1 .. $], help, version_, optionsFirst);
     if (parsed["--debug"].isTrue) {
-        logger.globalLogLevel(LogLevel.all);
+        globalLogLevel(LogLevel.all);
+        info(to!string(args));
+        info(prettyPrintArgs(parsed));
     }
     else {
-        logger.globalLogLevel(LogLevel.warning);
+        globalLogLevel(LogLevel.warning);
     }
-    info(to!string(args));
-    info(prettyPrintArgs(parsed));
+
+    if (parsed["stub"].isTrue) {
+        exit_status = gen_stub();
+    }
+    else if (parsed["mock"].isTrue) {
+        error("Mock generation not implemented yet");
+    }
+    else {
+        error("Usage error");
+        writeln(doc);
+    }
 
     return exit_status;
 }
