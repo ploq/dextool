@@ -261,21 +261,20 @@ struct ClassTranslatorHdr {
 T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
     T node;
 
-    with (CXCursorKind) with (CX_CXXAccessSpecifier)
-            final switch (cursor.access.accessSpecifier) {
-        case CX_CXXInvalidAccessSpecifier:
-            logger.trace(cursor.access.accessSpecifier);
-            break;
-            case CX_CXXPublic:
-            node = top.public_;
-            break;
-            case CX_CXXProtected:
-            node = top.protected_;
-            break;
-            case CX_CXXPrivate:
-            node = top.private_;
-            break;
-        }
+    with (CXCursorKind) with (CX_CXXAccessSpecifier) final switch (cursor.access.accessSpecifier) {
+    case CX_CXXInvalidAccessSpecifier:
+        logger.trace(cursor.access.accessSpecifier);
+        break;
+    case CX_CXXPublic:
+        node = top.public_;
+        break;
+    case CX_CXXProtected:
+        node = top.protected_;
+        break;
+    case CX_CXXPrivate:
+        node = top.private_;
+        break;
+    }
 
     node.suppress_indent(1);
     return node;
@@ -398,7 +397,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     // Contains many class definitions, nesting etc.
     // Basically most things one could expect from c++.
     // Expecting... reconstruction of public parts.
-    string expect = """    class Simple {
+    string expect = "    class Simple {
     public:
         Simple();
         ~Simple();
@@ -442,7 +441,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
 
     };
 
-""";
+";
 
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/class_many.hpp");
@@ -458,11 +457,11 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
 
 @name("Test of ClassTranslatorHdr, class_empty.hpp") unittest {
     /// Empty class
-    string expect = """    class Simple {
+    string expect = "    class Simple {
     public:
     };
 
-""";
+";
 
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/class_empty.hpp");
@@ -479,7 +478,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
 @name("Test of ClassTranslatorHdr, class_nested.hpp") unittest {
     // Nested classes.
     // Expecting a correct reconstruction with the correct nesting.
-    string expect = """    class OuterClass {
+    string expect = "    class OuterClass {
     public:
         OuterClass();
         ~OuterClass();
@@ -504,7 +503,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
 
     };
 
-""";
+";
 
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/class_nested.hpp");
@@ -523,7 +522,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     // - implementation in the header.
     // - variables.
     // Expecting to skip the implementation and variables.
-    string expect = """    class Simple {
+    string expect = "    class Simple {
     public:
         Simple();
         Simple(char x);
@@ -534,7 +533,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     private:
     };
 
-""";
+";
 
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/class_impl.hpp");
@@ -549,7 +548,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
 }
 
 @name("Test of ClassTranslatorHdr, class_funcs.hpp") unittest {
-    string expect = """    class Simple {
+    string expect = "    class Simple {
     public:
         Simple();
         Simple(char foo);
@@ -564,7 +563,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
     private:
     };
 
-""";
+";
 
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/class_funcs.hpp");
@@ -581,7 +580,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
 @name("Test of ClassTranslatorHdr, class_interface.hpp") unittest {
     // Contains a C++ interface. Pure virtual.
     // Expecting an implementation.
-    string expect = """    class Simple {
+    string expect = "    class Simple {
     public:
         Simple();
         ~Simple();
@@ -592,7 +591,7 @@ T FunctionTranslator(T)(Cursor c, ref T top) {
         char* func3();
     };
 
-""";
+";
 
     logger.globalLogLevel(LogLevel.info);
     auto x = new Context("test_files/class_interface.hpp");
