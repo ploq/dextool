@@ -3,12 +3,40 @@
 /// @copyright MIT License
 /// @author Joakim Brännström (joakim.brannstrom@gmx.com)
 module app_main;
+
+import std.ascii;
 import std.conv;
+import std.file;
 import std.stdio;
+import std.string;
 import std.experimental.logger;
 
 import docopt;
 import tested;
+
+class SimpleLogger : Logger {
+    int line = -1;
+    string file = null;
+    string func = null;
+    string prettyFunc = null;
+    string msg = null;
+    LogLevel lvl;
+
+    this(const LogLevel lv = LogLevel.info) {
+        super(lv);
+    }
+
+    override void writeLogMsg(ref LogEntry payload) {
+        this.line = payload.line;
+        this.file = payload.file;
+        this.func = payload.funcName;
+        this.prettyFunc = payload.prettyFuncName;
+        this.lvl = payload.logLevel;
+        this.msg = payload.msg;
+
+        writef("%s: %s%s", text(this.lvl), this.msg, newline);
+    }
+}
 
 static string doc = "
 usage:
@@ -30,7 +58,19 @@ shared static this() {
     }
 }
 
-int gen_stub() {
+int gen_stub(string filename) {
+    import analyzer;
+
+    if (!exists(filename)) {
+        errorf("File '%s' do not exist", filename);
+        return -1;
+    }
+
+    writefln("Generating stub from file '%s'", filename);
+
+    auto ctx = new Context(filename);
+    ctx.diagnostic();
+
     return 0;
 }
 
@@ -48,10 +88,12 @@ int rmain(string[] args) {
     }
     else {
         globalLogLevel(LogLevel.warning);
+        auto simple_logger = new SimpleLogger();
+        stdlog = simple_logger;
     }
 
     if (parsed["stub"].isTrue) {
-        exit_status = gen_stub();
+        exit_status = gen_stub(parsed["<filename>"].toString);
     }
     else if (parsed["mock"].isTrue) {
         error("Mock generation not implemented yet");
