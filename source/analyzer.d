@@ -84,7 +84,7 @@ void diagnostic(Context context) {
             with (CXDiagnosticSeverity)
                 if (translate)
                     translate = !(severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal);
-            writeln(stderr, diag.format);
+            warning(diag.format);
         }
     }
 }
