@@ -89,9 +89,7 @@ int gen_stub(in string infile, in string outfile) {
     return 0;
 }
 
-int dostuff(ref ArgValue[string] parsed) {
-    int exit_status = -1;
-
+void prepare_env(ref ArgValue[string] parsed) {
     try {
         if (parsed["--debug"].isTrue) {
             globalLogLevel(LogLevel.all);
@@ -103,10 +101,13 @@ int dostuff(ref ArgValue[string] parsed) {
         }
     }
     catch (Exception ex) {
-        trace(ex);
-        error("Failed to configure logging level");
-        return -1;
+        collectException(error("Failed to configure logging level"));
+        throw ex;
     }
+}
+
+int do_test_double(ref ArgValue[string] parsed) {
+    int exit_status = -1;
 
     if (parsed["stub"].isTrue) {
         exit_status = gen_stub(parsed["<infile>"].toString, parsed["<outfile>"].toString);
@@ -124,26 +125,21 @@ int dostuff(ref ArgValue[string] parsed) {
 
 int rmain(string[] args) nothrow {
     string errmsg, tracemsg;
-    int exit_status = 0;
+    int exit_status = -1;
     bool help = true;
     bool optionsFirst = false;
     auto version_ = "gen-test-double v0.1";
 
     try {
-        trace(to!string(args));
-
         auto parsed = docopt.docopt(doc, args[1 .. $], help, version_, optionsFirst);
+        prepare_env(parsed);
+        trace(to!string(args));
         trace(prettyPrintArgs(parsed));
 
-        Exception ex = collectException(dostuff(parsed), exit_status);
-        if (ex) {
-            trace(ex);
-            error("Unknown error");
-        }
+        exit_status = do_test_double(parsed);
     }
     catch (Exception ex) {
         collectException(trace(ex));
-        collectException(error("Failed to parse arguments"));
         exit_status = -1;
     }
 
