@@ -198,8 +198,6 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
 
 private:
 
-
-
 /** The name of the type is retrieved from the token it is derived from.
  *
  * Needed in those cases a Diagnostic error occur complaining about unknown type name.
@@ -349,87 +347,87 @@ string translateCursorType(CXTypeKind kind) {
     with (CXTypeKind) switch (kind) {
     case CXType_Invalid:
         return "<unimplemented>";
-        case CXType_Unexposed:
+    case CXType_Unexposed:
         return "<unimplemented>";
-        case CXType_Void:
+    case CXType_Void:
         return "void";
-        case CXType_Bool:
+    case CXType_Bool:
         return "bool";
-        case CXType_Char_U:
+    case CXType_Char_U:
         return "<unimplemented>";
-        case CXType_UChar:
+    case CXType_UChar:
         return "ubyte";
-        case CXType_Char16:
+    case CXType_Char16:
         return "wchar";
-        case CXType_Char32:
+    case CXType_Char32:
         return "dchar";
-        case CXType_UShort:
+    case CXType_UShort:
         return "ushort";
-        case CXType_UInt:
+    case CXType_UInt:
         return "uint";
 
-        case CXType_ULong:
+    case CXType_ULong:
         //includeHandler.addCompatible();
         return "c_ulong";
 
-        case CXType_ULongLong:
+    case CXType_ULongLong:
         return "ulong";
-        case CXType_UInt128:
+    case CXType_UInt128:
         return "<unimplemented>";
-        case CXType_Char_S:
+    case CXType_Char_S:
         return "char";
-        case CXType_SChar:
+    case CXType_SChar:
         return "byte";
-        case CXType_WChar:
+    case CXType_WChar:
         return "wchar";
-        case CXType_Short:
+    case CXType_Short:
         return "short";
-        case CXType_Int:
+    case CXType_Int:
         return "int";
 
-        case CXType_Long:
+    case CXType_Long:
         //includeHandler.addCompatible();
         return "c_long";
 
-        case CXType_LongLong:
+    case CXType_LongLong:
         return "long";
-        case CXType_Int128:
+    case CXType_Int128:
         return "<unimplemented>";
-        case CXType_Float:
+    case CXType_Float:
         return "float";
-        case CXType_Double:
+    case CXType_Double:
         return "double";
-        case CXType_LongDouble:
+    case CXType_LongDouble:
         return "real";
-        case CXType_NullPtr:
+    case CXType_NullPtr:
         return "null";
-        case CXType_Overload:
+    case CXType_Overload:
         return "<unimplemented>";
-        case CXType_Dependent:
+    case CXType_Dependent:
         return "<unimplemented>";
-        case CXType_Complex:
+    case CXType_Complex:
         return "<unimplemented>";
-        case CXType_Pointer:
+    case CXType_Pointer:
         return "<unimplemented>";
-        case CXType_BlockPointer:
+    case CXType_BlockPointer:
         return "<unimplemented>";
-        case CXType_LValueReference:
+    case CXType_LValueReference:
         return "<unimplemented>";
-        case CXType_RValueReference:
+    case CXType_RValueReference:
         return "<unimplemented>";
-        case CXType_Record:
+    case CXType_Record:
         return "<unimplemented>";
-        case CXType_Enum:
+    case CXType_Enum:
         return "<unimplemented>";
-        case CXType_Typedef:
+    case CXType_Typedef:
         return "<unimplemented>";
-        case CXType_FunctionNoProto:
+    case CXType_FunctionNoProto:
         return "<unimplemented>";
-        case CXType_FunctionProto:
+    case CXType_FunctionProto:
         return "<unimplemented>";
-        case CXType_Vector:
+    case CXType_Vector:
         return "<unimplemented>";
-        default:
+    default:
         assert(0, "Unhandled type kind " ~ to!string(kind));
     }
 }

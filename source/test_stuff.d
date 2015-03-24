@@ -130,8 +130,9 @@ void visitor1(T1, T2)(T1 cursor, T2 parent, int column) {
 
     //writeln(indent_str, "|", to!string(cursor), " # ", to!string(parent));
 
-    writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, cursor.spelling,
-        cursor.kind, cursor.location.spelling.line, cursor.location.spelling.column);
+    writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str,
+        cursor.spelling, cursor.kind, cursor.location.spelling.line,
+        cursor.location.spelling.column);
 
     foreach (c, p; cursor.declarations) {
         visitor1(c, p, column + 1);
@@ -163,8 +164,8 @@ void visitor1(T1, T2)(T1 cursor, T2 parent, int column) {
 
 void visitor2(ref Cursor c, ref Cursor p) {
     string indent_str = "";
-    writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, c.spelling, c.kind,
-        c.location.spelling.line, c.location.spelling.column);
+    writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, c.spelling,
+        c.kind, c.location.spelling.line, c.location.spelling.column);
 }
 
 @name("Test Visitor") unittest {
@@ -206,15 +207,17 @@ struct MyVisitor {
     x.diagnostic();
 
     VisitorData data;
-    auto visitor3 = delegate void(ref Cursor c, ref Cursor p) { auto indent_str = new char[
-        data.column * 2];
-    foreach (ref ch; indent_str)
+    auto visitor3 = delegate void(ref Cursor c, ref Cursor p) {
+        auto indent_str = new char[data.column * 2];
+        foreach (ref ch;
+        indent_str)
         ch = ' ';
 
-    writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, c.spelling, c.kind,
-        c.location.spelling.line, c.location.spelling.column);
-    if (!p.isEmpty)
-        data.column += 1;  };
+        writefln("%s|visiting %s [%s line=%d, col=%d]", indent_str, c.spelling,
+            c.kind, c.location.spelling.line, c.location.spelling.column);
+        if (!p.isEmpty)
+            data.column += 1;
+    };
 
     MyVisitor v = x.translationUnit.cursor;
     foreach (cursor, parent; v) {
