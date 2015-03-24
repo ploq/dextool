@@ -1,11 +1,11 @@
-    class Simple {
-    public:
-        Simple();
-        Simple(char x);
-        Simple(int y);
-        ~Simple();
+class Simple {
+public:
+    Simple();
+    Simple(char x);
+    Simple(int y);
+    ~Simple();
 
-        void func1();
-    private:
-    };
+    void func1();
+private:
+};
 

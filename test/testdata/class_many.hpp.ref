@@ -1,44 +1,44 @@
-    class Simple {
+class Simple {
+public:
+    Simple();
+    ~Simple();
+
+    void func1();
+    int func2();
+private:
+};
+
+class Simple2 {
+public:
+    Simple2();
+    ~Simple2();
+
+    void func1();
+private:
+};
+
+class OuterClass {
+public:
+    OuterClass();
+    ~OuterClass();
+
+    void func1();
+    int func2();
+private:
+    class InnerClass {
     public:
-        Simple();
-        ~Simple();
+        InnerClass();
+        ~InnerClass();
 
-        void func1();
-        int func2();
     private:
-    };
-
-    class Simple2 {
-    public:
-        Simple2();
-        ~Simple2();
-
-        void func1();
-    private:
-    };
-
-    class OuterClass {
-    public:
-        OuterClass();
-        ~OuterClass();
-
-        void func1();
-        int func2();
-    private:
-        class InnerClass {
+        class InnerClass2 {
         public:
-            InnerClass();
-            ~InnerClass();
-
-        private:
-            class InnerClass2 {
-            public:
-                InnerClass2();
-                ~InnerClass2();
-
-            };
+            InnerClass2();
+            ~InnerClass2();
 
         };
 
     };
+
+};
 

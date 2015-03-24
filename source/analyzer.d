@@ -107,9 +107,9 @@ void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
     v.decr();
 }
 
-void log_node(int line = __LINE__, string file = __FILE__, string funcName = __FUNCTION__,
-    string prettyFuncName = __PRETTY_FUNCTION__, string moduleName = __MODULE__)(
-    ref Cursor c, int level) {
+void log_node(int line = __LINE__, string file = __FILE__,
+    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
+    string moduleName = __MODULE__)(ref Cursor c, int level) {
     auto indent_str = new char[level * 2];
     foreach (ref ch; indent_str)
         ch = ' ';
@@ -209,6 +209,7 @@ struct ClassTranslatorHdr {
     this(Cursor cursor) {
         this.cursor = cursor;
         top = new CppModule;
+        top.suppress_indent(1);
         push(top);
     }
 

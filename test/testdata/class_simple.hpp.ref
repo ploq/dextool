@@ -1,7 +1,7 @@
-    class Simple {
-    public:
-        Simple();
-        ~Simple();
+class Simple {
+public:
+    Simple();
+    ~Simple();
 
-    };
+};
 
