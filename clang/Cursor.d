@@ -351,8 +351,14 @@ struct Cursor {
         return clang_equalCursors(cast(CXCursor) cursor.cx, cast(CXCursor) cx) != 0;
     }
 
-    hash_t toHash() const {
-        return clang_hashCursor(cast(CXCursor) cx);
+    size_t toHash() const nothrow @trusted {
+        //TODO i'm not sure this is a good solution... investigate.
+        try {
+            return clang_hashCursor(cast(CXCursor) cx);
+        }
+        catch (Exception ex) {
+            return 0;
+        }
     }
 
     /// Determine whether the given cursor kind represents a declaration.
