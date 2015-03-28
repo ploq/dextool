@@ -101,9 +101,24 @@ void log_diagnostic(Context context) {
     }
 }
 
-/// If apply returns true visit_ast will decend into the node if it contains children.
+/** Visit all nodes in a Clang AST to call apply on the nodes.
+ * The functions incr() and decr() are infered at compile time.
+ * The function incr() is called when entering a new level in the AST and decr() is called when leaving.
+ * The return value from apply() determines if visit_ast will decend into that node.
+ *
+ * Params:
+ *  cursor = Top cursor to traverse from.
+ *  v = User context to apply on the nodes in the AST.
+ * Example:
+ * ---
+ * visit_ast!TranslateContext(cursor, this);
+ * ---
+ */
 void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
-    v.incr();
+    import std.traits;
+    static if (__traits(hasMember, VisitorType, "incr")) {
+        v.incr();
+    }
     bool decend = v.apply(cursor);
 
     if (!cursor.isEmpty && decend) {
@@ -111,7 +126,10 @@ void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
             visit_ast(child, v);
         }
     }
-    v.decr();
+
+    static if (__traits(hasMember, VisitorType, "decr")) {
+        v.decr();
+    }
 }
 
 void log_node(int line = __LINE__, string file = __FILE__,
@@ -128,27 +146,54 @@ void log_node(int line = __LINE__, string file = __FILE__,
 }
 
 /// T is module type.
-mixin template VisitNodeModule(Tmodule) {
+/** Stack useful when visiting the AST.
+ * Could be used to know what node to attach code in.
+ * Params:
+ *  Tmodule = object type to build the stack of
+ * Example:
+ * ---
+ * mixin VisitNodeModule!CppModule;
+ * CppModule node;
+ * push(node);
+ * current.sep();
+ * ---
+ */
+struct VisitNodeModule(Tmodule) {
     alias Entry = Tuple!(Tmodule, "node", int, "level");
-    Entry[] stack; // stack of cpp nodes
-    int level;
+    private Entry[] stack; // stack of cpp nodes
+    private int level;
 
+public:
+    /// Increment the AST depth.
     void incr() {
         level++;
     }
 
+    /// Pop the stack if depth matches depth of top element of stack.
     void decr() {
-        // remove node leaving the level
+        // remove node when leavin the matching level
         if (stack.length > 1 && stack[$ - 1].level == level) {
             stack.length = stack.length - 1;
         }
         level--;
     }
 
-    ref Tmodule current() {
+    /// Return: AST depth when traversing.
+    @property auto depth() {
+        return level;
+    }
+
+    /// Return: Top of the stack.
+    @property ref Tmodule current() {
         return stack[$ - 1].node;
     }
 
+    /** Push an element to the stack together with current AST depth.
+     * Params:
+     *  c = Element to push
+     *
+     * Return: Pushed element.
+     */
     T push(T)(T c) {
         stack ~= Entry(cast(Tmodule)(c), level);
         return c;

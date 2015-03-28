@@ -40,14 +40,6 @@ struct TranslateContext {
     private int indent = 0;
     private string output_;
 
-    void incr() {
-        this.indent += 1;
-    }
-
-    void decr() {
-        this.indent -= 1;
-    }
-
     bool apply(Cursor c) {
         log_node(c, this.indent);
         bool decend = true;
@@ -83,7 +75,8 @@ struct TranslateContext {
 }
 
 struct ClassTranslatorHdr {
-    mixin VisitNodeModule!CppModule;
+    VisitNodeModule!CppModule visitor_stack;
+    alias visitor_stack this;
 
     private Cursor cursor;
     private CppModule top;
@@ -104,7 +97,7 @@ struct ClassTranslatorHdr {
 
     bool apply(Cursor c) {
         bool descend = true;
-        log_node(c, level);
+        log_node(c, depth);
         with (CXCursorKind) {
             switch (c.kind) {
             case CXCursor_ClassDecl:
