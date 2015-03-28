@@ -60,7 +60,7 @@ shared static this() {
 
 int gen_stub(in string infile, in string outfile) {
     import std.exception;
-    import analyzer;
+    import generator;
 
     if (!exists(infile)) {
         errorf("File '%s' do not exist", infile);

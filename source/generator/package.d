@@ -1,0 +1,8 @@
+/// Written in the D programming language.
+/// Date: 2015, Joakim Brännström
+/// License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
+/// Author: Joakim Brännström (joakim.brannstrom@gmx.com)
+module generator;
+
+public import generator.analyzer : Context, diagnostic, visit_ast;
+public import generator.stub;

@@ -1,8 +1,8 @@
 /// Written in the D programming language.
 /// Date: 2015, Joakim Brännström
-/// License: MIT License
+/// License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
 /// Author: Joakim Brännström (joakim.brannstrom@gmx.com)
-module analyzer;
+module generator.stub;
 
 import std.ascii;
 import std.array;
@@ -11,8 +11,6 @@ import std.stdio;
 import std.string;
 import std.typecons;
 import std.experimental.logger;
-
-alias logger = std.experimental.logger;
 
 import tested;
 
@@ -28,129 +26,13 @@ import dsrcgen.cpp;
 
 import translator.Type;
 
+import generator.analyzer;
+
 version (unittest) {
     shared static this() {
         import std.exception;
 
-        enforce(runUnitTests!analyzer(new ConsoleTestResultWriter), "Unit tests failed.");
-    }
-}
-
-/// Holds the context of the file.
-class Context {
-    /// Initialize context from file
-    this(string input_file) {
-        this.input_file = input_file;
-        this.index = Index(false, false);
-
-        uint options = 0;
-
-        //uint options = cast(uint) CXTranslationUnit_Flags.CXTranslationUnit_Incomplete | CXTranslationUnit_Flags
-        //    .CXTranslationUnit_IncludeBriefCommentsInCodeCompletion | CXTranslationUnit_Flags
-        //    .CXTranslationUnit_DetailedPreprocessingRecord;
-
-        this.translation_unit = TranslationUnit.parse(this.index,
-            this.input_file, this.args, null, options);
-    }
-
-    ~this() {
-        translation_unit.dispose;
-        index.dispose;
-    }
-
-    /// Return: Cursor of the translation unit.
-    @property Cursor cursor() {
-        return translation_unit.cursor;
-    }
-
-private:
-    static string[] args = ["-xc++"];
-    string input_file;
-    Index index;
-    TranslationUnit translation_unit;
-}
-
-/// No errors occured during translation.
-bool isValid(Context context) {
-    return context.translation_unit.isValid;
-}
-
-/// Print diagnostic error messages.
-void diagnostic(Context context) {
-    if (!context.isValid())
-        return;
-
-    auto dia = context.translation_unit.diagnostics;
-    if (dia.length > 0) {
-        bool translate = true;
-        foreach (diag; dia) {
-            auto severity = diag.severity;
-
-            with (CXDiagnosticSeverity)
-                if (translate)
-                    translate = !(severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal);
-            warning(diag.format);
-        }
-    }
-}
-
-/// If apply returns true visit_ast will decend into the node if it contains children.
-void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
-    v.incr();
-    bool decend = v.apply(cursor);
-
-    if (!cursor.isEmpty && decend) {
-        foreach (child, parent; Visitor(cursor)) {
-            visit_ast(child, v);
-        }
-    }
-    v.decr();
-}
-
-void log_node(int line = __LINE__, string file = __FILE__,
-    string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
-    string moduleName = __MODULE__)(ref Cursor c, int level) {
-    auto indent_str = new char[level * 2];
-    foreach (ref ch; indent_str)
-        ch = ' ';
-
-    logf!(line, file, funcName, prettyFuncName, moduleName)(LogLevel.trace,
-        "%s|%s [d=%s %s %s line=%d, col=%d %s]", indent_str, c.spelling,
-        c.displayName, c.kind, c.type, c.location.spelling.line,
-        c.location.spelling.column, c.abilities);
-}
-
-/// T is module type.
-mixin template VisitNodeModule(Tmodule) {
-    alias Entry = Tuple!(Tmodule, "node", int, "level");
-    Entry[] stack; // stack of cpp nodes
-    int level;
-
-    void incr() {
-        level++;
-        //logger.trace(level, " ", stack.length);
-    }
-
-    void decr() {
-        // remove node leaving the level
-        if (stack.length > 1 && stack[$ - 1].level == level) {
-            //logger.trace(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]), level);
-            stack.length = stack.length - 1;
-        }
-        level--;
-    }
-
-    ref Tmodule current() {
-        //if (stack.length > 0)
-        //    logger.trace(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
-        return stack[$ - 1].node;
-    }
-
-    T push(T)(T c) {
-        stack ~= Entry(cast(Tmodule)(c), level);
-        //if (stack.length > 0)
-        //    logger.trace(cast(void*)(stack[$-1].node), " ", to!string(stack[$-1]));
-        return c;
+        enforce(runUnitTests!(generator.stub)(new ConsoleTestResultWriter), "Unit tests failed.");
     }
 }
 
@@ -204,7 +86,7 @@ struct ClassTranslatorHdr {
     mixin VisitNodeModule!CppModule;
 
     private Cursor cursor;
-    private CppModule top; // top code generator node
+    private CppModule top;
 
     this(Cursor cursor) {
         this.cursor = cursor;
@@ -269,7 +151,7 @@ T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
 
     with (CXCursorKind) with (CX_CXXAccessSpecifier) final switch (cursor.access.accessSpecifier) {
     case CX_CXXInvalidAccessSpecifier:
-        logger.trace(cursor.access.accessSpecifier);
+        trace(cursor.access.accessSpecifier);
         break;
     case CX_CXXPublic:
         node = top.public_;
@@ -333,7 +215,7 @@ string[] ParmDeclToString(Cursor cursor) {
         params ~= format("%s %s", type.toString, param.spelling);
     }
 
-    logger.trace(params);
+    trace(params);
     return params;
 }
 
