@@ -70,7 +70,7 @@ int gen_stub(in string infile, in string outfile) {
     infof("Generating stub from file '%s'", infile);
 
     auto file_ctx = new Context(infile);
-    file_ctx.diagnostic();
+    file_ctx.log_diagnostic();
 
     TranslateContext ctx;
     auto cursor = file_ctx.cursor;

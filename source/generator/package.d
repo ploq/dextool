@@ -4,5 +4,5 @@
 /// Author: Joakim Brännström (joakim.brannstrom@gmx.com)
 module generator;
 
-public import generator.analyzer : Context, diagnostic, visit_ast;
+public import generator.analyzer : Context, log_diagnostic, visit_ast;
 public import generator.stub;

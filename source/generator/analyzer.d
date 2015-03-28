@@ -36,19 +36,18 @@ version (unittest) {
 
 /// Holds the context of the file.
 class Context {
-    /// Initialize context from file
+    /** Initialize context from file
+     * Params:
+     *  input_file = filename of code to parse
+     */
     this(string input_file) {
         this.input_file = input_file;
         this.index = Index(false, false);
 
-        uint options = 0;
-
-        //uint options = cast(uint) CXTranslationUnit_Flags.CXTranslationUnit_Incomplete | CXTranslationUnit_Flags
-        //    .CXTranslationUnit_IncludeBriefCommentsInCodeCompletion | CXTranslationUnit_Flags
-        //    .CXTranslationUnit_DetailedPreprocessingRecord;
-
+        // the last argument determines if comments are parsed and therefor
+        // accessible in the AST
         this.translation_unit = TranslationUnit.parse(this.index,
-            this.input_file, this.args, null, options);
+            this.input_file, this.args);
     }
 
     ~this() {
@@ -56,7 +55,9 @@ class Context {
         index.dispose;
     }
 
-    /// Return: Cursor of the translation unit.
+    /** Top cursor to travers the AST.
+     * Return: Cursor of the translation unit
+     */
     @property Cursor cursor() {
         return translation_unit.cursor;
     }
@@ -73,8 +74,16 @@ bool isValid(Context context) {
     return context.translation_unit.isValid;
 }
 
-/// Print diagnostic error messages.
-void diagnostic(Context context) {
+/** Query context for if diagnostic errors where detected during parsing.
+ * Return: True if errors where found.
+ */
+bool has_parse_errors(Context context) {
+    auto dia = context.translation_unit.diagnostics;
+    return dia.length > 0;
+}
+
+/// Log diagnostic error messages to std.logger.
+void log_diagnostic(Context context) {
     if (!context.isValid())
         return;
 
