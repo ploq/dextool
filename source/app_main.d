@@ -14,6 +14,7 @@ import std.experimental.logger;
 import docopt;
 import argvalue; // from docopt
 import tested;
+import dsrcgen.cpp;
 
 static string doc = "
 usage:
@@ -72,14 +73,16 @@ int gen_stub(in string infile, in string outfile) {
     auto file_ctx = new Context(infile);
     file_ctx.log_diagnostic();
 
-    TranslateContext ctx;
+    auto header = new CppModule;
+    auto impl = new CppModule;
+    auto ctx = TranslateContext(header, impl);
     auto cursor = file_ctx.cursor;
     visit_ast!TranslateContext(cursor, ctx);
 
     try {
         auto open_outfile = File(outfile, "w");
         scope(exit) open_outfile.close();
-        open_outfile.write(ctx.render);
+        open_outfile.write(header.render);
     }
     catch (ErrnoException ex) {
         trace(text(ex));

@@ -46,8 +46,6 @@ function check_status() {
 function state_init() {
     echo "Started watching path: "
     echo $INOTIFY_PATH | tr "[:blank:]" "\n"
-    test -e $ROOT/build/test_files && rm $ROOT/build/test_files
-    ln -sf $ROOT/test_files $ROOT/build/test_files
     # cp $HOME/sync/src/extern/llvm/Release+Asserts/lib/libclang.so $ROOT
     cp /usr/lib/llvm-3.5/lib/libclang.so $ROOT
 }

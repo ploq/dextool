@@ -38,7 +38,23 @@ version (unittest) {
 
 struct TranslateContext {
     private int indent = 0;
-    private string output_;
+    private CppModule hdr;
+    private CppModule impl;
+
+    this(CppModule hdr, CppModule impl) {
+        this.hdr = hdr;
+        hdr.suppress_indent(1);
+        this.impl = impl;
+        impl.suppress_indent(1);
+    }
+
+    void incr() {
+        this.indent++;
+    }
+
+    void decr() {
+        this.indent--;
+    }
 
     bool apply(Cursor c) {
         log_node(c, this.indent);
@@ -48,7 +64,7 @@ struct TranslateContext {
             switch (c.kind) {
             case CXCursor_ClassDecl:
                 if (c.isDefinition)
-                    output_ ~= (ClassTranslatorHdr(c)).translate;
+                    (ClassTranslatorHdr()).translate(hdr, c);
                 decend = false;
                 break;
 
@@ -68,10 +84,6 @@ struct TranslateContext {
 
         return decend;
     }
-
-    @property string render() {
-        return this.output_;
-    }
 }
 
 struct ClassTranslatorHdr {
@@ -81,18 +93,12 @@ struct ClassTranslatorHdr {
     private Cursor cursor;
     private CppModule top;
 
-    this(Cursor cursor) {
+    void translate(CppModule top, Cursor cursor) {
         this.cursor = cursor;
-        top = new CppModule;
-        top.suppress_indent(1);
+        this.top = top;
         push(top);
-    }
-
-    string translate() {
-        auto c = Cursor(this.cursor);
+        auto c = Cursor(cursor);
         visit_ast!ClassTranslatorHdr(c, this);
-
-        return top.render;
     }
 
     bool apply(Cursor c) {
