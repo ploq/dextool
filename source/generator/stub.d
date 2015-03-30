@@ -36,8 +36,39 @@ version (unittest) {
     }
 }
 
-struct TranslateContext {
-    private int indent = 0;
+class StubContext {
+    this() {
+        this.hdr = new CppModule;
+        hdr.suppress_indent(1);
+        this.impl = new CppModule;
+        impl.suppress_indent(1);
+
+        ctx = ImplStubContext(hdr, impl);
+    }
+
+    void translate(Cursor c) {
+        visit_ast!ImplStubContext(c, ctx);
+    }
+
+    @property string render_header() {
+        return this.hdr.render;
+    }
+
+    @property string render_impl() {
+        return this.impl.render;
+    }
+
+private:
+    CppModule hdr;
+    CppModule impl;
+
+    ImplStubContext ctx;
+}
+
+private:
+
+struct ImplStubContext {
+    int indent = 0;
     private CppModule hdr;
     private CppModule impl;
 
@@ -62,23 +93,23 @@ struct TranslateContext {
 
         with (CXCursorKind) {
             switch (c.kind) {
-            case CXCursor_ClassDecl:
-                if (c.isDefinition)
-                    (ClassTranslatorHdr()).translate(hdr, c);
-                decend = false;
-                break;
+                case CXCursor_ClassDecl:
+                    if (c.isDefinition)
+                        (ClassTranslatorHdr()).translate(hdr, c);
+                    decend = false;
+                    break;
 
-                //case CXCursor_StructDecl:
-                //    if (cursor.isDefinition)
-                //        output.structs ~= code;
-                //    break;
-                //case CXCursor_EnumDecl: output.enums ~= code; break;
-                //case CXCursor_UnionDecl: output.unions ~= code; break;
-                //case CXCursor_VarDecl: output.variables ~= code; break;
-                //case CXCursor_FunctionDecl: output.functions ~= code; break;
-                //case CXCursor_TypedefDecl: output.typedefs ~= code; break;
-            default:
-                break;
+                    //case CXCursor_StructDecl:
+                    //    if (cursor.isDefinition)
+                    //        output.structs ~= code;
+                    //    break;
+                    //case CXCursor_EnumDecl: output.enums ~= code; break;
+                    //case CXCursor_UnionDecl: output.unions ~= code; break;
+                    //case CXCursor_VarDecl: output.variables ~= code; break;
+                    //case CXCursor_FunctionDecl: output.functions ~= code; break;
+                    //case CXCursor_TypedefDecl: output.typedefs ~= code; break;
+                default:
+                    break;
             }
         }
 

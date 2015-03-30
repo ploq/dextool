@@ -73,16 +73,13 @@ int gen_stub(in string infile, in string outfile) {
     auto file_ctx = new Context(infile);
     file_ctx.log_diagnostic();
 
-    auto header = new CppModule;
-    auto impl = new CppModule;
-    auto ctx = TranslateContext(header, impl);
-    auto cursor = file_ctx.cursor;
-    visit_ast!TranslateContext(cursor, ctx);
+    auto ctx = new StubContext;
+    ctx.translate(file_ctx.cursor);
 
     try {
         auto open_outfile = File(outfile, "w");
         scope(exit) open_outfile.close();
-        open_outfile.write(header.render);
+        open_outfile.write(ctx.render_header);
     }
     catch (ErrnoException ex) {
         trace(text(ex));
