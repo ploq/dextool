@@ -144,8 +144,6 @@ RefCounted!TokenGroup tokenize(TranslationUnit tu, SourceRange range) {
 
 private:
 
-
-
 /** Helper class to facilitate token management.
  * Tokens are allocated from libclang in chunks. They must be disposed of as a
  * collective group.

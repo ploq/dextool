@@ -30,8 +30,9 @@ struct TranslationUnit {
         string[] commandLineArgs, UnsavedFile[] unsavedFiles = null,
         uint options = CXTranslationUnit_Flags.CXTranslationUnit_None) {
         auto r = RefCounted!TranslationUnit();
-        r = TranslationUnit(clang_parseTranslationUnit(index.cx, sourceFilename.toStringz,
-            strToCArray(commandLineArgs), cast(int) commandLineArgs.length,
+        r = TranslationUnit(clang_parseTranslationUnit(index.cx,
+            sourceFilename.toStringz, strToCArray(commandLineArgs),
+            cast(int) commandLineArgs.length,
             toCArray!(CXUnsavedFile)(unsavedFiles), cast(uint) unsavedFiles.length,
             options));
         return r;

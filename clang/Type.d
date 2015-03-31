@@ -134,7 +134,8 @@ struct Type {
 
     @property bool isFunctionType() {
         with (CXTypeKind)
-            return kind == CXType_FunctionNoProto || kind == CXType_FunctionProto
+            return kind == CXType_FunctionNoProto
+                || kind == CXType_FunctionProto
                 ||  // FIXME: This "hack" shouldn't be needed.
                 func.resultType.isValid;
     }
@@ -145,13 +146,13 @@ struct Type {
     }
 
     @property bool isObjCIdType() {
-        return isTypedef && canonicalType.kind == CXTypeKind.CXType_ObjCObjectPointer
-            && spelling == "id";
+        return isTypedef
+            && canonicalType.kind == CXTypeKind.CXType_ObjCObjectPointer && spelling == "id";
     }
 
     @property bool isObjCClassType() {
-        return isTypedef && canonicalType.kind == CXTypeKind.CXType_ObjCObjectPointer
-            && spelling == "Class";
+        return isTypedef
+            && canonicalType.kind == CXTypeKind.CXType_ObjCObjectPointer && spelling == "Class";
     }
 
     @property bool isObjCSelType() {
@@ -291,20 +292,20 @@ struct Arguments {
     with (CXTypeKind) switch (kind) {
     case CXType_Char_U:
         return true;
-        case CXType_UChar:
+    case CXType_UChar:
         return true;
-        case CXType_UShort:
+    case CXType_UShort:
         return true;
-        case CXType_UInt:
+    case CXType_UInt:
         return true;
-        case CXType_ULong:
+    case CXType_ULong:
         return true;
-        case CXType_ULongLong:
+    case CXType_ULongLong:
         return true;
-        case CXType_UInt128:
+    case CXType_UInt128:
         return true;
 
-        default:
+    default:
         return false;
     }
 }
