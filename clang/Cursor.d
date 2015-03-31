@@ -55,12 +55,16 @@ string abilities(ref Cursor c) {
 
 /** FunctionCursor isX represented as a string of letters
  *
+ * c = isConst
+ * p = isPureVirtual
  * s = isStatic
  * v = isVariadic
+ * V = isVirtual
  */
 string abilities(ref FunctionCursor c) {
     string s = abilities(c.cursor);
-    s ~= format(" %s%s", c.isStatic ? "s" : "", c.isVariadic ? "v" : "");
+    s ~= format(" %s%s%s%s%s", c.isConst ? "c" : "", c.isPureVirtual ? "p" : "",
+        c.isStatic ? "s" : "", c.isVariadic ? "v" : "", c.isVirtual ? "V" : "");
 
     return s;
 }
@@ -85,8 +89,8 @@ struct Cursor {
 
     private TranslationUnit translation_unit;
 
-    /// disallowed
-    private this(CXCursor c) {
+    /// disallowed for general use.
+    package this(CXCursor c) {
     }
 
     this(Cursor cursor) {
@@ -489,11 +493,47 @@ struct FunctionCursor {
         return type.func.isVariadic;
     }
 
+    /** Determine if a C++ member function or member function template is
+     * pure virtual.
+     */
+    @property bool isPureVirtual() {
+        return clang_CXXMethod_isPureVirtual(cx) != 0;
+    }
+
     /** Returns: True if the cursor refers to a C++ member function or member
      * function template that is declared 'static'.
      */
     @property bool isStatic() @trusted {
         return clang_CXXMethod_isStatic(cx) != 0;
+    }
+
+    /** Determine if a C++ member function or member function template is
+     * explicitly declared 'virtual' or if it overrides a virtual method from
+     * one of the base classes.
+     */
+    @property bool isVirtual() {
+        return clang_CXXMethod_isVirtual(cx) != 0;
+    }
+
+    /** Determine if a C++ member function or member function template is
+     * declared 'const'.
+     */
+    @property bool isConst() {
+        return clang_CXXMethod_isConst(cx) != 0;
+    }
+
+    /** Given a cursor pointing to a C++ method call or an Objective-C
+     * message, returns non-zero if the method/message is "dynamic", meaning:
+     *
+     * For a C++ method: the call is virtual.
+     * For an Objective-C message: the receiver is an object instance, not 'super'
+     * or a specific class.
+     *
+     * If the method/message is "static" or the cursor does not point to a
+     * method/message, it will return zero.
+     */
+    @property bool isDynamicCall() {
+        return clang_Cursor_isDynamicCall(cx) != 0;
     }
 }
 

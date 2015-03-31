@@ -161,3 +161,30 @@ struct ParamVisitor {
         assert(0, "Cannot get the first parameter of an empty parameter list");
     }
 }
+
+struct OverriddenVisitor {
+    alias Delegate = int delegate(ref Cursor);
+
+    private Cursor cursor;
+
+    this(Cursor cursor) {
+        this.cursor = cursor;
+    }
+
+    int opApply(Delegate dg) {
+        int result = 0;
+        CXCursor* overridden;
+        uint num_overridden;
+
+        clang_getOverriddenCursors(this.cursor.cx, &overridden, &num_overridden);
+        for (uint i = 0; i < num_overridden; ++overridden) {
+            auto c = Cursor(*overridden);
+            result = dg(c);
+            if (result)
+                break;
+        }
+        clang_disposeOverriddenCursors(overridden);
+
+        return result;
+    }
+}
