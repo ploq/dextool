@@ -93,23 +93,18 @@ struct ImplStubContext {
 
         with (CXCursorKind) {
             switch (c.kind) {
-                case CXCursor_ClassDecl:
-                    if (c.isDefinition)
-                        (ClassTranslatorHdr()).translate(hdr, c);
-                    decend = false;
-                    break;
+            case CXCursor_ClassDecl:
+                if (c.isDefinition)
+                    (ClassTranslatorHdr()).translate(hdr, c);
+                decend = false;
+                break;
 
-                    //case CXCursor_StructDecl:
-                    //    if (cursor.isDefinition)
-                    //        output.structs ~= code;
-                    //    break;
-                    //case CXCursor_EnumDecl: output.enums ~= code; break;
-                    //case CXCursor_UnionDecl: output.unions ~= code; break;
-                    //case CXCursor_VarDecl: output.variables ~= code; break;
-                    //case CXCursor_FunctionDecl: output.functions ~= code; break;
-                    //case CXCursor_TypedefDecl: output.typedefs ~= code; break;
-                default:
-                    break;
+                //case CXCursor_StructDecl
+                //case CXCursor_FunctionDecl
+                //case CXCursor_TypedefDecl
+                //case CXCursor_Namespace
+            default:
+                break;
             }
         }
 
