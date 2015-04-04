@@ -226,7 +226,7 @@ struct ClassTranslateContext {
                 descend = false;
                 break;
             case CXCursor_CXXAccessSpecifier:
-                push(AccessSpecifierTranslator!CppModule(c, current.hdr, current.impl));
+                push(accessSpecifierTranslator!CppModule(c, current.hdr, current.impl));
                 break;
 
             default:
@@ -250,7 +250,7 @@ private:
  *  hdr = Header module to append the translation to.
  *  impl = Implementation module to append the translation to (not used).
  */
-CppHdrImpl AccessSpecifierTranslator(T)(Cursor cursor, ref T hdr, ref T impl) {
+CppHdrImpl accessSpecifierTranslator(T)(Cursor cursor, ref T hdr, ref T impl) {
     T node;
 
     with (CXCursorKind) with (CX_CXXAccessSpecifier) final switch (cursor.access.accessSpecifier) {
@@ -299,7 +299,7 @@ void ctorTranslator(T)(Cursor c, ref T hdr, ref T impl) {
     void doImpl(in ref TypeName[] params, ref T impl) {
     }
 
-    auto params = ParmDeclToTypeName(c);
+    auto params = parmDeclToTypeName(c);
     doHeader(params, hdr);
     doImpl(params, impl);
 }
@@ -336,7 +336,7 @@ void dtorTranslator(T)(Cursor c, ref T hdr, ref T impl) {
  * ---
  * It is translated to the string "char x, char y".
  */
-TypeName[] ParmDeclToTypeName(Cursor cursor) {
+TypeName[] parmDeclToTypeName(Cursor cursor) {
     alias toString2 = clang.Token.toString;
     alias toString3 = translator.Type.toString;
     TypeName[] params;
@@ -391,11 +391,13 @@ void functionTranslator(T)(Cursor c, ref T hdr, ref T impl) {
     }
 
     if (!c.func.isVirtual) {
-        warningf("Skipping %s: Not a virtual function", c.spelling);
+        auto loc = c.location;
+        infof("%s:%d:%d:%s: Skipping, not a virtual function", loc.file.name,
+            loc.line, loc.column, c.spelling);
         return;
     }
 
-    auto params = ParmDeclToTypeName(c);
+    auto params = parmDeclToTypeName(c);
     auto return_type = toString2(translateTypeCursor(c));
     auto tmp_return_type = toString2(translateType(c.func.resultType));
     trace(return_type, "|", tmp_return_type);
