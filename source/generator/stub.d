@@ -28,6 +28,8 @@ import translator.Type;
 
 import generator.analyzer;
 
+alias StubPrefix = Typedef!(string, string.init, "StubPrefix");
+
 version (unittest) {
     shared static this() {
         import std.exception;
@@ -37,13 +39,17 @@ version (unittest) {
 }
 
 class StubContext {
-    this() {
+    /**
+     * Params:
+     *  prefix = prefix to use for the name of the stub class.
+     */
+    this(string prefix) {
         this.hdr = new CppModule;
         hdr.suppress_indent(1);
         this.impl = new CppModule;
         impl.suppress_indent(1);
 
-        ctx = ImplStubContext(hdr, impl);
+        ctx = ImplStubContext(prefix, hdr, impl);
     }
 
     void translate(Cursor c) {
@@ -66,19 +72,28 @@ private:
 }
 
 private:
+//TODO use the following typedefs in CppHdrImpl to avoid confusing hdr and impl. Type systems is awesome.
+alias CppModuleHdr = Typedef!(CppModule, CppModule.init, "CppHeader");
+alias CppModuleImpl = Typedef!(CppModule, CppModule.init, "CppImplementation");
+alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
+
+alias TypeName = Tuple!(string, "type", string, "name");
 
 /** Traverse the AST and generate a stub by filling the CppModules with data.
  *
  * Params:
+ *  prefix = prefix to use for the name of the stub classes.
  *  hdr = C++ code for a header for the stub
  *  impl = C++ code for the implementation of the stub
  */
 struct ImplStubContext {
+    private string prefix;
     private int indent = 0;
     private CppModule hdr;
     private CppModule impl;
 
-    this(CppModule hdr, CppModule impl) {
+    this(string prefix, CppModule hdr, CppModule impl) {
+        this.prefix = prefix;
         this.hdr = hdr;
         hdr.suppress_indent(1);
         this.impl = impl;
@@ -101,7 +116,7 @@ struct ImplStubContext {
             switch (c.kind) {
             case CXCursor_ClassDecl:
                 if (c.isDefinition)
-                    (ClassTranslator()).translate(hdr, impl, c);
+                    (ClassTranslateContext(prefix)).translate(hdr, impl, c);
                 decend = false;
                 break;
 
@@ -126,8 +141,6 @@ struct ClassVariabelContainer {
     private TypeName[] var_decl;
 
     /** Store new variable in the container.
-     * prefix is used for the variable name.
-     *
      * Params:
      *  type = Type of the variable
      *  name = Variable name
@@ -158,9 +171,10 @@ struct ClassVariabelContainer {
      *  m = module to create declarations in.
      */
     void injectDeclaration(CppModule m) {
-        with (m) foreach (type, name; var_decl) {
-            stmt(format("%s %s", type, name));
-        }
+        with (m)
+            foreach (type, name; var_decl) {
+                stmt(format("%s %s", type, name));
+            }
     }
 }
 
@@ -169,18 +183,9 @@ struct ClassVariabelContainer {
  * The generate stub implementation have an interface that the user can control
  * the data flow from stub -> SUT.
  */
-struct ClassTranslator {
-    alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
+struct ClassTranslateContext {
     VisitNodeModule!CppHdrImpl visitor_stack;
     alias visitor_stack this;
-
-    private {
-        Cursor cursor;
-        CppHdrImpl top;
-        string prefix; // class name prefix
-        string name; // class name
-        ClassVariabelContainer vars;
-    }
 
     /**
      * Params:
@@ -195,7 +200,7 @@ struct ClassTranslator {
         this.top = CppHdrImpl(hdr, impl);
         push(top);
         auto c = Cursor(cursor);
-        visit_ast!ClassTranslator(c, this);
+        visit_ast!ClassTranslateContext(c, this);
     }
 
     bool apply(Cursor c) {
@@ -204,11 +209,8 @@ struct ClassTranslator {
         with (CXCursorKind) {
             switch (c.kind) {
             case CXCursor_ClassDecl:
-                with (current.hdr) {
-                    this.name = c.spelling;
-                    push(CppHdrImpl(class_(name), current.impl));
-                    sep();
-                }
+                this.name = c.spelling;
+                push(classTranslator!CppModule(prefix, name, current));
                 break;
             case CXCursor_Constructor:
                 auto params = ParmDeclToTypeName(c);
@@ -237,6 +239,13 @@ struct ClassTranslator {
         }
         return descend;
     }
+
+private:
+    Cursor cursor;
+    CppHdrImpl top;
+    string prefix; // class name prefix
+    string name; // class name
+    ClassVariabelContainer vars;
 }
 
 /** Translate an access specifier to code suitable for a c++ header.
@@ -266,6 +275,20 @@ T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
     return node;
 }
 
+CppHdrImpl classTranslator(T)(string prefix, string name, ref CppHdrImpl hdr_impl) {
+    T doHeader(string class_prefix, string class_name, ref T hdr) {
+        T node;
+        with (hdr) {
+            node = class_(class_prefix ~ class_name, "public " ~ class_name);
+            sep();
+        }
+
+        return node;
+    }
+
+    return CppHdrImpl(doHeader(prefix, name, hdr_impl.hdr), hdr_impl.impl);
+}
+
 T ctorTranslatorHdr(T)(in ref TypeName[] vars, Cursor c, ref T top) {
     T node;
 
@@ -288,7 +311,7 @@ T CtorTranslatorImpl(T)(Cursor c, ref T top) {
     else
         node = top.ctor(body_name, join(params, ", "));
 
-    foreach(param; c.func.parameters) {
+    foreach (param; c.func.parameters) {
     }
 
     return node;
@@ -299,7 +322,6 @@ T dtorTranslatorHdr(T)(Cursor c, ref T top) {
     return node;
 }
 
-alias TypeName = Tuple!(string, "type", string, "name");
 /** Travers a node tree and gather all paramdecl converting them to a string.
  * Params:
  * cursor = A node containing ParmDecl nodes as children.
@@ -364,7 +386,7 @@ void functionTranslator(T)(Cursor c, ref T hdr, ref T impl) {
             node = hdr.func(return_type, c.spelling);
         else
             node = hdr.func(return_type, c.spelling, params.toString);
-         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
+        node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
     }
 
     void doImpl(in ref TypeName[] params, in ref string return_type, ref T impl) {

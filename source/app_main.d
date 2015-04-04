@@ -73,7 +73,7 @@ int gen_stub(in string infile, in string outfile) {
     auto file_ctx = new Context(infile);
     file_ctx.log_diagnostic();
 
-    auto ctx = new StubContext;
+    auto ctx = new StubContext("Stub");
     ctx.translate(file_ctx.cursor);
 
     try {
