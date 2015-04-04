@@ -363,8 +363,8 @@ TypeName[] ParmDeclToTypeName(Cursor cursor) {
 auto toStrings(in ref TypeName[] vars) {
     string[] params;
 
-    foreach (type, name; vars) {
-        params ~= format("%s %s", type, name);
+    foreach (tn; vars) {
+        params ~= format("%s %s", tn.type, tn.name);
     }
 
     return params;
