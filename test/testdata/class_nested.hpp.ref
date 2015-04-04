@@ -1,21 +1,19 @@
-class OuterClass {
+class StubOuterClass : public OuterClass {
 public:
-    OuterClass();
-    ~OuterClass();
+    StubOuterClass();
+    ~StubOuterClass();
 
-    void func1();
-    int func2();
 private:
-    class InnerClass {
+    class StubInnerClass : public InnerClass {
     public:
-        InnerClass();
-        ~InnerClass();
+        StubInnerClass();
+        ~StubInnerClass();
 
     private:
-        class InnerClass2 {
+        class StubInnerClass2 : public InnerClass2 {
         public:
-            InnerClass2();
-            ~InnerClass2();
+            StubInnerClass2();
+            ~StubInnerClass2();
 
         };
 

@@ -1,7 +1,7 @@
-class Simple {
+class StubSimple : public Simple {
 public:
-    Simple();
-    ~Simple();
+    StubSimple();
+    ~StubSimple();
 
 };
 
