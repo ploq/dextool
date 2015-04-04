@@ -390,6 +390,11 @@ void functionTranslator(T)(Cursor c, ref T hdr, ref T impl) {
     void doImpl(in ref TypeName[] params, in ref string return_type, ref T impl) {
     }
 
+    if (!c.func.isVirtual) {
+        warningf("Skipping %s: Not a virtual function", c.spelling);
+        return;
+    }
+
     auto params = ParmDeclToTypeName(c);
     auto return_type = toString2(translateTypeCursor(c));
     auto tmp_return_type = toString2(translateType(c.func.resultType));
