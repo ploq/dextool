@@ -1,11 +1,11 @@
-class Simple {
+class StubSimple : public Simple {
 public:
-    Simple();
-    ~Simple();
+    StubSimple();
+    virtual ~StubSimple();
 
-    void func1();
-    void operator=(const Simple& other);
+    virtual void func1();
+    virtual void operator=(const Simple& other);
 private:
-    char* func3();
+    virtual char* func3();
 };
 

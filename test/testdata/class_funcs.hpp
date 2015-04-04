@@ -12,6 +12,7 @@ public:
   float func7(int& y, char* yy);
   const double func3(int x, const int xx);
   const void* const func4(MadeUp z, const MadeUp zz, const MadeUp& zzz, const MadeUp** const zzzz);
+  void operator=(const Simple& other) = 0;
 
 private:
   int x;

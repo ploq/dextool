@@ -193,7 +193,7 @@ struct ClassTranslateContext {
      *  prefix = prefix to use for the name of the stub class.
      */
     this(string prefix) {
-        this.prefix = prefix;
+        this.prefix = cast(StubPrefix) prefix;
     }
 
     void translate(CppModule hdr, CppModule impl, Cursor cursor) {
@@ -210,15 +210,15 @@ struct ClassTranslateContext {
         with (CXCursorKind) {
             switch (c.kind) {
             case CXCursor_ClassDecl:
-                this.name = c.spelling;
+                this.name = cast(CppClassName) c.spelling;
                 push(classTranslator!CppModule(prefix, name, current));
                 break;
             case CXCursor_Constructor:
-                ctorTranslator!CppModule(c, current.hdr, current.impl);
+                ctorTranslator!CppModule(c, prefix, current.hdr, current.impl);
                 descend = false;
                 break;
             case CXCursor_Destructor:
-                dtorTranslator!CppModule(c, current.hdr, current.impl);
+                dtorTranslator!CppModule(c, prefix, current.hdr, current.impl);
                 descend = false;
                 break;
             case CXCursor_CXXMethod:
@@ -239,8 +239,8 @@ struct ClassTranslateContext {
 private:
     Cursor cursor;
     CppHdrImpl top;
-    string prefix; // class name prefix
-    string name; // class name
+    StubPrefix prefix;
+    CppClassName name;
     ClassVariabelContainer vars;
 }
 
@@ -272,52 +272,87 @@ CppHdrImpl accessSpecifierTranslator(T)(Cursor cursor, ref T hdr, ref T impl) {
     return CppHdrImpl(node, impl);
 }
 
-CppHdrImpl classTranslator(T)(string prefix, string name, ref CppHdrImpl hdr_impl) {
-    T doHeader(string class_prefix, string class_name, ref T hdr) {
+CppHdrImpl classTranslator(T)(StubPrefix prefix, CppClassName name, ref CppHdrImpl hdr_impl) {
+    T doHeader(ref T hdr) {
         T node;
+        string stub_class = cast(string) prefix ~ cast(string) name;
         with (hdr) {
-            node = class_(class_prefix ~ class_name, "public " ~ class_name);
+            node = class_(stub_class, "public " ~ cast(string) name);
             sep();
         }
 
         return node;
     }
 
-    return CppHdrImpl(doHeader(prefix, name, hdr_impl.hdr), hdr_impl.impl);
+    return CppHdrImpl(doHeader(hdr_impl.hdr), hdr_impl.impl);
 }
 
-void ctorTranslator(T)(Cursor c, ref T hdr, ref T impl) {
-    void doHeader(in ref TypeName[] params, ref T hdr) {
+void ctorTranslator(T)(Cursor c, in StubPrefix prefix, ref T hdr, ref T impl) {
+    void doHeader(CppClassName name, in ref TypeName[] params) {
         T node;
         if (params.length == 0)
-            node = hdr.ctor(c.spelling);
+            node = hdr.ctor(cast(string) name);
         else
-            node = hdr.ctor(c.spelling, params.toString);
+            node = hdr.ctor(cast(string) name, params.toString);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
     }
 
-    void doImpl(in ref TypeName[] params, ref T impl) {
+    void doImpl(CppClassName name, in ref TypeName[] params) {
     }
 
+    CppClassName name = prefix ~ c.spelling;
     auto params = parmDeclToTypeName(c);
-    doHeader(params, hdr);
-    doImpl(params, impl);
+    doHeader(name, params);
+    doImpl(name, params);
 }
 
-void dtorTranslator(T)(Cursor c, ref T hdr, ref T impl) {
-    void doHeader(CppClassName name, ref T hdr) {
+void dtorTranslator(T)(Cursor c, in StubPrefix prefix, ref T hdr, ref T impl) {
+    void doHeader(CppClassName name) {
         T node = hdr.dtor(cast(string) name);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
         hdr.sep();
     }
 
-    void doImpl(CppClassName name, ref T hdr) {
+    void doImpl(CppClassName name) {
     }
 
-    CppClassName name = c.spelling;
+    CppClassName name = prefix ~ c.spelling.removechars("~");
+    trace(name);
 
-    doHeader(name, hdr);
-    doImpl(name, hdr);
+    doHeader(name);
+    doImpl(name);
+}
+
+void functionTranslator(T)(Cursor c, ref T hdr, ref T impl) {
+    alias toString2 = translator.Type.toString;
+    alias toString = generator.stub.toString;
+
+    void doHeader(in ref TypeName[] params, in ref string return_type, ref T hdr) {
+        T node;
+        if (params.length == 0)
+            node = hdr.func(return_type, c.spelling);
+        else
+            node = hdr.func(return_type, c.spelling, params.toString);
+        node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
+    }
+
+    void doImpl(in ref TypeName[] params, in ref string return_type, ref T impl) {
+    }
+
+    if (!c.func.isVirtual) {
+        auto loc = c.location;
+        infof("%s:%d:%d:%s: Skipping, not a virtual function", loc.file.name,
+            loc.line, loc.column, c.spelling);
+        return;
+    }
+
+    auto params = parmDeclToTypeName(c);
+    auto return_type = toString2(translateTypeCursor(c));
+    auto tmp_return_type = toString2(translateType(c.func.resultType));
+    trace(return_type, "|", tmp_return_type);
+
+    doHeader(params, return_type, hdr);
+    doImpl(params, return_type, impl);
 }
 
 /** Travers a node tree and gather all paramdecl converting them to a string.
@@ -372,36 +407,4 @@ auto toStrings(in ref TypeName[] vars) {
 auto toString(in ref TypeName[] vars) {
     auto params = vars.toStrings;
     return join(params, ", ");
-}
-
-void functionTranslator(T)(Cursor c, ref T hdr, ref T impl) {
-    alias toString2 = translator.Type.toString;
-    alias toString = generator.stub.toString;
-
-    void doHeader(in ref TypeName[] params, in ref string return_type, ref T hdr) {
-        T node;
-        if (params.length == 0)
-            node = hdr.func(return_type, c.spelling);
-        else
-            node = hdr.func(return_type, c.spelling, params.toString);
-        node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
-    }
-
-    void doImpl(in ref TypeName[] params, in ref string return_type, ref T impl) {
-    }
-
-    if (!c.func.isVirtual) {
-        auto loc = c.location;
-        infof("%s:%d:%d:%s: Skipping, not a virtual function", loc.file.name,
-            loc.line, loc.column, c.spelling);
-        return;
-    }
-
-    auto params = parmDeclToTypeName(c);
-    auto return_type = toString2(translateTypeCursor(c));
-    auto tmp_return_type = toString2(translateType(c.func.resultType));
-    trace(return_type, "|", tmp_return_type);
-
-    doHeader(params, return_type, hdr);
-    doImpl(params, return_type, impl);
 }

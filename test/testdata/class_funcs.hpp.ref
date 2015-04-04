@@ -1,8 +1,8 @@
 class StubSimple : public Simple {
 public:
-    Simple();
-    Simple(char foo);
-    ~Simple();
+    StubSimple();
+    StubSimple(char foo);
+    ~StubSimple();
 
 private:
 };

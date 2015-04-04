@@ -1,11 +1,10 @@
-class Simple {
+class StubSimple : public Simple {
 public:
-    Simple();
-    Simple(char x);
-    Simple(int y);
-    ~Simple();
+    StubSimple();
+    StubSimple(char x);
+    StubSimple(int y);
+    ~StubSimple();
 
-    void func1();
 private:
 };
 
