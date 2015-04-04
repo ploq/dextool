@@ -1,1 +1,9 @@
+class StubSimple : public Simple {
+public:
+    Simple();
+    Simple(char foo);
+    ~Simple();
+
+private:
+};
 

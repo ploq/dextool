@@ -78,6 +78,7 @@ alias CppModuleImpl = Typedef!(CppModule, CppModule.init, "CppImplementation");
 alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
 
 alias TypeName = Tuple!(string, "type", string, "name");
+alias CppClassName = Typedef!(string, string.init, "CppClassName");
 
 /** Traverse the AST and generate a stub by filling the CppModules with data.
  *
@@ -213,24 +214,19 @@ struct ClassTranslateContext {
                 push(classTranslator!CppModule(prefix, name, current));
                 break;
             case CXCursor_Constructor:
-                auto params = ParmDeclToTypeName(c);
-                ctorTranslatorHdr!CppModule(params, c, current.hdr)[$.begin = "",
-                    $.end = ";" ~ newline, $.noindent = true];
+                ctorTranslator!CppModule(c, current.hdr, current.impl);
                 descend = false;
                 break;
             case CXCursor_Destructor:
-                dtorTranslatorHdr!CppModule(c, current.hdr)[$.begin = "",
-                    $.end = ";" ~ newline, $.noindent = true];
+                dtorTranslator!CppModule(c, current.hdr, current.impl);
                 descend = false;
-                current.hdr.sep();
                 break;
             case CXCursor_CXXMethod:
                 functionTranslator!CppModule(c, current.hdr, current.impl);
                 descend = false;
                 break;
             case CXCursor_CXXAccessSpecifier:
-                auto hdr = AccessSpecifierTranslator!CppModule(c, current.hdr);
-                push(CppHdrImpl(hdr, current.impl));
+                push(AccessSpecifierTranslator!CppModule(c, current.hdr, current.impl));
                 break;
 
             default:
@@ -251,9 +247,10 @@ private:
 /** Translate an access specifier to code suitable for a c++ header.
  * Params:
  *  cursor = Cursor to translate
- *  top = Top module to append the translation to.
+ *  hdr = Header module to append the translation to.
+ *  impl = Implementation module to append the translation to (not used).
  */
-T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
+CppHdrImpl AccessSpecifierTranslator(T)(Cursor cursor, ref T hdr, ref T impl) {
     T node;
 
     with (CXCursorKind) with (CX_CXXAccessSpecifier) final switch (cursor.access.accessSpecifier) {
@@ -261,18 +258,18 @@ T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
         trace(cursor.access.accessSpecifier);
         break;
     case CX_CXXPublic:
-        node = top.public_;
+        node = hdr.public_;
         break;
     case CX_CXXProtected:
-        node = top.protected_;
+        node = hdr.protected_;
         break;
     case CX_CXXPrivate:
-        node = top.private_;
+        node = hdr.private_;
         break;
     }
 
     node.suppress_indent(1);
-    return node;
+    return CppHdrImpl(node, impl);
 }
 
 CppHdrImpl classTranslator(T)(string prefix, string name, ref CppHdrImpl hdr_impl) {
@@ -289,37 +286,38 @@ CppHdrImpl classTranslator(T)(string prefix, string name, ref CppHdrImpl hdr_imp
     return CppHdrImpl(doHeader(prefix, name, hdr_impl.hdr), hdr_impl.impl);
 }
 
-T ctorTranslatorHdr(T)(in ref TypeName[] vars, Cursor c, ref T top) {
-    T node;
-
-    if (vars.length == 0)
-        node = top.ctor(c.spelling);
-    else
-        node = top.ctor(c.spelling, vars.toString);
-
-    return node;
-}
-
-T CtorTranslatorImpl(T)(Cursor c, ref T top) {
-    T node;
-    auto params = ParmDeclToString(c);
-    auto name = c.spelling;
-    auto body_name = format("%s::%s", name, name);
-
-    if (params.length == 0)
-        node = top.ctor(body_name);
-    else
-        node = top.ctor(body_name, join(params, ", "));
-
-    foreach (param; c.func.parameters) {
+void ctorTranslator(T)(Cursor c, ref T hdr, ref T impl) {
+    void doHeader(in ref TypeName[] params, ref T hdr) {
+        T node;
+        if (params.length == 0)
+            node = hdr.ctor(c.spelling);
+        else
+            node = hdr.ctor(c.spelling, params.toString);
+        node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
     }
 
-    return node;
+    void doImpl(in ref TypeName[] params, ref T impl) {
+    }
+
+    auto params = ParmDeclToTypeName(c);
+    doHeader(params, hdr);
+    doImpl(params, impl);
 }
 
-T dtorTranslatorHdr(T)(Cursor c, ref T top) {
-    T node = top.dtor(c.spelling);
-    return node;
+void dtorTranslator(T)(Cursor c, ref T hdr, ref T impl) {
+    void doHeader(CppClassName name, ref T hdr) {
+        T node = hdr.dtor(cast(string) name);
+        node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
+        hdr.sep();
+    }
+
+    void doImpl(CppClassName name, ref T hdr) {
+    }
+
+    CppClassName name = c.spelling;
+
+    doHeader(name, hdr);
+    doImpl(name, hdr);
 }
 
 /** Travers a node tree and gather all paramdecl converting them to a string.
