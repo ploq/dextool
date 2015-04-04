@@ -67,8 +67,14 @@ private:
 
 private:
 
+/** Traverse the AST and generate a stub by filling the CppModules with data.
+ *
+ * Params:
+ *  hdr = C++ code for a header for the stub
+ *  impl = C++ code for the implementation of the stub
+ */
 struct ImplStubContext {
-    int indent = 0;
+    private int indent = 0;
     private CppModule hdr;
     private CppModule impl;
 
@@ -95,7 +101,7 @@ struct ImplStubContext {
             switch (c.kind) {
             case CXCursor_ClassDecl:
                 if (c.isDefinition)
-                    (ClassTranslatorHdr()).translate(hdr, c);
+                    (ClassTranslator()).translate(hdr, impl, c);
                 decend = false;
                 break;
 
@@ -112,19 +118,84 @@ struct ImplStubContext {
     }
 }
 
-struct ClassTranslatorHdr {
-    VisitNodeModule!CppModule visitor_stack;
+/** Variables discovered during traversal of AST for a clas.
+ *
+ */
+struct ClassVariabelContainer {
+    alias TypeName = Tuple!(string, "type", string, "name");
+    private TypeName[] var_decl;
+
+    /** Store new variable in the container.
+     * prefix is used for the variable name.
+     *
+     * Params:
+     *  type = Type of the variable
+     *  name = Variable name
+     * Example:
+     * ---
+     * ClassVariabelContainer foo;
+     * foo.push("int", "ctor_x");
+     * ---
+     * The generated declaration is then:
+     * ---
+     * int ctor_x;
+     * ---
+     */
+    void push(string type, string name) {
+        var_decl ~= TypeName(type, name);
+    }
+
+    /** Traverse the cursor and store ParmDecl as variables in container.
+     *Params:
+     *  cursor = AST cursor to a function.
+     */
+    void push(Cursor c) {
+    }
+
+    /** Create declaration of all variables in supplied CppModule.
+     *
+     * Params:
+     *  m = module to create declarations in.
+     */
+    void injectDeclaration(CppModule m) {
+        with (m) foreach (type, name; var_decl) {
+            stmt(format("%s %s", type, name));
+        }
+    }
+}
+
+/** Translate a ClassDecl to a stub implementation.
+ *
+ * The generate stub implementation have an interface that the user can control
+ * the data flow from stub -> SUT.
+ */
+struct ClassTranslator {
+    alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
+    VisitNodeModule!CppHdrImpl visitor_stack;
     alias visitor_stack this;
 
-    private Cursor cursor;
-    private CppModule top;
+    private {
+        Cursor cursor;
+        CppHdrImpl top;
+        string prefix; // class name prefix
+        string name; // class name
+        ClassVariabelContainer vars;
+    }
 
-    void translate(CppModule top, Cursor cursor) {
+    /**
+     * Params:
+     *  prefix = prefix to use for the name of the stub class.
+     */
+    this(string prefix) {
+        this.prefix = prefix;
+    }
+
+    void translate(CppModule hdr, CppModule impl, Cursor cursor) {
         this.cursor = cursor;
-        this.top = top;
+        this.top = CppHdrImpl(hdr, impl);
         push(top);
         auto c = Cursor(cursor);
-        visit_ast!ClassTranslatorHdr(c, this);
+        visit_ast!ClassTranslator(c, this);
     }
 
     bool apply(Cursor c) {
@@ -133,29 +204,31 @@ struct ClassTranslatorHdr {
         with (CXCursorKind) {
             switch (c.kind) {
             case CXCursor_ClassDecl:
-                with (current) {
-                    push(class_(c.spelling));
+                with (current.hdr) {
+                    this.name = c.spelling;
+                    push(CppHdrImpl(class_(name), current.impl));
                     sep();
                 }
                 break;
             case CXCursor_Constructor:
-                CtorTranslator!CppModule(c, current)[$.begin = "",
+                auto params = ParmDeclToTypeName(c);
+                ctorTranslatorHdr!CppModule(params, c, current.hdr)[$.begin = "",
                     $.end = ";" ~ newline, $.noindent = true];
                 descend = false;
                 break;
             case CXCursor_Destructor:
-                DtorTranslator!CppModule(c, current)[$.begin = "",
+                dtorTranslatorHdr!CppModule(c, current.hdr)[$.begin = "",
                     $.end = ";" ~ newline, $.noindent = true];
                 descend = false;
-                current.sep();
+                current.hdr.sep();
                 break;
             case CXCursor_CXXMethod:
-                FunctionTranslator!CppModule(c, current)[$.begin = "",
-                    $.end = ";" ~ newline, $.noindent = true];
+                functionTranslator!CppModule(c, current.hdr, current.impl);
                 descend = false;
                 break;
             case CXCursor_CXXAccessSpecifier:
-                push(AccessSpecifierTranslator!CppModule(c, current));
+                auto hdr = AccessSpecifierTranslator!CppModule(c, current.hdr);
+                push(CppHdrImpl(hdr, current.impl));
                 break;
 
             default:
@@ -193,23 +266,40 @@ T AccessSpecifierTranslator(T)(Cursor cursor, ref T top) {
     return node;
 }
 
-T CtorTranslator(T)(Cursor c, ref T top) {
+T ctorTranslatorHdr(T)(in ref TypeName[] vars, Cursor c, ref T top) {
     T node;
 
-    auto params = ParmDeclToString(c);
-    if (params.length == 0)
+    if (vars.length == 0)
         node = top.ctor(c.spelling);
     else
-        node = top.ctor(c.spelling, join(params, ", "));
+        node = top.ctor(c.spelling, vars.toString);
 
     return node;
 }
 
-T DtorTranslator(T)(Cursor c, ref T top) {
+T CtorTranslatorImpl(T)(Cursor c, ref T top) {
+    T node;
+    auto params = ParmDeclToString(c);
+    auto name = c.spelling;
+    auto body_name = format("%s::%s", name, name);
+
+    if (params.length == 0)
+        node = top.ctor(body_name);
+    else
+        node = top.ctor(body_name, join(params, ", "));
+
+    foreach(param; c.func.parameters) {
+    }
+
+    return node;
+}
+
+T dtorTranslatorHdr(T)(Cursor c, ref T top) {
     T node = top.dtor(c.spelling);
     return node;
 }
 
+alias TypeName = Tuple!(string, "type", string, "name");
 /** Travers a node tree and gather all paramdecl converting them to a string.
  * Params:
  * cursor = A node containing ParmDecl nodes as children.
@@ -226,35 +316,65 @@ T DtorTranslator(T)(Cursor c, ref T top) {
  * ---
  * It is translated to the string "char x, char y".
  */
-string[] ParmDeclToString(Cursor cursor) {
-    string[] params;
+TypeName[] ParmDeclToTypeName(Cursor cursor) {
+    alias toString2 = clang.Token.toString;
+    alias toString3 = translator.Type.toString;
+    TypeName[] params;
 
     auto f_group = cursor.tokens;
 
     foreach (param; cursor.func.parameters) {
+        //TODO remove junk
         log_node(param, 0);
         auto tok_group = param.tokens;
-        auto type_spelling = tok_group.toString;
+        auto type_spelling = toString2(tok_group);
         auto type = translateTypeCursor(param);
         trace(type_spelling, " ", type, " ", param.spelling, "|", param.type.spelling);
-        params ~= format("%s %s", type.toString, param.spelling);
+        params ~= TypeName(toString3(type), param.spelling);
     }
 
     trace(params);
     return params;
 }
 
-T FunctionTranslator(T)(Cursor c, ref T top) {
-    T node;
+/// Convert a vector of TypeName to string pairs.
+auto toStrings(in ref TypeName[] vars) {
+    string[] params;
 
-    string[] params = ParmDeclToString(c);
-    auto return_type = translateTypeCursor(c).toString;
-    auto tmp_return_type = translateType(c.func.resultType).toString;
+    foreach (type, name; vars) {
+        params ~= format("%s %s", type, name);
+    }
+
+    return params;
+}
+
+/// Convert a vector of TypeName to a comma separated string.
+auto toString(in ref TypeName[] vars) {
+    auto params = vars.toStrings;
+    return join(params, ", ");
+}
+
+void functionTranslator(T)(Cursor c, ref T hdr, ref T impl) {
+    alias toString2 = translator.Type.toString;
+    alias toString = generator.stub.toString;
+
+    void doHeader(in ref TypeName[] params, in ref string return_type, ref T hdr) {
+        T node;
+        if (params.length == 0)
+            node = hdr.func(return_type, c.spelling);
+        else
+            node = hdr.func(return_type, c.spelling, params.toString);
+         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
+    }
+
+    void doImpl(in ref TypeName[] params, in ref string return_type, ref T impl) {
+    }
+
+    auto params = ParmDeclToTypeName(c);
+    auto return_type = toString2(translateTypeCursor(c));
+    auto tmp_return_type = toString2(translateType(c.func.resultType));
     trace(return_type, "|", tmp_return_type);
-    if (params.length == 0)
-        node = top.func(return_type, c.spelling);
-    else
-        node = top.func(return_type, c.spelling, join(params, ", "));
 
-    return node;
+    doHeader(params, return_type, hdr);
+    doImpl(params, return_type, impl);
 }
