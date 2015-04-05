@@ -3,7 +3,7 @@
     "description": "Generate test doubles from C/C++ code by analyzing with LLVM/Clang",
     "copyright": "Copyright © 2014, Joakim Brännström",
     "authors": ["Joakim Brännström"],
-    "license": "BSL-1.0",
+    "license": "GPL",
     "dependencies": {
         "tested": {"version": "~>0.9.4"},
         "dsrcgen": {"path": "dsrcgen"},
