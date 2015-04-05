@@ -65,9 +65,9 @@ private:
 
 Example of generated stub code:
 ```cpp
-namespace StubSimpleCallback {
-struct IctorSimple { virtual void ctor_Simple() = 0; };
-struct IdtorSimple { virtual void dtor_Simple() = 0; };
+namespace StubCallbackSimple {
+struct IctorSimple { virtual void ctorSimple() = 0; };
+struct IdtorSimple { virtual void dtorSimple() = 0; };
 struct Ifunc1 { virtual void func1() = 0; };
 struct Iop_assign { virtual void op_assign(const Simple& other) = 0; };
 struct Ifunc3 { virtual char* func3() = 0; };

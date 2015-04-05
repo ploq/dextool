@@ -7,6 +7,7 @@
  - const parameters in a method.
  - Manager of lifetime for the stub and access to the instance for the tester.
  - Generated data in namespace to avoid name collisions.
+ - ctor's. Problem is... a sensible name mangling.
 
 # Quality of Life
  - Data in the stub data struct groups separated by enter.
