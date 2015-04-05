@@ -85,7 +85,11 @@ alias CppModuleImpl = Typedef!(CppModule, CppModule.init, "CppImplementation");
 alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
 
 alias TypeName = Tuple!(string, "type", string, "name");
+
 alias CppClassName = Typedef!(string, string.init, "CppClassName");
+alias CppMethodConst = Typedef!(bool, bool.init, "CppMethodConst");
+alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
+alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
 
 /** Traverse the AST and generate a stub by filling the CppModules with data.
  *
@@ -187,14 +191,50 @@ struct ClassVariabelContainer {
 
 /// Container of callbacks to generate code for.
 struct CallbackContainer {
-
     /** Add a callback to the container.
      * Params:
      *  method = method name of the callback.
      *  params = parameters the method callback shall accept.
      */
-    void push(string name, TypeName params) {
+    void push(CppMethodName method, in TypeName[] params, CppMethodConst const_) {
+        items ~= CallbackType(method, params.dup, const_);
     }
+
+    /** Generate C++ code in the provided module.
+     * The prefix is used in for example namespace containing callbacks.
+     * Params:
+     *  prefix = prefix for namespace containing generated code.
+     *  cprefix = prefix for callback interfaces.
+     *  hdr = module for generated declaration code.
+     *  impl = module for generated implementation code
+     */
+    void translate(StubPrefix prefix, CallbackPrefix cprefix, CppModule hdr, CppModule impl) {
+        //TODO ugly with the cast. Cleanup. Maybe functions for converting?
+        void doHeader() {
+            auto ns = hdr.namespace(cast(string) prefix);
+            ns.suppress_indent(1);
+            foreach (c; items) {
+                auto s = ns.struct_(cast(string) cprefix ~ cast(string) c.name);
+                s[$.begin = "{", $.noindent = true];
+                auto m = s.method(true, "void", cast(string) c.name,
+                    cast(bool) c.const_, c.params.toString);
+                m[$.begin = "", $.end = " = 0; ", $.noindent = true];
+                m.set_indentation(1);
+            }
+
+            hdr.sep();
+        }
+
+        if (items.length == 0) {
+            return;
+        }
+        doHeader();
+    }
+
+private:
+    alias CallbackType = Tuple!(CppMethodName, "name", TypeName[], "params",
+        CppMethodConst, "const_");
+    CallbackType[] items;
 }
 
 /** Translate a ClassDecl to a stub implementation.
@@ -215,11 +255,23 @@ struct ClassTranslateContext {
     }
 
     void translate(CppModule hdr, CppModule impl, Cursor cursor) {
+        void doTraversal() {
+            auto c = Cursor(cursor);
+            visit_ast!ClassTranslateContext(c, this);
+        }
+
+        void doCallbacks() {
+            StubPrefix pns = prefix ~ "Callback" ~ name;
+            CallbackPrefix cp = "I";
+            callbacks.translate(pns, cp, hdr, impl);
+        }
+
         this.cursor = cursor;
         this.top = CppHdrImpl(hdr, impl);
         push(top);
-        auto c = Cursor(cursor);
-        visit_ast!ClassTranslateContext(c, this);
+
+        doTraversal();
+        doCallbacks();
     }
 
     bool apply(Cursor c) {
@@ -236,7 +288,7 @@ struct ClassTranslateContext {
                 descend = false;
                 break;
             case CXCursor_Destructor:
-                dtorTranslator!CppModule(c, prefix, current.hdr, current.impl);
+                dtorTranslator!CppModule(c, prefix, callbacks, current.hdr, current.impl);
                 descend = false;
                 break;
             case CXCursor_CXXMethod:
@@ -260,6 +312,7 @@ private:
     StubPrefix prefix;
     CppClassName name;
     ClassVariabelContainer vars;
+    CallbackContainer callbacks;
 }
 
 /** Translate an access specifier to code suitable for a c++ header.
@@ -321,20 +374,23 @@ void ctorTranslator(T)(Cursor c, in StubPrefix prefix, ref T hdr, ref T impl) {
     doImpl(name, params);
 }
 
-void dtorTranslator(T)(Cursor c, in StubPrefix prefix, ref T hdr, ref T impl) {
-    void doHeader(CppClassName name) {
+void dtorTranslator(T)(Cursor c, in StubPrefix prefix,
+    ref CallbackContainer callbacks, ref T hdr, ref T impl) {
+    void doHeader(CppClassName name, CppMethodName callback_name) {
         T node = hdr.dtor(c.func.isVirtual, cast(string) name);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
         hdr.sep();
+
+        callbacks.push(callback_name, TypeName[].init, CppMethodConst(false));
     }
 
     void doImpl(CppClassName name) {
     }
 
     CppClassName name = prefix ~ c.spelling.removechars("~");
-    trace(name);
+    CppMethodName callback_name = "dtor" ~ c.spelling.removechars("~");
 
-    doHeader(name);
+    doHeader(name, callback_name);
     doImpl(name);
 }
 
