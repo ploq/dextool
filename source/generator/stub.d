@@ -56,11 +56,18 @@ class StubContext {
         visit_ast!ImplStubContext(c, ctx);
     }
 
-    @property string render_header() {
-        return this.hdr.render;
+    /** Generate the C++ header file of the stub.
+     * Params:
+     *  filename = intended output filename, used for ifdef guard.
+     */
+    string output_header(string filename) {
+        auto o = CppHModule(filename);
+        o.content.append(this.hdr);
+
+        return o.render;
     }
 
-    @property string render_impl() {
+    string output_impl() {
         return this.impl.render;
     }
 

@@ -79,7 +79,7 @@ int gen_stub(in string infile, in string outfile) {
     try {
         auto open_outfile = File(outfile, "w");
         scope(exit) open_outfile.close();
-        open_outfile.write(ctx.render_header);
+        open_outfile.write(ctx.output_header(outfile));
     }
     catch (ErrnoException ex) {
         trace(text(ex));

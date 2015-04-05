@@ -1,4 +1,7 @@
+#ifndef class_empty.hpp.out
+#define class_empty.hpp.out
 class StubSimple : public Simple {
 public:
 };
 
+#endif // class_empty.hpp.out

@@ -1,3 +1,5 @@
+#ifndef class_simple.hpp.out
+#define class_simple.hpp.out
 class StubSimple : public Simple {
 public:
     StubSimple();
@@ -5,3 +7,4 @@ public:
 
 };
 
+#endif // class_simple.hpp.out

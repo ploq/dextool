@@ -1,3 +1,5 @@
+#ifndef class_many.hpp.out
+#define class_many.hpp.out
 class StubSimple : public Simple {
 public:
     StubSimple();
@@ -37,3 +39,4 @@ private:
 
 };
 
+#endif // class_many.hpp.out

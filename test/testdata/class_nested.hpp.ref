@@ -1,3 +1,5 @@
+#ifndef class_nested.hpp.out
+#define class_nested.hpp.out
 class StubOuterClass : public OuterClass {
 public:
     StubOuterClass();
@@ -21,3 +23,4 @@ private:
 
 };
 
+#endif // class_nested.hpp.out
