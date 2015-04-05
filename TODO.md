@@ -12,3 +12,4 @@
  - Data in the stub data struct groups separated by enter.
  - Date in the header when it was generated.
  - Support for header with copyright notice in generated.
+ - A pure stub interface that have all callbacks inherited.

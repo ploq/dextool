@@ -71,6 +71,13 @@ struct IdtorSimple { virtual void dtor_Simple() = 0; };
 struct Ifunc1 { virtual void func1() = 0; };
 struct Iop_assign { virtual void op_assign(const Simple& other) = 0; };
 struct Ifunc3 { virtual char* func3() = 0; };
+
+class StubCompleteInterface : public IctorSimple,
+    public IdtorSimple,
+    public Ifunc1,
+    public Iop_assign,
+    public Ifunc3 {
+};
 } //NS: StubSimpleCallback
 
 namespace StubInternalSimple {
