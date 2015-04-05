@@ -145,7 +145,6 @@ struct ImplStubContext {
  *
  */
 struct ClassVariabelContainer {
-    alias TypeName = Tuple!(string, "type", string, "name");
     private TypeName[] var_decl;
 
     /** Store new variable in the container.
@@ -183,6 +182,18 @@ struct ClassVariabelContainer {
             foreach (type, name; var_decl) {
                 stmt(format("%s %s", type, name));
             }
+    }
+}
+
+/// Container of callbacks to generate code for.
+struct CallbackContainer {
+
+    /** Add a callback to the container.
+     * Params:
+     *  method = method name of the callback.
+     *  params = parameters the method callback shall accept.
+     */
+    void push(string name, TypeName params) {
     }
 }
 

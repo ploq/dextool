@@ -66,13 +66,21 @@ private:
 Example of generated stub code:
 ```cpp
 namespace StubSimpleCallback {
+struct IctorSimple { virtual void ctor_Simple() = 0; };
+struct IdtorSimple { virtual void dtor_Simple() = 0; };
 struct Ifunc1 { virtual void func1() = 0; };
 struct Iop_assign { virtual void op_assign(const Simple& other) = 0; };
 struct Ifunc3 { virtual char* func3() = 0; };
-}
+} //NS: StubSimpleCallback
 
 namespace StubInternalSimple {
 struct StubData {
+    unsigned ctor_Simple_cnt;
+    StubSimpleCallback::IctorSimple* ctor_Simple_callback;
+
+    unsigned dtor_Simple_cnt;
+    StubSimpleCallback::IdtorSimple* dtor_Simple_callback;
+
     unsigned func1_cnt;
     StubSimpleCallback::Ifunc1* func1_callback;
 
@@ -83,5 +91,5 @@ struct StubData {
     unsigned func3_cnt;
     char* func3_return;
 };
-}
+} //NS: StubInternalSimple
 ```
