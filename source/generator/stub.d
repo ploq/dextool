@@ -87,8 +87,8 @@ alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
 alias TypeName = Tuple!(string, "type", string, "name");
 
 alias CppClassName = Typedef!(string, string.init, "CppClassName");
-alias CppMethodConst = Typedef!(bool, bool.init, "CppMethodConst");
 alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
+alias CppType = Typedef!(string, string.init, "CppType");
 alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
 
 /** Traverse the AST and generate a stub by filling the CppModules with data.
@@ -193,11 +193,12 @@ struct ClassVariabelContainer {
 struct CallbackContainer {
     /** Add a callback to the container.
      * Params:
+     *  type = return type of the method.
      *  method = method name of the callback.
      *  params = parameters the method callback shall accept.
      */
-    void push(CppMethodName method, in TypeName[] params, CppMethodConst const_) {
-        items ~= CallbackType(method, params.dup, const_);
+    void push(CppType type, CppMethodName method, in TypeName[] params) {
+        items ~= CallbackType(type, method, params.dup);
     }
 
     /** Generate C++ code in the provided module.
@@ -216,8 +217,8 @@ struct CallbackContainer {
             foreach (c; items) {
                 auto s = ns.struct_(cast(string) cprefix ~ cast(string) c.name);
                 s[$.begin = "{", $.noindent = true];
-                auto m = s.method(true, "void", cast(string) c.name,
-                    cast(bool) c.const_, c.params.toString);
+                auto m = s.method(true, cast(string) c.return_type,
+                    cast(string) c.name, false, c.params.toString);
                 m[$.begin = "", $.end = " = 0; ", $.noindent = true];
                 m.set_indentation(1);
             }
@@ -232,8 +233,8 @@ struct CallbackContainer {
     }
 
 private:
-    alias CallbackType = Tuple!(CppMethodName, "name", TypeName[], "params",
-        CppMethodConst, "const_");
+    alias CallbackType = Tuple!(CppType, "return_type", CppMethodName,
+        "name", TypeName[], "params");
     CallbackType[] items;
 }
 
@@ -292,7 +293,7 @@ struct ClassTranslateContext {
                 descend = false;
                 break;
             case CXCursor_CXXMethod:
-                functionTranslator!CppModule(c, current.hdr, current.impl);
+                functionTranslator!CppModule(c, callbacks, current.hdr, current.impl);
                 descend = false;
                 break;
             case CXCursor_CXXAccessSpecifier:
@@ -381,7 +382,7 @@ void dtorTranslator(T)(Cursor c, in StubPrefix prefix,
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
         hdr.sep();
 
-        callbacks.push(callback_name, TypeName[].init, CppMethodConst(false));
+        callbacks.push(CppType("void"), callback_name, TypeName[].init);
     }
 
     void doImpl(CppClassName name) {
@@ -394,7 +395,18 @@ void dtorTranslator(T)(Cursor c, in StubPrefix prefix,
     doImpl(name);
 }
 
-void functionTranslator(T)(Cursor c, ref T hdr, ref T impl) {
+CppMethodName cppOperatorToName(CppMethodName name) {
+    switch (cast(string) name) {
+    case "operator=":
+        return CppMethodName("opAssign");
+    default:
+        errorf("Generating callback function for '%s' not supported", cast(string) name);
+        return CppMethodName("opNotSupported");
+    }
+}
+
+void functionTranslator(T)(Cursor c, ref CallbackContainer callbacks, ref T hdr, ref T impl) {
+    //TODO ugly... fix this aliases.
     alias toString2 = translator.Type.toString;
     alias toString = generator.stub.toString;
 
@@ -403,6 +415,9 @@ void functionTranslator(T)(Cursor c, ref T hdr, ref T impl) {
         node = hdr.method(c.func.isVirtual, return_type, c.spelling,
             c.func.isConst, params.toString);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
+
+        //if (find("operator") callbacks.push(CppType(return_type), CppMethodName(c.spelling),
+        //        params);
     }
 
     void doImpl(in ref TypeName[] params, in ref string return_type, ref T impl) {
@@ -444,9 +459,7 @@ TypeName[] parmDeclToTypeName(Cursor cursor) {
     alias toString2 = clang.Token.toString;
     alias toString3 = translator.Type.toString;
     TypeName[] params;
-
     auto f_group = cursor.tokens;
-
     foreach (param; cursor.func.parameters) {
         //TODO remove junk
         log_node(param, 0);
@@ -464,7 +477,6 @@ TypeName[] parmDeclToTypeName(Cursor cursor) {
 /// Convert a vector of TypeName to string pairs.
 auto toStrings(in ref TypeName[] vars) {
     string[] params;
-
     foreach (tn; vars) {
         params ~= format("%s %s", tn.type, tn.name);
     }
