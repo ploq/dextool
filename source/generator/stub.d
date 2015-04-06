@@ -395,14 +395,18 @@ void dtorTranslator(T)(Cursor c, in StubPrefix prefix,
     doImpl(name);
 }
 
-CppMethodName cppOperatorToName(CppMethodName name) {
+auto cppOperatorToName(in ref CppMethodName name) pure nothrow @safe {
+    Nullable!CppMethodName r;
+
     switch (cast(string) name) {
     case "operator=":
-        return CppMethodName("opAssign");
+        r = CppMethodName("opAssign");
+        break;
     default:
-        errorf("Generating callback function for '%s' not supported", cast(string) name);
-        return CppMethodName("opNotSupported");
+        break;
     }
+
+    return r;
 }
 
 void functionTranslator(T)(Cursor c, ref CallbackContainer callbacks, ref T hdr, ref T impl) {
@@ -411,13 +415,24 @@ void functionTranslator(T)(Cursor c, ref CallbackContainer callbacks, ref T hdr,
     alias toString = generator.stub.toString;
 
     void doHeader(in ref TypeName[] params, in ref string return_type, ref T hdr) {
-        T node;
-        node = hdr.method(c.func.isVirtual, return_type, c.spelling,
-            c.func.isConst, params.toString);
+        import std.algorithm.searching : find;
+
+        auto method_name = CppMethodName(c.spelling);
+        T node = hdr.method(c.func.isVirtual, return_type,
+            cast(string) method_name, c.func.isConst, params.toString);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
 
-        //if (find("operator") callbacks.push(CppType(return_type), CppMethodName(c.spelling),
-        //        params);
+        Nullable!CppMethodName callback_method;
+        callback_method = method_name;
+        if (find(cast(string) method_name, "operator") != string.init) {
+            callback_method = cppOperatorToName(method_name);
+            if (callback_method.isNull) {
+                errorf("Generating callback function for '%s' not supported",
+                    cast(string) method_name);
+            }
+        }
+
+        callbacks.push(CppType(return_type), callback_method.get, params);
     }
 
     void doImpl(in ref TypeName[] params, in ref string return_type, ref T impl) {
@@ -455,7 +470,7 @@ void functionTranslator(T)(Cursor c, ref CallbackContainer callbacks, ref T hdr,
  * ---
  * It is translated to the string "char x, char y".
  */
-TypeName[] parmDeclToTypeName(Cursor cursor) {
+TypeName[] parmDeclToTypeName(ref Cursor cursor) {
     alias toString2 = clang.Token.toString;
     alias toString3 = translator.Type.toString;
     TypeName[] params;
@@ -475,17 +490,18 @@ TypeName[] parmDeclToTypeName(Cursor cursor) {
 }
 
 /// Convert a vector of TypeName to string pairs.
-auto toStrings(in ref TypeName[] vars) {
+auto toStrings(in ref TypeName[] vars) pure @safe nothrow {
     string[] params;
+
     foreach (tn; vars) {
-        params ~= format("%s %s", tn.type, tn.name);
+        params ~= to!string(tn.type) ~ " " ~ to!string(tn.name);
     }
 
     return params;
 }
 
 /// Convert a vector of TypeName to a comma separated string.
-auto toString(in ref TypeName[] vars) {
+auto toString(in ref TypeName[] vars) pure @safe nothrow {
     auto params = vars.toStrings;
     return join(params, ", ");
 }

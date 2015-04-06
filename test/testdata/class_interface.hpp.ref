@@ -12,11 +12,11 @@ private:
 };
 
 namespace StubCallbackSimple {
-struct IdtorSimple { virtual void dtor_Simple() = 0; };
+struct IdtorSimple { virtual void dtorSimple() = 0; };
 struct Ifunc1 { virtual void func1() = 0; };
-struct Iop_assign { virtual void op_assign(const Simple& other) = 0; };
+struct IopAssign { virtual void opAssign(const Simple& other) = 0; };
 struct Ifunc3 { virtual char* func3() = 0; };
-}
+} //NS:StubCallbackSimple
 
 namespace StubInternalSimple {
 struct StubData {
@@ -33,6 +33,6 @@ struct StubData {
     unsigned func3_cnt;
     char* func3_return;
 };
-} //NS: StubInternalSimple
+} //NS:StubInternalSimple
 
 #endif // class_interface.hpp.out
