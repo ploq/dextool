@@ -1,3 +1,6 @@
+// Contains a C++ interface. Pure virtual.
+// Expecting an implementation.
+
 class Simple {
 public:
     Simple();

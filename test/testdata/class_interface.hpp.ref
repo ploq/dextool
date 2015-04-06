@@ -1,0 +1,12 @@
+    class Simple {
+    public:
+        Simple();
+        ~Simple();
+
+        void func1();
+        void operator=(const Simple& other);
+    private:
+        char* func3();
+    };
+
+

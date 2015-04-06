@@ -1,3 +1,8 @@
+// A class that have:
+// - implementation in the header.
+// - variables.
+// Expecting to skip the implementation and variables.
+
 class Simple {
 public:
     Simple();

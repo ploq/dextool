@@ -1,6 +1,6 @@
 #!/bin/bash
 ROOT=$PWD
-INOTIFY_PATH="$ROOT/source $ROOT/clang $ROOT/dub.json $ROOT/dsrcgen/source"
+INOTIFY_PATH="$ROOT/source $ROOT/clang $ROOT/dub.json $ROOT/dsrcgen/source $ROOT/test"
 
 C_NONE='\e[m'
 C_RED='\e[1;31m'
@@ -19,10 +19,9 @@ export LD_LIBRARY_PATH=$ROOT:$LD_LIBRARY_PATH
 
 # init
 # wait
-# ut_build_run
-# ut_check_status
+# ut_run
 # release_build
-# release_check_status
+# release_test
 # test_passed
 # doc_check_counter
 # doc_build
@@ -60,7 +59,7 @@ function state_wait() {
     sleep 1
 }
 
-function state_ut_build_run() {
+function state_ut_run() {
     dub run -c unittest -b unittest
     check_status "Compile and run UnitTest"
 }
@@ -68,6 +67,13 @@ function state_ut_build_run() {
 function state_release_build() {
     dub build -c release
     check_status "Compile Release"
+}
+
+function state_release_test() {
+    pushd test
+    ./run_tests.sh
+    check_status "Release Tests"
+    popd
 }
 
 function doc_build() {
@@ -93,17 +99,14 @@ do
     case "$STATE" in
         "init")
             state_init
-            STATE="ut_build_run"
+            STATE="ut_run"
             ;;
         "wait")
             state_wait
-            STATE="ut_build_run"
+            STATE="ut_run"
             ;;
-        "ut_build_run")
-            state_ut_build_run
-            STATE="ut_check_status"
-            ;;
-        "ut_check_status")
+        "ut_run")
+            state_ut_run
             STATE="wait"
             if [[ $CHECK_STATUS_RVAL -eq 0 ]]; then
                 STATE="release_build"
@@ -112,11 +115,17 @@ do
             fi
             ;;
         "release_build")
-            state_release_build
-            STATE="release_check_status"
-            ;;
-        "release_check_status")
             STATE="wait"
+            state_release_build
+            if [[ $CHECK_STATUS_RVAL -eq 0 ]]; then
+                STATE="release_test"
+            else
+                play_sound "fail"
+            fi
+            ;;
+        "release_test")
+            STATE="wait"
+            state_release_test
             if [[ $CHECK_STATUS_RVAL -eq 0 ]]; then
                 STATE="test_passed"
             else

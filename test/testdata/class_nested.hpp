@@ -1,3 +1,6 @@
+// Nested classes.
+// Expecting a correct reconstruction with the correct nesting.
+
 class OuterClass {
 public:
     OuterClass();

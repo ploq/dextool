@@ -1,3 +1,7 @@
+// Contains many class definitions, nesting etc.
+// Basically most things one could expect from c++.
+// Expecting... reconstruction of public parts.
+
 class Foo;
 struct FooBar;
 

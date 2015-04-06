@@ -1,0 +1,12 @@
+    class Simple {
+    public:
+        Simple();
+        Simple(char x);
+        Simple(int y);
+        ~Simple();
+
+        void func1();
+    private:
+    };
+
+
