@@ -1,6 +1,8 @@
 # Features
  - operators are translated to words. As it is now an operator would result in broken code.
  - Stub generation of C-functions.
+ - Better control of nameing and prefixes. callback namespace, callback
+   functions, data structure etc.
 
 # Before it is useful
  - Interface method that are const.
