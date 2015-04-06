@@ -7,21 +7,22 @@
     "dependencies": {
         "tested": {"version": ">=0.9.4"},
         "docopt": {"version": ">=0.6.1-b.1"},
-        "logger": {"version": ">=0.3.3"}
+        "logger": {"version": ">=0.3.3"},
+        "dsrcgen": {"version": "~master", "path": "dsrcgen"}
     },
 
     "targetPath": "build",
     "mainSourceFile": "source/app.d",
-	"sourcePaths": ["source", "clang", "dsrcgen"],
-	"importPaths": ["source", "clang", "dsrcgen"],
+    "sourcePaths": ["source", "clang"],
+    "importPaths": ["source", "clang"],
 
-	"lflags-posix": ["-lclang", "-rpath", ".", "-L."],
+    "lflags-posix": ["-lclang", "-rpath", ".", "-L."],
     "targetType": "executable",
     "buildRequirements": ["requireBoundsCheck", "requireContracts"],
 
     "configurations": [
         {"name": "release",
-            "targetName": "fun_with_clang",
+            "targetName": "fun_with_clang"
         },
         {"name": "unittest",
             "targetName": "unittest",
