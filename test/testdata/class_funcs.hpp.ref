@@ -15,6 +15,7 @@ struct IdtorSimple { virtual void dtorSimple() = 0; };
 
 namespace StubInternalSimple {
 struct StubData {
+    unsigned dtorSimple_cnt;
     StubCallbackSimple::IdtorSimple* dtorSimple_callback;
 };
 } //NS:StubInternalSimple

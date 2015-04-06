@@ -207,7 +207,9 @@ struct VariableContainer {
                 tn.name = it.typename.name ~ "_callback";
                 return tn;
             case CallCounter:
-                return it.typename;
+                tn.type = it.typename.type;
+                tn.name = it.typename.name ~ "_cnt";
+                return tn;
             }
         }
 
@@ -438,6 +440,7 @@ void dtorTranslator(T)(Cursor c, in StubPrefix prefix, ref VariableContainer var
         hdr.sep();
 
         callbacks.push(CppType("void"), callback_name, TypeName[].init);
+        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(string) callback_name);
         vars.push(NameMangling.Callback, cast(CppType) callback_name, cast(string) callback_name);
     }
 
