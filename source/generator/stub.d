@@ -90,6 +90,18 @@ alias CppClassName = Typedef!(string, string.init, "CppClassName");
 alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
 alias CppType = Typedef!(string, string.init, "CppType");
 alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
+alias CallbackNs = Typedef!(string, string.init, "CallbackNamespace");
+alias DataNs = Typedef!(string, string.init, "DataNamespace");
+alias DataStruct = Typedef!(string, string.init, "DataStructInNs");
+
+/** Name mangling that occurs when translating to C++ code.
+ */
+enum NameMangling {
+    Plain, // no mangling
+    Method,
+    Callback,
+    CallCounter
+}
 
 /** Traverse the AST and generate a stub by filling the CppModules with data.
  *
@@ -145,47 +157,75 @@ struct ImplStubContext {
     }
 }
 
-/** Variables discovered during traversal of AST for a clas.
+/** Variables discovered during traversal of AST that data storage in the stub.
+ * A common case is pointers to callbacks and parameters.
  *
+ * NameMangling affects how the types and variables are translated to C++ code.
+ * See translate() for details.
+ *
+ * Example:
+ * ---
+ * VariableContainer foo;
+ * foo.push(NameMangling.Plain, "int", "ctor_x");
+ * ---
+ * The generated declaration is then:
+ * ---
+ * int ctor_x;
+ * ---
  */
-struct ClassVariabelContainer {
-    private TypeName[] var_decl;
+struct VariableContainer {
+    private alias InternalType = Tuple!(NameMangling, "mangling", TypeName, "typename");
+    private InternalType[] vars;
 
-    /** Store new variable in the container.
-     * Params:
-     *  type = Type of the variable
-     *  name = Variable name
-     * Example:
-     * ---
-     * ClassVariabelContainer foo;
-     * foo.push("int", "ctor_x");
-     * ---
-     * The generated declaration is then:
-     * ---
-     * int ctor_x;
-     * ---
-     */
-    void push(string type, string name) {
-        var_decl ~= TypeName(type, name);
+    void push(in NameMangling mangling, in CppType type, in string name) pure @safe nothrow {
+        vars ~= InternalType(mangling, TypeName(cast(TypedefType!CppType) type, name));
     }
 
-    /** Traverse the cursor and store ParmDecl as variables in container.
-     *Params:
-     *  cursor = AST cursor to a function.
-     */
-    void push(Cursor c) {
+    void push(in NameMangling mangling, in ref TypeName tn) {
+        vars ~= InternalType(mangling, tn);
     }
 
-    /** Create declaration of all variables in supplied CppModule.
-     *
-     * Params:
-     *  m = module to create declarations in.
-     */
-    void injectDeclaration(CppModule m) {
-        with (m)
-            foreach (type, name; var_decl) {
-                stmt(format("%s %s", type, name));
+    void push(in NameMangling mangling, in ref TypeName[] tn) {
+        import std.algorithm.iteration : map;
+        import std.range : chain;
+
+        vars = chain(vars, tn.chain().map!(a => InternalType(mangling, a))).array().dup;
+    }
+
+    void translate(in CallbackNs cb_ns, in CallbackPrefix cb_prefix,
+        in DataNs data_ns, in DataStruct data_st, CppModule hdr, CppModule impl) {
+        TypeName InternaltoString(in ref InternalType it) pure @safe nothrow {
+            TypeName tn;
+
+            final switch (it.mangling) with (NameMangling) {
+            case Plain:
+                return it.typename;
+            case Method:
+                return it.typename;
+            case Callback:
+                tn.type = cb_ns ~ "::" ~ cb_prefix ~ it.typename.type ~ "*";
+                tn.name = it.typename.name ~ "_callback";
+                return tn;
+            case CallCounter:
+                return it.typename;
             }
+        }
+
+        void doHeader() {
+            auto ns = hdr.namespace(cast(string) data_ns);
+            ns.suppress_indent(1);
+            auto st = ns.struct_(cast(string) data_st);
+            foreach (item; vars)
+                with (st) {
+                    TypeName tn = InternaltoString(item);
+                    stmt(format("%s %s", tn.type, tn.name));
+                }
+        }
+
+        if (vars.length == 0) {
+            return;
+        }
+        doHeader();
     }
 }
 
@@ -197,26 +237,27 @@ struct CallbackContainer {
      *  method = method name of the callback.
      *  params = parameters the method callback shall accept.
      */
-    void push(CppType type, CppMethodName method, in TypeName[] params) {
-        items ~= CallbackType(type, method, params.dup);
+    void push(CppType return_type, CppMethodName method, in TypeName[] params) {
+        items ~= CallbackType(return_type, method, params.dup);
     }
 
     /** Generate C++ code in the provided module.
      * The prefix is used in for example namespace containing callbacks.
      * Params:
-     *  prefix = prefix for namespace containing generated code.
+     *  cb_ns = namespace containing generated code for callbacks.
      *  cprefix = prefix for callback interfaces.
+     *  data_ns = namespace to generate code in.
      *  hdr = module for generated declaration code.
      *  impl = module for generated implementation code
      */
-    void translate(StubPrefix prefix, CallbackPrefix cprefix, CppModule hdr, CppModule impl) {
+    void translate(CallbackNs cb_ns, CallbackPrefix cprefix, CppModule hdr, CppModule impl) {
         //TODO ugly with the cast. Cleanup. Maybe functions for converting?
         void doHeader() {
-            auto ns = hdr.namespace(cast(string) prefix);
+            auto ns = hdr.namespace(cast(string) cb_ns);
             ns.suppress_indent(1);
             foreach (c; items) {
                 auto s = ns.struct_(cast(string) cprefix ~ cast(string) c.name);
-                s[$.begin = "{", $.noindent = true];
+                s[$.begin = " {", $.noindent = true];
                 auto m = s.method(true, cast(string) c.return_type,
                     cast(string) c.name, false, c.params.toString);
                 m[$.begin = "", $.end = " = 0; ", $.noindent = true];
@@ -261,10 +302,19 @@ struct ClassTranslateContext {
             visit_ast!ClassTranslateContext(c, this);
         }
 
-        void doCallbacks() {
-            StubPrefix pns = prefix ~ "Callback" ~ name;
+        void doCallbacks(out CallbackNs out_ns, out CallbackPrefix out_cp) {
+            CallbackNs cb_ns = prefix ~ "Callback" ~ name;
             CallbackPrefix cp = "I";
-            callbacks.translate(pns, cp, hdr, impl);
+            callbacks.translate(cb_ns, cp, hdr, impl);
+
+            out_ns = cb_ns;
+            out_cp = cp;
+        }
+
+        void doDataStruct(in CallbackNs cb_ns, in CallbackPrefix cb_prefix) {
+            DataNs data_ns = prefix ~ "Internal" ~ name;
+            DataStruct data_st = prefix ~ "Data";
+            vars.translate(cb_ns, cb_prefix, data_ns, data_st, hdr, impl);
         }
 
         this.cursor = cursor;
@@ -272,7 +322,12 @@ struct ClassTranslateContext {
         push(top);
 
         doTraversal();
-        doCallbacks();
+
+        CallbackNs cb_ns;
+        CallbackPrefix cb_prefix;
+        doCallbacks(cb_ns, cb_prefix);
+
+        doDataStruct(cb_ns, cb_prefix);
     }
 
     bool apply(Cursor c) {
@@ -289,7 +344,7 @@ struct ClassTranslateContext {
                 descend = false;
                 break;
             case CXCursor_Destructor:
-                dtorTranslator!CppModule(c, prefix, callbacks, current.hdr, current.impl);
+                dtorTranslator!CppModule(c, prefix, vars, callbacks, current.hdr, current.impl);
                 descend = false;
                 break;
             case CXCursor_CXXMethod:
@@ -312,7 +367,7 @@ private:
     CppHdrImpl top;
     StubPrefix prefix;
     CppClassName name;
-    ClassVariabelContainer vars;
+    VariableContainer vars;
     CallbackContainer callbacks;
 }
 
@@ -375,7 +430,7 @@ void ctorTranslator(T)(Cursor c, in StubPrefix prefix, ref T hdr, ref T impl) {
     doImpl(name, params);
 }
 
-void dtorTranslator(T)(Cursor c, in StubPrefix prefix,
+void dtorTranslator(T)(Cursor c, in StubPrefix prefix, ref VariableContainer vars,
     ref CallbackContainer callbacks, ref T hdr, ref T impl) {
     void doHeader(CppClassName name, CppMethodName callback_name) {
         T node = hdr.dtor(c.func.isVirtual, cast(string) name);
@@ -383,6 +438,7 @@ void dtorTranslator(T)(Cursor c, in StubPrefix prefix,
         hdr.sep();
 
         callbacks.push(CppType("void"), callback_name, TypeName[].init);
+        vars.push(NameMangling.Callback, cast(CppType) callback_name, cast(string) callback_name);
     }
 
     void doImpl(CppClassName name) {
@@ -422,6 +478,7 @@ void functionTranslator(T)(Cursor c, ref CallbackContainer callbacks, ref T hdr,
             cast(string) method_name, c.func.isConst, params.toString);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
 
+        //TODO idea. Try and simplify by using enums for operators.
         Nullable!CppMethodName callback_method;
         callback_method = method_name;
         if (find(cast(string) method_name, "operator") != string.init) {
