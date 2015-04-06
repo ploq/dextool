@@ -5,10 +5,9 @@
     "authors": ["Joakim Brännström"],
     "license": "BSL-1.0",
     "dependencies": {
-        "tested": {"version": "0.9.4"},
-        "docopt": {"version": "0.6.1-b.1"},
-        "logger": {"version": ">=0.3.3"},
-        "dsrcgen": {"version": "~master", "path": "dsrcgen"}
+        "tested": {"version": "~>0.9.4"},
+        "dsrcgen": {"path": "dsrcgen"},
+        "docopt": "~>0.6.1-b.2"
     },
 
     "targetPath": "build",

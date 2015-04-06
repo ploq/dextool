@@ -37,7 +37,7 @@ class SimpleLogger : Logger {
         super(lv);
     }
 
-    override void writeLogMsg(ref LogEntry payload) {
+    override void writeLogMsg(ref LogEntry payload) @trusted {
         this.line = payload.line;
         this.file = payload.file;
         this.func = payload.funcName;
@@ -79,9 +79,10 @@ int gen_stub(in string infile, in string outfile) {
     try {
         auto open_outfile = File(outfile, "w");
         scope(exit) open_outfile.close();
+        open_outfile.write(ctx.render);
     }
     catch (ErrnoException ex) {
-        trace(ex);
+        trace(text(ex));
         errorf("Unable to write to file '%s'", outfile);
         return -1;
     }
@@ -90,6 +91,8 @@ int gen_stub(in string infile, in string outfile) {
 }
 
 void prepare_env(ref ArgValue[string] parsed) {
+    import std.experimental.logger.core : sharedLog;
+
     try {
         if (parsed["--debug"].isTrue) {
             globalLogLevel(LogLevel.all);
@@ -97,7 +100,7 @@ void prepare_env(ref ArgValue[string] parsed) {
         else {
             globalLogLevel(LogLevel.info);
             auto simple_logger = new SimpleLogger();
-            stdlog = simple_logger;
+            sharedLog(simple_logger);
         }
     }
     catch (Exception ex) {
@@ -139,7 +142,7 @@ int rmain(string[] args) nothrow {
         exit_status = do_test_double(parsed);
     }
     catch (Exception ex) {
-        collectException(trace(ex));
+        collectException(trace(text(ex)));
         exit_status = -1;
     }
 
