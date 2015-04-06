@@ -61,19 +61,13 @@ function state_wait() {
 }
 
 function state_ut_build_run() {
-    dub build -c unittest -b unittest
-    check_status "Compile UnitTest"
-
-    if [[ $CHECK_STATUS_RVAL -eq 0 ]]; then
-        dub run -b unittest
-        check_status "Run UnitTest"
-    fi
+    dub run -c unittest -b unittest
+    check_status "Compile and run UnitTest"
 }
 
 function state_release_build() {
-    # dub build
-    # check_status "Compile Release"
-    return
+    dub build -c release
+    check_status "Compile Release"
 }
 
 function doc_build() {
@@ -130,7 +124,6 @@ do
             fi
             ;;
         "test_passed")
-            # breaking the pattern of doing something in the FSM but OK hack when it is only one line
             STATE="wait"
             if [[ $DOC_CNT -ge $DOC_MAX_CNT ]]; then
                 STATE="doc_build"
@@ -138,6 +131,7 @@ do
                 echo "Building doc in "$(($DOC_MAX_CNT - $DOC_CNT))" successfull passes"
                 play_sound "ok"
             fi
+            # breaking the pattern of doing something in the FSM but OK hack when it is only one line
             DOC_CNT=$(($DOC_CNT + 1))
             ;;
         "doc_build")

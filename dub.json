@@ -1,12 +1,12 @@
 {
-    "name": "fun_with_clang",
-    "description": "Fun with LLVM/Clang",
+    "name": "gen-test-double",
+    "description": "Generate test doubles from C/C++ code by analyzing with LLVM/Clang",
     "copyright": "Copyright © 2014, Joakim Brännström",
     "authors": ["Joakim Brännström"],
     "license": "BSL-1.0",
     "dependencies": {
-        "tested": {"version": ">=0.9.4"},
-        "docopt": {"version": ">=0.6.1-b.1"},
+        "tested": {"version": "0.9.4"},
+        "docopt": {"version": "0.6.1-b.1"},
         "logger": {"version": ">=0.3.3"},
         "dsrcgen": {"version": "~master", "path": "dsrcgen"}
     },
@@ -21,9 +21,7 @@
     "buildRequirements": ["requireBoundsCheck", "requireContracts"],
 
     "configurations": [
-        {"name": "release",
-            "targetName": "fun_with_clang"
-        },
+        {"name": "release"},
         {"name": "unittest",
             "targetName": "unittest",
             "buildType": "debugInfo"
