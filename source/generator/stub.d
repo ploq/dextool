@@ -290,10 +290,7 @@ CppHdrImpl classTranslator(T)(StubPrefix prefix, CppClassName name, ref CppHdrIm
 void ctorTranslator(T)(Cursor c, in StubPrefix prefix, ref T hdr, ref T impl) {
     void doHeader(CppClassName name, in ref TypeName[] params) {
         T node;
-        if (params.length == 0)
-            node = hdr.ctor(cast(string) name);
-        else
-            node = hdr.ctor(cast(string) name, params.toString);
+        node = hdr.ctor(cast(string) name, params.toString);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
     }
 
@@ -308,7 +305,7 @@ void ctorTranslator(T)(Cursor c, in StubPrefix prefix, ref T hdr, ref T impl) {
 
 void dtorTranslator(T)(Cursor c, in StubPrefix prefix, ref T hdr, ref T impl) {
     void doHeader(CppClassName name) {
-        T node = hdr.dtor(cast(string) name);
+        T node = hdr.dtor(c.func.isVirtual, cast(string) name);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
         hdr.sep();
     }
@@ -329,10 +326,8 @@ void functionTranslator(T)(Cursor c, ref T hdr, ref T impl) {
 
     void doHeader(in ref TypeName[] params, in ref string return_type, ref T hdr) {
         T node;
-        if (params.length == 0)
-            node = hdr.func(return_type, c.spelling);
-        else
-            node = hdr.func(return_type, c.spelling, params.toString);
+        node = hdr.method(c.func.isVirtual, return_type, c.spelling,
+            c.func.isConst, params.toString);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
     }
 
