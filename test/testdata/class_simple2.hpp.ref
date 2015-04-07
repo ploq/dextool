@@ -9,4 +9,15 @@ public:
 private:
 };
 
+namespace StubCallbackSimple {
+struct IdtorSimple { virtual void dtorSimple() = 0; };
+} //NS:StubCallbackSimple
+
+namespace StubInternalSimple {
+struct StubData {
+    StubCallbackSimple::IdtorSimple* dtorSimple_callback;
+    unsigned dtorSimple_cnt;
+};
+} //NS:StubInternalSimple
+
 #endif // class_simple2.hpp.out

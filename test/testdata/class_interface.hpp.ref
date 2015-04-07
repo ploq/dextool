@@ -20,13 +20,14 @@ struct Ifunc3 { virtual char* func3() = 0; };
 
 namespace StubInternalSimple {
 struct StubData {
-    unsigned dtorSimple_cnt;
     StubCallbackSimple::IdtorSimple* dtorSimple_callback;
-    unsigned func1_cnt;
+    unsigned dtorSimple_cnt;
     StubCallbackSimple::Ifunc1* func1_callback;
+    unsigned func1_cnt;
+    StubCallbackSimple::IopAssign* opAssign_callback;
     unsigned opAssign_cnt;
     Simple* opAssign_param_other;
-    StubCallbackSimple::IopAssign* opAssign_callback;
+    StubCallbackSimple::Ifunc3* func3_callback;
     unsigned func3_cnt;
     char* func3_return;
 };

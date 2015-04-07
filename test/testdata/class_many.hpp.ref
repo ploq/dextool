@@ -8,6 +8,17 @@ public:
 private:
 };
 
+namespace StubCallbackSimple {
+struct IdtorSimple { virtual void dtorSimple() = 0; };
+} //NS:StubCallbackSimple
+
+namespace StubInternalSimple {
+struct StubData {
+    StubCallbackSimple::IdtorSimple* dtorSimple_callback;
+    unsigned dtorSimple_cnt;
+};
+} //NS:StubInternalSimple
+
 class StubSimple2 : public Simple2 {
 public:
     StubSimple2();
@@ -16,27 +27,34 @@ public:
 private:
 };
 
+namespace StubCallbackSimple2 {
+struct IdtorSimple2 { virtual void dtorSimple2() = 0; };
+} //NS:StubCallbackSimple2
+
+namespace StubInternalSimple2 {
+struct StubData {
+    StubCallbackSimple2::IdtorSimple2* dtorSimple2_callback;
+    unsigned dtorSimple2_cnt;
+};
+} //NS:StubInternalSimple2
+
 class StubOuterClass : public OuterClass {
 public:
     StubOuterClass();
     ~StubOuterClass();
 
 private:
-    class StubInnerClass : public InnerClass {
-    public:
-        StubInnerClass();
-        ~StubInnerClass();
-
-    private:
-        class StubInnerClass2 : public InnerClass2 {
-        public:
-            StubInnerClass2();
-            ~StubInnerClass2();
-
-        };
-
-    };
-
 };
+
+namespace StubCallbackOuterClass {
+struct IdtorOuterClass { virtual void dtorOuterClass() = 0; };
+} //NS:StubCallbackOuterClass
+
+namespace StubInternalOuterClass {
+struct StubData {
+    StubCallbackOuterClass::IdtorOuterClass* dtorOuterClass_callback;
+    unsigned dtorOuterClass_cnt;
+};
+} //NS:StubInternalOuterClass
 
 #endif // class_many.hpp.out

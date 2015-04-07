@@ -100,7 +100,8 @@ enum NameMangling {
     Plain, // no mangling
     Method,
     Callback,
-    CallCounter
+    CallCounter,
+    ReturnType
 }
 
 /** Traverse the AST and generate a stub by filling the CppModules with data.
@@ -194,7 +195,7 @@ struct VariableContainer {
 
     void translate(in CallbackNs cb_ns, in CallbackPrefix cb_prefix,
         in DataNs data_ns, in DataStruct data_st, CppModule hdr, CppModule impl) {
-        TypeName InternaltoString(in ref InternalType it) pure @safe nothrow {
+        TypeName InternalToString(in ref InternalType it) pure @safe nothrow {
             TypeName tn;
 
             final switch (it.mangling) with (NameMangling) {
@@ -210,6 +211,10 @@ struct VariableContainer {
                 tn.type = it.typename.type;
                 tn.name = it.typename.name ~ "_cnt";
                 return tn;
+            case ReturnType:
+                tn.type = it.typename.type;
+                tn.name = it.typename.name ~ "_return";
+                return tn;
             }
         }
 
@@ -219,9 +224,10 @@ struct VariableContainer {
             auto st = ns.struct_(cast(string) data_st);
             foreach (item; vars)
                 with (st) {
-                    TypeName tn = InternaltoString(item);
+                    TypeName tn = InternalToString(item);
                     stmt(format("%s %s", tn.type, tn.name));
                 }
+            hdr.sep;
         }
 
         if (vars.length == 0) {
@@ -244,7 +250,6 @@ struct CallbackContainer {
     }
 
     /** Generate C++ code in the provided module.
-     * The prefix is used in for example namespace containing callbacks.
      * Params:
      *  cb_ns = namespace containing generated code for callbacks.
      *  cprefix = prefix for callback interfaces.
@@ -266,7 +271,7 @@ struct CallbackContainer {
                 m.set_indentation(1);
             }
 
-            hdr.sep();
+            hdr.sep;
         }
 
         if (items.length == 0) {
@@ -338,8 +343,16 @@ struct ClassTranslateContext {
         with (CXCursorKind) {
             switch (c.kind) {
             case CXCursor_ClassDecl:
-                this.name = cast(CppClassName) c.spelling;
-                push(classTranslator!CppModule(prefix, name, current));
+                if (classdecl_used) {
+                    //if (c.isDefinition)
+                    //    (ClassTranslateContext(cast(string) prefix)).translate(current.hdr, current.impl, c);
+                    descend = false;
+                }
+                else {
+                    this.classdecl_used = true;
+                    this.name = cast(CppClassName) c.spelling;
+                    push(classTranslator!CppModule(prefix, name, current));
+                }
                 break;
             case CXCursor_Constructor:
                 ctorTranslator!CppModule(c, prefix, current.hdr, current.impl);
@@ -350,7 +363,7 @@ struct ClassTranslateContext {
                 descend = false;
                 break;
             case CXCursor_CXXMethod:
-                functionTranslator!CppModule(c, callbacks, current.hdr, current.impl);
+                functionTranslator!CppModule(c, vars, callbacks, current.hdr, current.impl);
                 descend = false;
                 break;
             case CXCursor_CXXAccessSpecifier:
@@ -365,6 +378,7 @@ struct ClassTranslateContext {
     }
 
 private:
+    bool classdecl_used;
     Cursor cursor;
     CppHdrImpl top;
     StubPrefix prefix;
@@ -440,8 +454,8 @@ void dtorTranslator(T)(Cursor c, in StubPrefix prefix, ref VariableContainer var
         hdr.sep();
 
         callbacks.push(CppType("void"), callback_name, TypeName[].init);
-        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(string) callback_name);
         vars.push(NameMangling.Callback, cast(CppType) callback_name, cast(string) callback_name);
+        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(string) callback_name);
     }
 
     void doImpl(CppClassName name) {
@@ -468,13 +482,27 @@ auto cppOperatorToName(in ref CppMethodName name) pure nothrow @safe {
     return r;
 }
 
-void functionTranslator(T)(Cursor c, ref CallbackContainer callbacks, ref T hdr, ref T impl) {
+void functionTranslator(T)(Cursor c, ref VariableContainer vars,
+    ref CallbackContainer callbacks, ref T hdr, ref T impl) {
     //TODO ugly... fix this aliases.
     alias toString2 = translator.Type.toString;
     alias toString = generator.stub.toString;
 
+    string rawTypeToStubDataType(in string raw) {
+        import std.algorithm.searching : find;
+
+        string r = raw.replace("const", "");
+        if (find(r, "&")) {
+            r = r.replace("&", "") ~ "*";
+        }
+
+        return r.strip;
+    }
+
     void doHeader(in ref TypeName[] params, in ref string return_type, ref T hdr) {
         import std.algorithm.searching : find;
+        import std.algorithm.iteration : map;
+        import std.range : chain;
 
         auto method_name = CppMethodName(c.spelling);
         T node = hdr.method(c.func.isVirtual, return_type,
@@ -493,6 +521,17 @@ void functionTranslator(T)(Cursor c, ref CallbackContainer callbacks, ref T hdr,
         }
 
         callbacks.push(CppType(return_type), callback_method.get, params);
+        vars.push(NameMangling.Callback, cast(CppType) callback_method.get,
+            cast(string) callback_method.get);
+        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(string) callback_method.get);
+
+        TypeName[] p = params.chain().map!(a => TypeName(rawTypeToStubDataType(a.type),
+            callback_method.get ~ "_param_" ~ a.name)).array();
+        vars.push(NameMangling.Plain, p);
+
+        if (return_type.strip != "void") {
+            vars.push(NameMangling.ReturnType, CppType(return_type), cast(string) method_name);
+        }
     }
 
     void doImpl(in ref TypeName[] params, in ref string return_type, ref T impl) {

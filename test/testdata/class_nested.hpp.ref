@@ -6,21 +6,17 @@ public:
     ~StubOuterClass();
 
 private:
-    class StubInnerClass : public InnerClass {
-    public:
-        StubInnerClass();
-        ~StubInnerClass();
-
-    private:
-        class StubInnerClass2 : public InnerClass2 {
-        public:
-            StubInnerClass2();
-            ~StubInnerClass2();
-
-        };
-
-    };
-
 };
+
+namespace StubCallbackOuterClass {
+struct IdtorOuterClass { virtual void dtorOuterClass() = 0; };
+} //NS:StubCallbackOuterClass
+
+namespace StubInternalOuterClass {
+struct StubData {
+    StubCallbackOuterClass::IdtorOuterClass* dtorOuterClass_callback;
+    unsigned dtorOuterClass_cnt;
+};
+} //NS:StubInternalOuterClass
 
 #endif // class_nested.hpp.out
