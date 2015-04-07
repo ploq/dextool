@@ -30,7 +30,8 @@ version (unittest) {
     shared static this() {
         import std.exception;
 
-        enforce(runUnitTests!(generator.analyzer)(new ConsoleTestResultWriter), "Unit tests failed.");
+        enforce(runUnitTests!(generator.analyzer)(new ConsoleTestResultWriter),
+            "Unit tests failed.");
     }
 }
 
@@ -46,8 +47,8 @@ class Context {
 
         // the last argument determines if comments are parsed and therefor
         // accessible in the AST
-        this.translation_unit = TranslationUnit.parse(this.index,
-            this.input_file, this.args);
+        this.translation_unit = TranslationUnit.parse(this.index, this.input_file,
+            this.args);
     }
 
     ~this() {
@@ -116,6 +117,7 @@ void log_diagnostic(Context context) {
  */
 void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
     import std.traits;
+
     static if (__traits(hasMember, VisitorType, "incr")) {
         v.incr();
     }
@@ -159,10 +161,6 @@ void log_node(int line = __LINE__, string file = __FILE__,
  * ---
  */
 struct VisitNodeModule(Tmodule) {
-    alias Entry = Tuple!(Tmodule, "node", int, "level");
-    private Entry[] stack; // stack of cpp nodes
-    private int level;
-
 public:
     /// Increment the AST depth.
     void incr() {
@@ -171,10 +169,7 @@ public:
 
     /// Pop the stack if depth matches depth of top element of stack.
     void decr() {
-        // remove node when leavin the matching level
-        if (stack.length > 1 && stack[$ - 1].level == level) {
-            stack.length = stack.length - 1;
-        }
+        stack.pop(level);
         level--;
     }
 
@@ -183,9 +178,8 @@ public:
         return level;
     }
 
-    /// Return: Top of the stack.
-    @property ref Tmodule current() {
-        return stack[$ - 1].node;
+    @property auto current() {
+        return stack.top;
     }
 
     /** Push an element to the stack together with current AST depth.
@@ -194,8 +188,78 @@ public:
      *
      * Return: Pushed element.
      */
-    T push(T)(T c) {
-        stack ~= Entry(cast(Tmodule)(c), level);
-        return c;
+    auto push(T)(T c) {
+        //stack ~= Entry(cast(Tmodule)(c), level);
+        return stack.push(level, cast(Tmodule) c);
     }
+
+private:
+    IdStack!(int, Tmodule) stack;
+    int level;
+}
+
+/** Stack with a discrete id that is only popped when the id matches top of stack.
+ * If the stack is empty then Tvalue.init is returned from current.
+ *
+ * TODO add a contract that invariant stack_id.length == stack_value.length
+ *
+ * Keeping two stacks and in sync for easier access to the full stack of values.
+ * Useful when the stack of values is transformed to other data structures.
+ * Example
+ * ---
+ * import std.array : join;
+ * IdStack!(int, string) ns;
+ * ns.push(0, "std");
+ * ns.push(1, "BaseClass");
+ * writeln(join(ns.values, "::"));
+ * ---
+ * output: std::BaseClass
+ *
+ * Example:
+ * ---
+ * IdStack!(int, int) s;
+ * s.push(2, 0);
+ * s.push(5, 1);
+ * s.push(7, 5);
+ * for (int i = 8; i != 0; --i) {
+ *    s.pop(i);
+ *    write(s.current, " ");
+ * }
+ * ---
+ * output: 7 7 7 5 5 5 5 2 0
+ */
+struct IdStack(Tid, Tvalue) {
+    import std.typecons : NullableRef;
+
+    ref auto push(Tid id, Tvalue c) {
+        stack_id ~= id;
+        stack_value ~= c;
+        return stack_value[$ - 1];
+    }
+
+    void pop(Tid id) {
+        if (stack_value.length > 0 && stack_id[$ - 1] == id) {
+            stack_value.length = stack_value.length - 1;
+            stack_id.length = stack_id.length - 1;
+        }
+    }
+
+    @property auto top() {
+        NullableRef!Tvalue r;
+        if (stack_value.length > 0)
+            r.bind(&stack_value[$ - 1]);
+        return r;
+    }
+
+    @property auto size() {
+        return stack_value.length;
+    }
+
+    @property const ref auto values() {
+        return stack_value;
+    }
+
+private:
+    Tid[] stack_id;
+    Tvalue[] stack_value;
 }

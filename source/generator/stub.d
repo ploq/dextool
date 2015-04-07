@@ -4,9 +4,11 @@
 /// Author: Joakim Brännström (joakim.brannstrom@gmx.com)
 module generator.stub;
 
+import std.algorithm;
 import std.ascii;
 import std.array;
 import std.conv;
+import std.range;
 import std.stdio;
 import std.string;
 import std.typecons;
@@ -28,7 +30,12 @@ import translator.Type;
 
 import generator.analyzer;
 
+/// Prefix used for prepending generated code with a unique string to avoid name collisions.
 alias StubPrefix = Typedef!(string, string.init, "StubPrefix");
+/// Name of a C++ class/struct/namespace.
+alias CppClassStructNsName = Typedef!(string, string.init, "CppNestingNs");
+/// Nesting of C++ class/struct/namespace.
+alias CppNesting = CppClassStructNsName[];
 
 version (unittest) {
     shared static this() {
@@ -43,7 +50,7 @@ class StubContext {
      * Params:
      *  prefix = prefix to use for the name of the stub class.
      */
-    this(string prefix) {
+    this(StubPrefix prefix) {
         this.hdr = new CppModule;
         hdr.suppress_indent(1);
         this.impl = new CppModule;
@@ -86,6 +93,7 @@ alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
 
 alias TypeName = Tuple!(string, "type", string, "name");
 
+alias CppClassNesting = Typedef!(string, string.init, "CppNesting");
 alias CppClassName = Typedef!(string, string.init, "CppClassName");
 alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
 alias CppType = Typedef!(string, string.init, "CppType");
@@ -112,12 +120,7 @@ enum NameMangling {
  *  impl = C++ code for the implementation of the stub
  */
 struct ImplStubContext {
-    private string prefix;
-    private int indent = 0;
-    private CppModule hdr;
-    private CppModule impl;
-
-    this(string prefix, CppModule hdr, CppModule impl) {
+    this(StubPrefix prefix, CppModule hdr, CppModule impl) {
         this.prefix = prefix;
         this.hdr = hdr;
         hdr.suppress_indent(1);
@@ -126,23 +129,30 @@ struct ImplStubContext {
     }
 
     void incr() {
-        this.indent++;
+        this.level++;
     }
 
     void decr() {
-        this.indent--;
+        nesting.pop(this.level);
+        this.level--;
     }
 
     bool apply(Cursor c) {
-        log_node(c, this.indent);
+        log_node(c, this.level);
         bool decend = true;
 
         with (CXCursorKind) {
             switch (c.kind) {
             case CXCursor_ClassDecl:
-                if (c.isDefinition)
-                    (ClassTranslateContext(prefix)).translate(hdr, impl, c);
-                decend = false;
+                if (c.isDefinition) {
+                    // interesting part is nesting of ns/class/struct up to
+                    // current cursor when used in translator functions.
+                    // therefor pushing current ns/class/struct to the stack
+                    // for cases it is needed after processing current cursor.
+                    (ClassTranslateContext(prefix)).translate(c, nesting.values, hdr,
+                        impl);
+                    nesting.push(level, CppClassStructNsName(c.spelling));
+                }
                 break;
 
                 //case CXCursor_StructDecl
@@ -156,6 +166,13 @@ struct ImplStubContext {
 
         return decend;
     }
+
+private:
+    int level = 0;
+    StubPrefix prefix;
+    CppModule hdr;
+    CppModule impl;
+    IdStack!(int, CppClassStructNsName) nesting;
 }
 
 /** Variables discovered during traversal of AST that data storage in the stub.
@@ -299,11 +316,13 @@ struct ClassTranslateContext {
      * Params:
      *  prefix = prefix to use for the name of the stub class.
      */
-    this(string prefix) {
-        this.prefix = cast(StubPrefix) prefix;
+    this(StubPrefix prefix) {
+        this.prefix = prefix;
     }
 
-    void translate(CppModule hdr, CppModule impl, Cursor cursor) {
+    void translate(Cursor cursor, const ref CppNesting nesting, CppModule hdr, CppModule impl) {
+        import std.array : join;
+
         void doTraversal() {
             auto c = Cursor(cursor);
             visit_ast!ClassTranslateContext(c, this);
@@ -326,6 +345,7 @@ struct ClassTranslateContext {
 
         this.cursor = cursor;
         this.top = CppHdrImpl(hdr, impl);
+        this.nesting = CppClassNesting(nesting.map!(a => cast(string) a).join("::"));
         push(top);
 
         doTraversal();
@@ -343,15 +363,15 @@ struct ClassTranslateContext {
         with (CXCursorKind) {
             switch (c.kind) {
             case CXCursor_ClassDecl:
-                if (classdecl_used) {
-                    //if (c.isDefinition)
-                    //    (ClassTranslateContext(cast(string) prefix)).translate(current.hdr, current.impl, c);
+                final switch (classdecl_used) {
+                case true:
                     descend = false;
-                }
-                else {
+                    break;
+                case false:
                     this.classdecl_used = true;
                     this.name = cast(CppClassName) c.spelling;
-                    push(classTranslator!CppModule(prefix, name, current));
+                    push(classTranslator!CppModule(prefix, nesting, name, current.get));
+                    break;
                 }
                 break;
             case CXCursor_Constructor:
@@ -385,6 +405,7 @@ private:
     CppClassName name;
     VariableContainer vars;
     CallbackContainer callbacks;
+    CppClassNesting nesting;
 }
 
 /** Translate an access specifier to code suitable for a c++ header.
@@ -415,12 +436,14 @@ CppHdrImpl accessSpecifierTranslator(T)(Cursor cursor, ref T hdr, ref T impl) {
     return CppHdrImpl(node, impl);
 }
 
-CppHdrImpl classTranslator(T)(StubPrefix prefix, CppClassName name, ref CppHdrImpl hdr_impl) {
+CppHdrImpl classTranslator(T)(StubPrefix prefix, CppClassNesting nesting,
+    CppClassName name, ref CppHdrImpl hdr_impl) {
     T doHeader(ref T hdr) {
         T node;
         string stub_class = cast(string) prefix ~ cast(string) name;
         with (hdr) {
-            node = class_(stub_class, "public " ~ cast(string) name);
+            auto n = cast(string) nesting;
+            node = class_(stub_class, "public " ~ n ~ (n.length == 0 ? "" : "::") ~ cast(string) name);
             sep();
         }
 
@@ -575,7 +598,7 @@ TypeName[] parmDeclToTypeName(ref Cursor cursor) {
     TypeName[] params;
     auto f_group = cursor.tokens;
     foreach (param; cursor.func.parameters) {
-        //TODO remove junk
+        //TODO remove junk/variables only used in trace(..)
         log_node(param, 0);
         auto tok_group = param.tokens;
         auto type_spelling = toString2(tok_group);

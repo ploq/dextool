@@ -73,7 +73,7 @@ int gen_stub(in string infile, in string outfile) {
     auto file_ctx = new Context(infile);
     file_ctx.log_diagnostic();
 
-    auto ctx = new StubContext("Stub");
+    auto ctx = new StubContext(StubPrefix("Stub"));
     ctx.translate(file_ctx.cursor);
 
     try {
@@ -127,6 +127,8 @@ int do_test_double(ref ArgValue[string] parsed) {
 }
 
 int rmain(string[] args) nothrow {
+    import std.array : join;
+
     string errmsg, tracemsg;
     int exit_status = -1;
     bool help = true;
@@ -137,6 +139,7 @@ int rmain(string[] args) nothrow {
         auto parsed = docopt.docopt(doc, args[1 .. $], help, version_, optionsFirst);
         prepare_env(parsed);
         trace(to!string(args));
+        trace(join(args, " "));
         trace(prettyPrintArgs(parsed));
 
         exit_status = do_test_double(parsed);

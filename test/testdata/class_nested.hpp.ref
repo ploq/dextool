@@ -19,4 +19,41 @@ struct StubData {
 };
 } //NS:StubInternalOuterClass
 
+class StubInnerClass : public OuterClass::InnerClass {
+public:
+    StubInnerClass();
+    ~StubInnerClass();
+
+private:
+};
+
+namespace StubCallbackInnerClass {
+struct IdtorInnerClass { virtual void dtorInnerClass() = 0; };
+} //NS:StubCallbackInnerClass
+
+namespace StubInternalInnerClass {
+struct StubData {
+    StubCallbackInnerClass::IdtorInnerClass* dtorInnerClass_callback;
+    unsigned dtorInnerClass_cnt;
+};
+} //NS:StubInternalInnerClass
+
+class StubInnerClass2 : public OuterClass::InnerClass::InnerClass2 {
+public:
+    StubInnerClass2();
+    ~StubInnerClass2();
+
+};
+
+namespace StubCallbackInnerClass2 {
+struct IdtorInnerClass2 { virtual void dtorInnerClass2() = 0; };
+} //NS:StubCallbackInnerClass2
+
+namespace StubInternalInnerClass2 {
+struct StubData {
+    StubCallbackInnerClass2::IdtorInnerClass2* dtorInnerClass2_callback;
+    unsigned dtorInnerClass2_cnt;
+};
+} //NS:StubInternalInnerClass2
+
 #endif // class_nested.hpp.out
