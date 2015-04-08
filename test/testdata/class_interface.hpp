@@ -11,4 +11,5 @@ public:
 
 private:
     virtual char* func3() = 0;
+    virtual int func4() = 0;
 };

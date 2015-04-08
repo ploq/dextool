@@ -518,11 +518,11 @@ void functionTranslator(T)(Cursor c, ref VariableContainer vars,
     alias toString2 = translator.Type.toString;
     alias toString = generator.stub.toString;
 
-    string rawTypeToStubDataType(in string raw) {
+    string rawTypeToString(in string raw) {
         import std.algorithm.searching : find;
 
         string r = raw.replace("const", "");
-        if (find(r, "&")) {
+        if (find(r, "&") != string.init) {
             r = r.replace("&", "") ~ "*";
         }
 
@@ -544,6 +544,7 @@ void functionTranslator(T)(Cursor c, ref VariableContainer vars,
         callback_method = method_name;
         if (find(cast(string) method_name, "operator") != string.init) {
             callback_method = cppOperatorToName(method_name);
+            trace(cast(string) callback_method);
             if (callback_method.isNull) {
                 errorf("Generating callback function for '%s' not supported",
                     cast(string) method_name);
@@ -555,12 +556,13 @@ void functionTranslator(T)(Cursor c, ref VariableContainer vars,
             cast(string) callback_method.get);
         vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(string) callback_method.get);
 
-        TypeName[] p = params.chain().map!(a => TypeName(rawTypeToStubDataType(a.type),
+        TypeName[] p = params.chain().map!(a => TypeName(rawTypeToString(a.type),
             callback_method.get ~ "_param_" ~ a.name)).array();
         vars.push(NameMangling.Plain, p);
 
         if (return_type.strip != "void") {
-            vars.push(NameMangling.ReturnType, CppType(return_type), cast(string) method_name);
+            vars.push(NameMangling.ReturnType,
+                CppType(rawTypeToString(return_type)), cast(string) callback_method.get);
         }
     }
 
@@ -578,6 +580,8 @@ void functionTranslator(T)(Cursor c, ref VariableContainer vars,
     auto return_type = toString2(translateTypeCursor(c));
     auto tmp_return_type = toString2(translateType(c.func.resultType));
     trace(return_type, "|", tmp_return_type);
+    ///TODO investigate how tmp_return_type can be used. It is the type with
+    //namespace nesting. For example foo::bar::Smurf&.
 
     doHeader(params, return_type, hdr);
     doImpl(params, return_type, impl);

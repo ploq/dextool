@@ -183,7 +183,10 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
                     st = State.Done;
                 break;
             case CXTokenKind.CXToken_Keyword:
-                r.name ~= " " ~ t.spelling;
+                if (t.spelling.among("operator"))
+                    st = State.Done;
+                else
+                    r.name ~= " " ~ t.spelling;
                 break;
             default:
             }

@@ -3,8 +3,10 @@
 class StubSimple : public Simple {
 public:
     StubSimple();
+    StubSimple(char foo);
     ~StubSimple();
 
+private:
 };
 
 namespace StubCallbackSimple {
