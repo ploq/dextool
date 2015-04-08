@@ -126,6 +126,7 @@ struct ImplStubContext {
         hdr.suppress_indent(1);
         this.impl = impl;
         impl.suppress_indent(1);
+        hdr_impl.push(0, CppHdrImpl(hdr, impl));
     }
 
     void incr() {
@@ -133,7 +134,8 @@ struct ImplStubContext {
     }
 
     void decr() {
-        nesting.pop(this.level);
+        nesting.pop(level);
+        hdr_impl.pop(level);
         this.level--;
     }
 
@@ -149,8 +151,8 @@ struct ImplStubContext {
                     // current cursor when used in translator functions.
                     // therefor pushing current ns/class/struct to the stack
                     // for cases it is needed after processing current cursor.
-                    (ClassTranslateContext(prefix)).translate(c, nesting.values, hdr,
-                        impl);
+                    (ClassTranslateContext(prefix)).translate(c,
+                        nesting.values, hdr_impl.top.hdr, hdr_impl.top.impl);
                     nesting.push(level, CppClassStructNsName(c.spelling));
                 }
                 break;
@@ -158,7 +160,11 @@ struct ImplStubContext {
                 //case CXCursor_StructDecl
                 //case CXCursor_FunctionDecl
                 //case CXCursor_TypedefDecl
-                //case CXCursor_Namespace
+            case CXCursor_Namespace:
+                hdr_impl.push(level,
+                    namespaceTranslator(CppClassStructNsName(c.spelling), hdr_impl.top.get));
+                nesting.push(level, CppClassStructNsName(c.spelling));
+                break;
             default:
                 break;
             }
@@ -172,6 +178,7 @@ private:
     StubPrefix prefix;
     CppModule hdr;
     CppModule impl;
+    IdStack!(int, CppHdrImpl) hdr_impl;
     IdStack!(int, CppClassStructNsName) nesting;
 }
 
@@ -574,6 +581,16 @@ void functionTranslator(T)(Cursor c, ref VariableContainer vars,
 
     doHeader(params, return_type, hdr);
     doImpl(params, return_type, impl);
+}
+
+CppHdrImpl namespaceTranslator(CppClassStructNsName nest, ref CppHdrImpl hdr_impl) {
+    CppModule doHeader(ref CppModule hdr) {
+        auto r = hdr.namespace(cast(string) nest);
+        r.suppress_indent(1);
+        return r;
+    }
+
+    return CppHdrImpl(doHeader(hdr_impl.hdr), hdr_impl.impl);
 }
 
 /** Travers a node tree and gather all paramdecl converting them to a string.
