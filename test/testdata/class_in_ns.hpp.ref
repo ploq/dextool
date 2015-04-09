@@ -4,30 +4,32 @@ namespace foo {
 namespace bar {
 class StubSmurf : public foo::bar::Smurf {
 public:
+    virtual Smurf& operator=(const Smurf& other);
+public:
     StubSmurf();
     StubSmurf(const Smurf& other);
     virtual ~StubSmurf();
 
-    virtual Smurf& operator=(const Smurf& other);
-private:
 };
 
 namespace StubCallbackSmurf {
-struct IdtorSmurf { virtual void dtorSmurf() = 0; };
 struct IopAssign { virtual Smurf& opAssign(const Smurf& other) = 0; };
+struct IdtorSmurf { virtual void dtorSmurf() = 0; };
 } //NS:StubCallbackSmurf
 
 namespace StubInternalSmurf {
 struct StubData {
-    StubCallbackSmurf::IdtorSmurf* dtorSmurf_callback;
-    unsigned dtorSmurf_cnt;
     StubCallbackSmurf::IopAssign* opAssign_callback;
     unsigned opAssign_cnt;
     Smurf* opAssign_param_other;
     Smurf* opAssign_return;
+    StubCallbackSmurf::IdtorSmurf* dtorSmurf_callback;
+    unsigned dtorSmurf_cnt;
 };
 } //NS:StubInternalSmurf
 
 } //NS:bar
+
 } //NS:foo
+
 #endif // class_in_ns.hpp.out

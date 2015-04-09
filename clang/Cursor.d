@@ -93,7 +93,9 @@ struct Cursor {
 
     private TranslationUnit translation_unit;
 
-    /// disallowed for general use.
+    /** disallowed for general use.
+     * TODO consider using concepts from https://w0rp.com/blog/post/an-raii-constructor-by-another-name-is-just-as-sweet/
+     */
     package this(CXCursor c) {
     }
 

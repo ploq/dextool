@@ -22,7 +22,6 @@ import clang.Index;
 import clang.Token;
 import clang.TranslationUnit;
 import clang.Visitor;
-import clang.UnsavedFile;
 
 import dsrcgen.cpp;
 
@@ -86,21 +85,28 @@ private:
 }
 
 private:
-//TODO use the following typedefs in CppHdrImpl to avoid confusing hdr and impl. Type systems is awesome.
+//TODO use the following typedefs in CppHdrImpl to avoid confusing hdr and impl.
 alias CppModuleHdr = Typedef!(CppModule, CppModule.init, "CppHeader");
 alias CppModuleImpl = Typedef!(CppModule, CppModule.init, "CppImplementation");
 alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
 
-alias TypeName = Tuple!(string, "type", string, "name");
+// To avoid confusing all the different strings with the only differentiating
+// fact being the variable name the idea of lots-of-typing from Haskell is
+// borrowed. Type systems are awesome.
+alias CallbackNs = Typedef!(string, string.init, "CallbackNamespace");
+alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
 
-alias CppClassNesting = Typedef!(string, string.init, "CppNesting");
+alias CppAccessSpecifier = Typedef!(CX_CXXAccessSpecifier, CX_CXXAccessSpecifier.init,
+    "CppAccess");
 alias CppClassName = Typedef!(string, string.init, "CppClassName");
+alias CppClassNesting = Typedef!(string, string.init, "CppNesting");
 alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
 alias CppType = Typedef!(string, string.init, "CppType");
-alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
-alias CallbackNs = Typedef!(string, string.init, "CallbackNamespace");
+
 alias DataNs = Typedef!(string, string.init, "DataNamespace");
 alias DataStruct = Typedef!(string, string.init, "DataStructInNs");
+
+alias TypeName = Tuple!(string, "type", string, "name");
 
 /** Name mangling that occurs when translating to C++ code.
  */
@@ -159,11 +165,13 @@ struct ImplStubContext {
 
                 //case CXCursor_StructDecl
                 //case CXCursor_FunctionDecl
-                //case CXCursor_TypedefDecl
             case CXCursor_Namespace:
                 hdr_impl.push(level,
                     namespaceTranslator(CppClassStructNsName(c.spelling), hdr_impl.top.get));
                 nesting.push(level, CppClassStructNsName(c.spelling));
+                break;
+            case CXCursor_CXXBaseSpecifier:
+                decend = false;
                 break;
             default:
                 break;
@@ -273,6 +281,12 @@ struct CallbackContainer {
         items ~= CallbackType(return_type, method, params.dup);
     }
 
+    bool exists(CppMethodName method) {
+        import std.algorithm : any;
+
+        return items.any!(a => a.name == method);
+    }
+
     /** Generate C++ code in the provided module.
      * Params:
      *  cb_ns = namespace containing generated code for callbacks.
@@ -327,7 +341,8 @@ struct ClassTranslateContext {
         this.prefix = prefix;
     }
 
-    void translate(Cursor cursor, const ref CppNesting nesting, CppModule hdr, CppModule impl) {
+    void translate(ref Cursor cursor, const ref CppNesting nesting, CppModule hdr,
+        CppModule impl) {
         import std.array : join;
 
         void doTraversal() {
@@ -350,7 +365,6 @@ struct ClassTranslateContext {
             vars.translate(cb_ns, cb_prefix, data_ns, data_st, hdr, impl);
         }
 
-        this.cursor = cursor;
         this.top = CppHdrImpl(hdr, impl);
         this.nesting = CppClassNesting(nesting.map!(a => cast(string) a).join("::"));
         push(top);
@@ -364,89 +378,165 @@ struct ClassTranslateContext {
         doDataStruct(cb_ns, cb_prefix);
     }
 
+    /** Traverse cursor and translate a subset of kinds.
+     * It defers translation of class methods to specialized translator for those.
+     * The reason is that a class can have multiple interfaces it inherit from
+     * and the generated stub must implement all of them.
+     */
     bool apply(Cursor c) {
         bool descend = true;
         log_node(c, depth);
-        with (CXCursorKind) {
-            switch (c.kind) {
-            case CXCursor_ClassDecl:
-                final switch (classdecl_used) {
-                case true:
-                    descend = false;
-                    break;
-                case false:
-                    this.classdecl_used = true;
-                    this.name = cast(CppClassName) c.spelling;
-                    push(classTranslator!CppModule(prefix, nesting, name, current.get));
-                    break;
-                }
-                break;
-            case CXCursor_Constructor:
-                ctorTranslator!CppModule(c, prefix, current.hdr, current.impl);
-                descend = false;
-                break;
-            case CXCursor_Destructor:
-                dtorTranslator!CppModule(c, prefix, vars, callbacks, current.hdr, current.impl);
-                descend = false;
-                break;
-            case CXCursor_CXXMethod:
-                functionTranslator!CppModule(c, vars, callbacks, current.hdr, current.impl);
-                descend = false;
-                break;
-            case CXCursor_CXXAccessSpecifier:
-                push(accessSpecifierTranslator!CppModule(c, current.hdr, current.impl));
-                break;
 
-            default:
+        switch (c.kind) with (CXCursorKind) {
+        case CXCursor_ClassDecl:
+            // Cursor sent is the root of the class so first time we descend
+            // because it is the class asked of us to translate.  Further
+            // ClassDecl found are nested classes. Those are taken care of by
+            // other code and thus ignored.
+            final switch (classdecl_used) {
+            case true:
+                descend = false;
+                break;
+            case false:
+                this.classdecl_used = true;
+                this.name = cast(CppClassName) c.spelling;
+                push(classTranslator(prefix, nesting, name, current.get));
+                MethodTranslateContext(access_spec).translate(c, vars, callbacks, current.get);
                 break;
             }
+            break;
+        case CXCursor_Constructor:
+            push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr), current.impl));
+            ctorTranslator(c, prefix, current.hdr, current.impl);
+            descend = false;
+            break;
+        case CXCursor_Destructor:
+            push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr), current.impl));
+            dtorTranslator(c, prefix, vars, callbacks, current.hdr, current.impl);
+            descend = false;
+            break;
+        case CXCursor_CXXAccessSpecifier:
+            access_spec = CppAccessSpecifier(c.access.accessSpecifier);
+            break;
+        default:
+            break;
         }
         return descend;
     }
 
 private:
     bool classdecl_used;
-    Cursor cursor;
     CppHdrImpl top;
     StubPrefix prefix;
     CppClassName name;
     VariableContainer vars;
     CallbackContainer callbacks;
     CppClassNesting nesting;
+    Nullable!CppAccessSpecifier access_spec;
+}
+
+CppModule consumeAccessSpecificer(ref Nullable!CppAccessSpecifier access_spec, ref CppModule hdr) {
+    CppModule r = hdr;
+
+    if (!access_spec.isNull) {
+        r = accessSpecifierTranslator(access_spec.get, hdr);
+    }
+
+    access_spec.nullify;
+    return r;
+}
+
+/** Translate class methods to stub implementation.
+ */
+struct MethodTranslateContext {
+    VisitNodeModule!CppHdrImpl visitor_stack;
+    alias visitor_stack this;
+
+    this(Nullable!CppAccessSpecifier access_spec) {
+        this.access_spec = access_spec;
+    }
+
+    void translate(ref Cursor cursor, ref VariableContainer vars,
+        ref CallbackContainer callbacks, ref CppHdrImpl hdr_impl) {
+        this.vars.bind(&vars);
+        this.callbacks.bind(&callbacks);
+
+        push(hdr_impl);
+        visit_ast!MethodTranslateContext(cursor, this);
+    }
+
+    bool apply(Cursor c) {
+        bool descend = true;
+        log_node(c, depth);
+
+        switch (c.kind) with (CXCursorKind) {
+        case CXCursor_CXXMethod:
+            if (callbacks.exists(CppMethodName(c.spelling)))
+                break;
+            //TODO ugly move check to inside function Translator or something...
+            if (c.func.isVirtual) {
+                push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr),
+                    current.impl));
+            }
+            functionTranslator(c, vars, callbacks, access_spec, current.hdr, current.impl);
+            descend = false;
+            break;
+        case CXCursor_CXXAccessSpecifier:
+            access_spec = CppAccessSpecifier(c.access.accessSpecifier);
+            break;
+        case CXCursor_CXXBaseSpecifier:
+            inheritMethodTranslator(c, vars, callbacks, current.get);
+            descend = false;
+            break;
+        default:
+            break;
+        }
+
+        return descend;
+    }
+
+private:
+    NullableRef!VariableContainer vars;
+    NullableRef!CallbackContainer callbacks;
+    Nullable!CppAccessSpecifier access_spec;
 }
 
 /** Translate an access specifier to code suitable for a c++ header.
+ * It is on purpuse that node is initialized to hdr. If the access specifier is
+ * invalid then no harm is done by returning it.
+ *
  * Params:
  *  cursor = Cursor to translate
  *  hdr = Header module to append the translation to.
  *  impl = Implementation module to append the translation to (not used).
  */
-CppHdrImpl accessSpecifierTranslator(T)(Cursor cursor, ref T hdr, ref T impl) {
-    T node;
+CppModule accessSpecifierTranslator(CppAccessSpecifier kind, ref CppModule hdr) {
+    CppModule node = hdr;
 
-    with (CXCursorKind) with (CX_CXXAccessSpecifier) final switch (cursor.access.accessSpecifier) {
+    final switch (cast(CX_CXXAccessSpecifier) kind) with (CX_CXXAccessSpecifier) {
     case CX_CXXInvalidAccessSpecifier:
-        trace(cursor.access.accessSpecifier);
         break;
     case CX_CXXPublic:
         node = hdr.public_;
+        node.suppress_indent(1);
         break;
     case CX_CXXProtected:
         node = hdr.protected_;
+        node.suppress_indent(1);
         break;
     case CX_CXXPrivate:
         node = hdr.private_;
+        node.suppress_indent(1);
         break;
     }
 
-    node.suppress_indent(1);
-    return CppHdrImpl(node, impl);
+    return node;
 }
 
-CppHdrImpl classTranslator(T)(StubPrefix prefix, CppClassNesting nesting,
+CppHdrImpl classTranslator(StubPrefix prefix, CppClassNesting nesting,
     CppClassName name, ref CppHdrImpl hdr_impl) {
-    T doHeader(ref T hdr) {
-        T node;
+    auto doHeader(ref CppModule hdr) {
+        auto node = hdr;
         string stub_class = cast(string) prefix ~ cast(string) name;
         with (hdr) {
             auto n = cast(string) nesting;
@@ -460,10 +550,11 @@ CppHdrImpl classTranslator(T)(StubPrefix prefix, CppClassNesting nesting,
     return CppHdrImpl(doHeader(hdr_impl.hdr), hdr_impl.impl);
 }
 
-void ctorTranslator(T)(Cursor c, in StubPrefix prefix, ref T hdr, ref T impl) {
+void ctorTranslator(Cursor c, in StubPrefix prefix, ref CppModule hdr, ref CppModule impl) {
     void doHeader(CppClassName name, in ref TypeName[] params) {
-        T node;
-        node = hdr.ctor(cast(string) name, params.toString);
+        auto node = hdr;
+        auto p = params.toString;
+        node = hdr.ctor(cast(string) name, p);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
     }
 
@@ -476,10 +567,10 @@ void ctorTranslator(T)(Cursor c, in StubPrefix prefix, ref T hdr, ref T impl) {
     doImpl(name, params);
 }
 
-void dtorTranslator(T)(Cursor c, in StubPrefix prefix, ref VariableContainer vars,
-    ref CallbackContainer callbacks, ref T hdr, ref T impl) {
+void dtorTranslator(Cursor c, in StubPrefix prefix, ref VariableContainer vars,
+    ref CallbackContainer callbacks, ref CppModule hdr, ref CppModule impl) {
     void doHeader(CppClassName name, CppMethodName callback_name) {
-        T node = hdr.dtor(c.func.isVirtual, cast(string) name);
+        auto node = hdr.dtor(c.func.isVirtual, cast(string) name);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
         hdr.sep();
 
@@ -512,12 +603,14 @@ auto cppOperatorToName(in ref CppMethodName name) pure nothrow @safe {
     return r;
 }
 
-void functionTranslator(T)(Cursor c, ref VariableContainer vars,
-    ref CallbackContainer callbacks, ref T hdr, ref T impl) {
+void functionTranslator(Cursor c, ref VariableContainer vars,
+    ref CallbackContainer callbacks,
+    ref Nullable!CppAccessSpecifier access_spec, ref CppModule hdr, ref CppModule impl) {
     //TODO ugly... fix this aliases.
     alias toString2 = translator.Type.toString;
     alias toString = generator.stub.toString;
 
+    //TODO refactor by moving to translator/Type.d
     string rawTypeToString(in string raw) {
         import std.algorithm.searching : find;
 
@@ -529,13 +622,14 @@ void functionTranslator(T)(Cursor c, ref VariableContainer vars,
         return r.strip;
     }
 
-    void doHeader(in ref TypeName[] params, in ref string return_type, ref T hdr) {
+    void doHeader(in ref TypeName[] params, in ref string return_type, ref CppModule hdr) {
+        //TODO refactor, callback_method and method_name are confusing.
         import std.algorithm.searching : find;
         import std.algorithm.iteration : map;
         import std.range : chain;
 
         auto method_name = CppMethodName(c.spelling);
-        T node = hdr.method(c.func.isVirtual, return_type,
+        auto node = hdr.method(c.func.isVirtual, return_type,
             cast(string) method_name, c.func.isConst, params.toString);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
 
@@ -566,7 +660,7 @@ void functionTranslator(T)(Cursor c, ref VariableContainer vars,
         }
     }
 
-    void doImpl(in ref TypeName[] params, in ref string return_type, ref T impl) {
+    void doImpl(in ref TypeName[] params, in ref string return_type, ref CppModule impl) {
     }
 
     if (!c.func.isVirtual) {
@@ -596,6 +690,29 @@ CppHdrImpl namespaceTranslator(CppClassStructNsName nest, ref CppHdrImpl hdr_imp
     }
 
     return CppHdrImpl(doHeader(hdr_impl.hdr), hdr_impl.impl);
+}
+
+void inheritMethodTranslator(ref Cursor cursor, ref VariableContainer vars,
+    ref CallbackContainer callbacks, ref CppHdrImpl hdr_impl) {
+    //TODO ugly hack. dunno what it should be so for now forcing to public.
+    Nullable!CppAccessSpecifier access_spec;
+    access_spec = CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic);
+
+    log_node(cursor, 0);
+    foreach (parent, child; cursor.all) {
+        log_node(parent, 0);
+        log_node(child, 0);
+
+        auto p = parent.definition;
+
+        switch (parent.kind) with (CXCursorKind) {
+        case CXCursor_TypeRef:
+            log_node(p, 1);
+            MethodTranslateContext(access_spec).translate(p, vars, callbacks, hdr_impl);
+            break;
+        default:
+        }
+    }
 }
 
 /** Travers a node tree and gather all paramdecl converting them to a string.

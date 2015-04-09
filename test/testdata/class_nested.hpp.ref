@@ -5,7 +5,6 @@ public:
     StubOuterClass();
     ~StubOuterClass();
 
-private:
 };
 
 namespace StubCallbackOuterClass {
@@ -24,7 +23,6 @@ public:
     StubInnerClass();
     ~StubInnerClass();
 
-private:
 };
 
 namespace StubCallbackInnerClass {

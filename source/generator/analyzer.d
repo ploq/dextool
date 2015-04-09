@@ -201,12 +201,12 @@ public:
      * Return: Pushed element.
      */
     auto push(T)(T c) {
-        //stack ~= Entry(cast(Tmodule)(c), level);
         return stack.push(level, cast(Tmodule) c);
     }
 
 private:
-    IdStack!(int, Tmodule) stack;
+    alias StackType = IdStack!(int, Tmodule);
+    StackType stack;
     int level;
 }
 
@@ -249,8 +249,10 @@ struct IdStack(Tid, Tvalue) {
         return stack_value[$ - 1];
     }
 
+    /** Pop from stack all items that have a matching id.
+     */
     void pop(Tid id) {
-        if (stack_value.length > 0 && stack_id[$ - 1] == id) {
+        while (stack_value.length > 0 && stack_id[$ - 1] == id) {
             stack_value.length = stack_value.length - 1;
             stack_id.length = stack_id.length - 1;
         }

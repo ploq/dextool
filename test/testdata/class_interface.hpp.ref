@@ -2,28 +2,27 @@
 #define class_interface.hpp.out
 class StubSimple : public Simple {
 public:
-    StubSimple();
-    virtual ~StubSimple();
-
     virtual void func1();
     virtual void operator=(const Simple& other);
 private:
     virtual char* func3();
     virtual int func4();
+public:
+    StubSimple();
+    virtual ~StubSimple();
+
 };
 
 namespace StubCallbackSimple {
-struct IdtorSimple { virtual void dtorSimple() = 0; };
 struct Ifunc1 { virtual void func1() = 0; };
 struct IopAssign { virtual void opAssign(const Simple& other) = 0; };
 struct Ifunc3 { virtual char* func3() = 0; };
 struct Ifunc4 { virtual int func4() = 0; };
+struct IdtorSimple { virtual void dtorSimple() = 0; };
 } //NS:StubCallbackSimple
 
 namespace StubInternalSimple {
 struct StubData {
-    StubCallbackSimple::IdtorSimple* dtorSimple_callback;
-    unsigned dtorSimple_cnt;
     StubCallbackSimple::Ifunc1* func1_callback;
     unsigned func1_cnt;
     StubCallbackSimple::IopAssign* opAssign_callback;
@@ -35,6 +34,8 @@ struct StubData {
     StubCallbackSimple::Ifunc4* func4_callback;
     unsigned func4_cnt;
     int func4_return;
+    StubCallbackSimple::IdtorSimple* dtorSimple_callback;
+    unsigned dtorSimple_cnt;
 };
 } //NS:StubInternalSimple
 

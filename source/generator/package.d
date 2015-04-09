@@ -5,4 +5,5 @@
 module generator;
 
 public import generator.analyzer : Context, log_diagnostic, visit_ast;
+
 public import generator.stub;

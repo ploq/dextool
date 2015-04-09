@@ -6,7 +6,6 @@ public:
     StubSimple(char foo);
     ~StubSimple();
 
-private:
 };
 
 namespace StubCallbackSimple {

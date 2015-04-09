@@ -1,0 +1,131 @@
+#ifndef class_inherit.hpp.out
+#define class_inherit.hpp.out
+class StubFoo : public Foo {
+public:
+    virtual void func2();
+    virtual void func3();
+};
+
+namespace StubCallbackFoo {
+struct Ifunc2 { virtual void func2() = 0; };
+struct Ifunc3 { virtual void func3() = 0; };
+} //NS:StubCallbackFoo
+
+namespace StubInternalFoo {
+struct StubData {
+    StubCallbackFoo::Ifunc2* func2_callback;
+    unsigned func2_cnt;
+    StubCallbackFoo::Ifunc3* func3_callback;
+    unsigned func3_cnt;
+};
+} //NS:StubInternalFoo
+
+namespace BarSpace {
+class StubBar : public BarSpace::Bar {
+public:
+    virtual void func5();
+};
+
+namespace StubCallbackBar {
+struct Ifunc5 { virtual void func5() = 0; };
+} //NS:StubCallbackBar
+
+namespace StubInternalBar {
+struct StubData {
+    StubCallbackBar::Ifunc5* func5_callback;
+    unsigned func5_cnt;
+};
+} //NS:StubInternalBar
+
+} //NS:BarSpace
+
+class StubWarp : public Warp {
+public:
+    virtual void func2();
+    virtual void func3();
+private:
+    virtual void func4();
+};
+
+namespace StubCallbackWarp {
+struct Ifunc2 { virtual void func2() = 0; };
+struct Ifunc3 { virtual void func3() = 0; };
+struct Ifunc4 { virtual void func4() = 0; };
+} //NS:StubCallbackWarp
+
+namespace StubInternalWarp {
+struct StubData {
+    StubCallbackWarp::Ifunc2* func2_callback;
+    unsigned func2_cnt;
+    StubCallbackWarp::Ifunc3* func3_callback;
+    unsigned func3_cnt;
+    StubCallbackWarp::Ifunc4* func4_callback;
+    unsigned func4_cnt;
+};
+} //NS:StubInternalWarp
+
+class StubSmurf : public Smurf {
+public:
+    virtual void func2();
+    virtual void func3();
+private:
+    virtual void func4();
+public:
+    StubSmurf();
+    virtual ~StubSmurf();
+
+};
+
+namespace StubCallbackSmurf {
+struct Ifunc2 { virtual void func2() = 0; };
+struct Ifunc3 { virtual void func3() = 0; };
+struct Ifunc4 { virtual void func4() = 0; };
+struct IdtorSmurf { virtual void dtorSmurf() = 0; };
+} //NS:StubCallbackSmurf
+
+namespace StubInternalSmurf {
+struct StubData {
+    StubCallbackSmurf::Ifunc2* func2_callback;
+    unsigned func2_cnt;
+    StubCallbackSmurf::Ifunc3* func3_callback;
+    unsigned func3_cnt;
+    StubCallbackSmurf::Ifunc4* func4_callback;
+    unsigned func4_cnt;
+    StubCallbackSmurf::IdtorSmurf* dtorSmurf_callback;
+    unsigned dtorSmurf_cnt;
+};
+} //NS:StubInternalSmurf
+
+class StubDaddySmurf : public DaddySmurf {
+public:
+    virtual void func2();
+    virtual void func3();
+private:
+    virtual void func4();
+public:
+    StubDaddySmurf();
+    virtual ~StubDaddySmurf();
+
+};
+
+namespace StubCallbackDaddySmurf {
+struct Ifunc2 { virtual void func2() = 0; };
+struct Ifunc3 { virtual void func3() = 0; };
+struct Ifunc4 { virtual void func4() = 0; };
+struct IdtorDaddySmurf { virtual void dtorDaddySmurf() = 0; };
+} //NS:StubCallbackDaddySmurf
+
+namespace StubInternalDaddySmurf {
+struct StubData {
+    StubCallbackDaddySmurf::Ifunc2* func2_callback;
+    unsigned func2_cnt;
+    StubCallbackDaddySmurf::Ifunc3* func3_callback;
+    unsigned func3_cnt;
+    StubCallbackDaddySmurf::Ifunc4* func4_callback;
+    unsigned func4_cnt;
+    StubCallbackDaddySmurf::IdtorDaddySmurf* dtorDaddySmurf_callback;
+    unsigned dtorDaddySmurf_cnt;
+};
+} //NS:StubInternalDaddySmurf
+
+#endif // class_inherit.hpp.out
