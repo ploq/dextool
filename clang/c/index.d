@@ -18,11 +18,10 @@ module clang.c.index;
 import core.stdc.config;
 import core.stdc.time;
 
+public import clang.c.cxerrorcode;
+public import clang.c.cxstring;
 
-import clang.c.cxerrorcode;
-import clang.c.cxstring;
-
-extern (C):
+/* reason for empty lines is to match line numbers with original c header */
 
 /**
  * \brief The version constants for the libclang API.
@@ -32,25 +31,26 @@ extern (C):
  * The policy about the libclang API was always to keep it source and ABI
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
-const uint CINDEX_VERSION_MAJOR = 0;
-const uint CINDEX_VERSION_MINOR = 27;
+enum CINDEX_VERSION_MAJOR = 0;
+enum CINDEX_VERSION_MINOR = 27;
 
 int CINDEX_VERSION_ENCODE(int major, int minor) {
     return (major * 10000) + (minor * 1);
 }
 
-const int CINDEX_VERSION = CINDEX_VERSION_ENCODE(CINDEX_VERSION_MAJOR, CINDEX_VERSION_MINOR);
+enum CINDEX_VERSION = CINDEX_VERSION_ENCODE(
+    CINDEX_VERSION_MAJOR,
+    CINDEX_VERSION_MINOR);
 
-private string concat_version() @safe pure {
+string CINDEX_VERSION_STRINGIZE_ (int major, int minor) {
     import std.conv;
-    return text(CINDEX_VERSION_MAJOR) ~ "." ~ text(CINDEX_VERSION_MINOR);
+    return major.to!(string) ~ "." ~ minor.to!(string);
 }
 
-const string CINDEX_VERSION_STRING = concat_version();
+alias CINDEX_VERSION_STRINGIZE = CINDEX_VERSION_STRINGIZE_;
+enum CINDEX_VERSION_STRING = CINDEX_VERSION_STRINGIZE(CINDEX_VERSION_MAJOR, CINDEX_VERSION_MINOR);
 
-
-
-/* empty to match line numbers withh original c header */
+extern (C):
 
 /** \defgroup CINDEX libclang: C Interface to Clang
  *
@@ -4890,7 +4890,7 @@ enum CXResult {
  *
  * \returns one of the CXResult enumerators.
  */
-void clang_findReferencesInFile(CXCursor cursor, CXFile file,
+CXResult clang_findReferencesInFile(CXCursor cursor, CXFile file,
                                                CXCursorAndRangeVisitor visitor);
 
 /**
@@ -4914,7 +4914,7 @@ CXResult clang_findIncludesInFile(CXTranslationUnit TU,
 alias CXVisitorResult
     (^CXCursorAndRangeVisitorBlock)(CXCursor, CXSourceRange);
 
-void clang_findReferencesInFileWithBlock(CXCursor, CXFile,
+CXResult clang_findReferencesInFileWithBlock(CXCursor, CXFile,
                                          CXCursorAndRangeVisitorBlock);
 
 CXResult clang_findIncludesInFileWithBlock(CXTranslationUnit, CXFile,
