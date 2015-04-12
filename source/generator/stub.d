@@ -591,6 +591,7 @@ CppHdrImpl namespaceTranslator(CppClassStructNsName nest, ref CppHdrImpl hdr_imp
     CppModule doHeader(ref CppModule hdr) {
         auto r = hdr.namespace(cast(string) nest);
         r.suppress_indent(1);
+        hdr.sep();
         return r;
     }
 
