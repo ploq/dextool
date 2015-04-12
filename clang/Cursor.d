@@ -82,7 +82,11 @@ string abilities(ref EnumCursor c) {
 }
 
 /** The Cursor class represents a reference to an element within the AST. It
- *  acts as a kind of iterator.
+ * acts as a kind of iterator.
+ *
+ * Keep track of TranslationUnit the cursor belong to for correct
+ * tokenization. The TranslationUnit returned from
+ * clang_Cursor_getTranslationUnit do not produce correct tokens.
  */
 struct Cursor {
     mixin CX;
