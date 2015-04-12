@@ -4,16 +4,16 @@
  * Version: Initial created: Oct 1, 2011
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
  */
-
 module clang.Util;
 
 import clang.c.index;
 import clang.c.cxstring;
 
-import std.string;
 import std.conv;
 
 immutable(char*)* strToCArray(string[] arr) {
+    import std.string : toStringz;
+
     if (!arr)
         return null;
 
@@ -46,13 +46,11 @@ U* toCArray(U, T)(T[] arr) {
     if (!arr)
         return null;
 
-    U[] cArr;
-    cArr.reserve(arr.length);
+    static if (is(typeof(T.init.cx)))
+        return arr.map!(e => e.cx).toArray.ptr;
 
-    foreach (e; arr)
-        cArr ~= e.cx;
-
-    return cArr.ptr;
+    else
+        return arr.ptr;
 }
 
 mixin template CX() {

@@ -408,28 +408,31 @@ string translateCursorType(CXTypeKind kind) {
         return "<unimplemented>";
     case CXType_Dependent:
         return "<unimplemented>";
+        //case CXType_ObjCId: return rewriteIdToObjcObject ? "ObjcObject" : "id";
+    case CXType_ObjCId:
+        return "ObjcObject";
+    case CXType_ObjCClass:
+        return "Class";
+    case CXType_ObjCSel:
+        return "SEL";
+
     case CXType_Complex:
-        return "<unimplemented>";
     case CXType_Pointer:
-        return "<unimplemented>";
     case CXType_BlockPointer:
-        return "<unimplemented>";
     case CXType_LValueReference:
-        return "<unimplemented>";
     case CXType_RValueReference:
-        return "<unimplemented>";
     case CXType_Record:
-        return "<unimplemented>";
     case CXType_Enum:
-        return "<unimplemented>";
     case CXType_Typedef:
-        return "<unimplemented>";
     case CXType_FunctionNoProto:
-        return "<unimplemented>";
     case CXType_FunctionProto:
-        return "<unimplemented>";
     case CXType_Vector:
+    case CXType_IncompleteArray:
+    case CXType_VariableArray:
+    case CXType_DependentSizedArray:
+    case CXType_MemberPointer:
         return "<unimplemented>";
+
     default:
         assert(0, "Unhandled type kind " ~ to!string(kind));
     }

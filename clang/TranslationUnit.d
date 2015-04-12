@@ -10,16 +10,11 @@ module clang.TranslationUnit;
 import std.string;
 import std.typecons;
 
-//import mambo.core.io;
-
 import clang.c.index;
 import clang.Cursor;
 import clang.Diagnostic;
 import clang.File;
 import clang.Index;
-import clang.SourceLocation;
-import clang.Token;
-import clang.UnsavedFile;
 import clang.Util;
 import clang.Visitor;
 
@@ -27,14 +22,17 @@ struct TranslationUnit {
     mixin CX;
 
     static RefCounted!TranslationUnit parse(Index index, string sourceFilename,
-        string[] commandLineArgs, UnsavedFile[] unsavedFiles = null,
+        string[] commandLineArgs, CXUnsavedFile[] unsavedFiles = null,
         uint options = CXTranslationUnit_Flags.CXTranslationUnit_None) {
-        auto r = RefCounted!TranslationUnit();
-        r = TranslationUnit(clang_parseTranslationUnit(index.cx,
-            sourceFilename.toStringz, strToCArray(commandLineArgs),
-            cast(int) commandLineArgs.length,
+
+        auto p = clang_parseTranslationUnit(index.cx, sourceFilename.toStringz,
+            strToCArray(commandLineArgs), cast(int) commandLineArgs.length,
             toCArray!(CXUnsavedFile)(unsavedFiles), cast(uint) unsavedFiles.length,
-            options));
+            options);
+
+        auto r = RefCounted!TranslationUnit();
+        r = TranslationUnit(p);
+
         return r;
     }
 

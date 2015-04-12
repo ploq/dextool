@@ -15,12 +15,12 @@ import std.experimental.logger;
 import tested;
 
 import clang.c.index;
+import clang.Compiler;
 import clang.Cursor;
 import clang.Index;
 import clang.Token;
 import clang.TranslationUnit;
 import clang.Visitor;
-import clang.UnsavedFile;
 
 import dsrcgen.cpp;
 
@@ -41,14 +41,14 @@ class Context {
      * Params:
      *  input_file = filename of code to parse
      */
-    this(string input_file) {
-        this.input_file = input_file;
-        this.index = Index(false, false);
+    this(string input_file_) {
+        input_file = input_file_;
+        index = Index(false, false);
 
         // the last argument determines if comments are parsed and therefor
         // accessible in the AST
-        this.translation_unit = TranslationUnit.parse(this.index, this.input_file,
-            this.args);
+        translation_unit = TranslationUnit.parse(index, input_file,
+            compilerArgs, compiler.extraHeaders);
     }
 
     ~this() {
@@ -64,10 +64,22 @@ class Context {
     }
 
 private:
-    static string[] args = ["-xc++"];
+    string[] compilerArgs() {
+        return base_args ~ extraArgs;
+    }
+
+    string[] extraArgs() {
+        import std.array : array;
+        import std.algorithm : map;
+
+        return compiler.extraIncludePaths.map!(e => "-I" ~ e).array();
+    }
+
+    static const string[] base_args = ["-xc++"];
     string input_file;
     Index index;
     TranslationUnit translation_unit;
+    Compiler compiler;
 }
 
 /// No errors occured during translation.

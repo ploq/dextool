@@ -1,7 +1,7 @@
 {
     "name": "gen-test-double",
     "description": "Generate test doubles from C/C++ code by analyzing with LLVM/Clang",
-    "copyright": "Copyright © 2014, Joakim Brännström",
+    "copyright": "Copyright © 2014-2015, Joakim Brännström",
     "authors": ["Joakim Brännström"],
     "license": "GPL",
     "dependencies": {
@@ -14,6 +14,7 @@
     "mainSourceFile": "source/app.d",
     "sourcePaths": ["source", "clang"],
     "importPaths": ["source", "clang"],
+    "stringImportPaths": ["clang/resources"],
 
     "lflags-posix": ["-lclang", "-rpath", ".", "-L."],
     "targetType": "executable",
