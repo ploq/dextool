@@ -20,10 +20,11 @@ module app_main;
 
 import std.conv;
 import std.exception;
-import std.file;
 import std.stdio;
 import std.string;
-import std.experimental.logger;
+
+import file = std.file;
+import logger = std.experimental.logger;
 
 import docopt;
 import argvalue; // from docopt
@@ -40,15 +41,15 @@ options:
  -d, --debug    turn on debug output for tracing of generator flow
 ";
 
-class SimpleLogger : Logger {
+class SimpleLogger : logger.Logger {
     int line = -1;
     string file = null;
     string func = null;
     string prettyFunc = null;
     string msg = null;
-    LogLevel lvl;
+    logger.LogLevel lvl;
 
-    this(const LogLevel lv = LogLevel.info) {
+    this(const logger.LogLevel lv = logger.LogLevel.info) {
         super(lv);
     }
 
@@ -75,14 +76,15 @@ shared static this() {
 
 int gen_stub(in string infile, in string outfile) {
     import std.exception;
+    import std.path : stripExtension;
     import generator;
 
-    if (!exists(infile)) {
-        errorf("File '%s' do not exist", infile);
+    if (!file.exists(infile)) {
+        logger.errorf("File '%s' do not exist", infile);
         return -1;
     }
 
-    infof("Generating stub from file '%s'", infile);
+    logger.infof("Generating stub from file '%s'", infile);
 
     auto file_ctx = new Context(infile);
     file_ctx.log_diagnostic();
@@ -96,8 +98,8 @@ int gen_stub(in string infile, in string outfile) {
         open_outfile.write(ctx.output_header(outfile));
     }
     catch (ErrnoException ex) {
-        trace(text(ex));
-        errorf("Unable to write to file '%s'", outfile);
+        logger.trace(text(ex));
+        logger.errorf("Unable to write to file '%s'", outfile);
         return -1;
     }
 
@@ -109,16 +111,16 @@ void prepare_env(ref ArgValue[string] parsed) {
 
     try {
         if (parsed["--debug"].isTrue) {
-            globalLogLevel(LogLevel.all);
+            logger.globalLogLevel(logger.LogLevel.all);
         }
         else {
-            globalLogLevel(LogLevel.info);
+            logger.globalLogLevel(logger.LogLevel.info);
             auto simple_logger = new SimpleLogger();
-            sharedLog(simple_logger);
+            logger.sharedLog(simple_logger);
         }
     }
     catch (Exception ex) {
-        collectException(error("Failed to configure logging level"));
+        collectException(logger.error("Failed to configure logging level"));
         throw ex;
     }
 }
@@ -130,10 +132,10 @@ int do_test_double(ref ArgValue[string] parsed) {
         exit_status = gen_stub(parsed["<infile>"].toString, parsed["<outfile>"].toString);
     }
     else if (parsed["mock"].isTrue) {
-        error("Mock generation not implemented yet");
+        logger.error("Mock generation not implemented yet");
     }
     else {
-        error("Usage error");
+        logger.error("Usage error");
         writeln(doc);
     }
 
@@ -152,14 +154,14 @@ int rmain(string[] args) nothrow {
     try {
         auto parsed = docopt.docopt(doc, args[1 .. $], help, version_, optionsFirst);
         prepare_env(parsed);
-        trace(to!string(args));
-        trace(join(args, " "));
-        trace(prettyPrintArgs(parsed));
+        logger.trace(to!string(args));
+        logger.trace(join(args, " "));
+        logger.trace(prettyPrintArgs(parsed));
 
         exit_status = do_test_double(parsed);
     }
     catch (Exception ex) {
-        collectException(trace(text(ex)));
+        collectException(logger.trace(text(ex)));
         exit_status = -1;
     }
 
