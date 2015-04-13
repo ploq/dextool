@@ -17,8 +17,6 @@ import clang.Cursor;
 import clang.Token;
 import clang.Type;
 
-import translator.Translator;
-
 struct TypeKind {
     string name;
     bool isConst;
@@ -65,10 +63,7 @@ body {
 
             case CXType_Record:
             case CXType_Enum:
-                // fix suffix and isConst
                 result.name = type.spelling;
-                if (result.name.length == 0)
-                    result.name = getAnonymousName(type.declaration);
                 break;
 
             case CXType_ConstantArray:
