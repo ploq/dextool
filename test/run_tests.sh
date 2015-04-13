@@ -16,12 +16,17 @@ function check_status() {
     fi
 }
 
+outdir="outdata"
+if [[ ! -d "$outdir" ]]; then
+    mkdir "$outdir"
+fi
+
 for sourcef in testdata/*.hpp; do
     expect=${sourcef}".ref"
-    out=$(basename ${sourcef})".out"
+    out="$outdir/"$(basename ${sourcef})
     echo -e "${C_YELLOW}=== $sourcef  ===${C_NONE}"
     echo -e "\t${expect}" "\t$PWD/${out}"
-    ../build/gen-test-double stub --debug $sourcef ${out}
+    ../build/gen-test-double stub --debug $sourcef $outdir
     diff -u "${expect}" "${out}"
     # raw=$(diff -u "${expect}" "${out}")
     # echo $(echo $raw|wc -l)
@@ -31,6 +36,6 @@ for sourcef in testdata/*.hpp; do
     # fi
 done
 
-rm *.out
+rm -r "$outdir"
 
 exit 0

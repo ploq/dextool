@@ -36,6 +36,8 @@ alias CppClassStructNsName = Typedef!(string, string.init, "CppNestingNs");
 /// Nesting of C++ class/struct/namespace.
 alias CppNesting = CppClassStructNsName[];
 
+alias HdrFilename = Typedef!(string, string.init, "HeaderFilename");
+
 version (unittest) {
     shared static this() {
         import std.exception;
@@ -66,15 +68,27 @@ class StubContext {
      * Params:
      *  filename = intended output filename, used for ifdef guard.
      */
-    string output_header(string filename) {
-        auto o = CppHModule(filename);
+    string output_header(HdrFilename filename) {
+        import std.string : translate;
+
+        dchar[dchar] table = ['.' : '_', '-' : '_'];
+
+        ///TODO add user defined header.
+        auto o = CppHModule(translate(cast(string) filename, table));
         o.content.append(this.hdr);
 
         return o.render;
     }
 
-    string output_impl() {
-        return this.impl.render;
+    string output_impl(HdrFilename filename) {
+        ///TODO add user defined header.
+        auto o = new CppModule;
+        o.suppress_indent(1);
+        o.include(cast(string) filename);
+        o.sep;
+        o.append(impl);
+
+        return o.render;
     }
 
 private:

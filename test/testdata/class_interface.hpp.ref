@@ -1,5 +1,5 @@
-#ifndef class_interface.hpp.out
-#define class_interface.hpp.out
+#ifndef class_interface_hpp
+#define class_interface_hpp
 class StubSimple : public Simple {
 public:
     virtual void func1();
@@ -39,4 +39,4 @@ struct StubData {
 };
 } //NS:StubInternalSimple
 
-#endif // class_interface.hpp.out
+#endif // class_interface_hpp

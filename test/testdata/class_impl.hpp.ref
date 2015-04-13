@@ -1,5 +1,5 @@
-#ifndef class_impl.hpp.out
-#define class_impl.hpp.out
+#ifndef class_impl_hpp
+#define class_impl_hpp
 class StubSimple : public Simple {
 public:
     StubSimple();
@@ -20,4 +20,4 @@ struct StubData {
 };
 } //NS:StubInternalSimple
 
-#endif // class_impl.hpp.out
+#endif // class_impl_hpp

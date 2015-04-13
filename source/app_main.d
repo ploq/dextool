@@ -22,6 +22,7 @@ import std.conv;
 import std.exception;
 import std.stdio;
 import std.string;
+import std.typecons;
 
 import file = std.file;
 import logger = std.experimental.logger;
@@ -33,8 +34,8 @@ import dsrcgen.cpp;
 
 static string doc = "
 usage:
-  gen-test-double stub [options] <infile> <outfile>
-  gen-test-double mock [options] <infile> <outfile>
+  gen-test-double stub [options] <infile> <outdir>
+  gen-test-double mock [options] <infile> <outdir>
 
 options:
  -h, --help     show this
@@ -74,10 +75,36 @@ shared static this() {
     }
 }
 
-int gen_stub(in string infile, in string outfile) {
+auto try_open_file(string filename, string mode) @trusted nothrow {
+    Unique!File rval;
+    try {
+        rval = Unique!File(new File(filename, mode));
+    }
+    catch (Exception ex) {
+    }
+    if (rval.isEmpty) {
+        try {
+            logger.errorf("Unable to read/write file '%s'", filename);
+        }
+        catch (Exception ex) {
+        }
+    }
+
+    return rval;
+}
+
+int gen_stub(in string infile, in string outdir) {
     import std.exception;
-    import std.path : stripExtension;
+    import std.path : baseName, buildPath, stripExtension;
     import generator;
+
+    auto hdr_ext = ".hpp";
+    auto impl_ext = ".cpp";
+
+    auto base_filename = infile.baseName.stripExtension;
+    HdrFilename hdr_filename = HdrFilename(base_filename ~ hdr_ext);
+    string hdr_out_filename = buildPath(outdir, cast(string) hdr_filename);
+    string impl_out_filename = buildPath(outdir, cast(string) base_filename ~ impl_ext);
 
     if (!file.exists(infile)) {
         logger.errorf("File '%s' do not exist", infile);
@@ -92,14 +119,24 @@ int gen_stub(in string infile, in string outfile) {
     auto ctx = new StubContext(StubPrefix("Stub"));
     ctx.translate(file_ctx.cursor);
 
+    auto outfile_hdr = try_open_file(hdr_out_filename, "w");
+    if (outfile_hdr.isEmpty) {
+        return -1;
+    }
+    scope(exit) outfile_hdr.close();
+
+    auto outfile_impl = try_open_file(impl_out_filename, "w");
+    if (outfile_impl.isEmpty) {
+        return -1;
+    }
+    scope(exit) outfile_impl.close();
+
     try {
-        auto open_outfile = File(outfile, "w");
-        scope(exit) open_outfile.close();
-        open_outfile.write(ctx.output_header(outfile));
+        outfile_hdr.write(ctx.output_header(hdr_filename));
+        outfile_impl.write(ctx.output_impl(hdr_filename));
     }
     catch (ErrnoException ex) {
         logger.trace(text(ex));
-        logger.errorf("Unable to write to file '%s'", outfile);
         return -1;
     }
 
@@ -129,7 +166,7 @@ int do_test_double(ref ArgValue[string] parsed) {
     int exit_status = -1;
 
     if (parsed["stub"].isTrue) {
-        exit_status = gen_stub(parsed["<infile>"].toString, parsed["<outfile>"].toString);
+        exit_status = gen_stub(parsed["<infile>"].toString, parsed["<outdir>"].toString);
     }
     else if (parsed["mock"].isTrue) {
         logger.error("Mock generation not implemented yet");

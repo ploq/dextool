@@ -1,5 +1,5 @@
-#ifndef class_in_ns.hpp.out
-#define class_in_ns.hpp.out
+#ifndef class_in_ns_hpp
+#define class_in_ns_hpp
 namespace foo {
 namespace bar {
 class StubSmurf : public foo::bar::Smurf {
@@ -32,4 +32,4 @@ struct StubData {
 
 } //NS:foo
 
-#endif // class_in_ns.hpp.out
+#endif // class_in_ns_hpp

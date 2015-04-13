@@ -1,6 +1,6 @@
-#ifndef class_empty.hpp.out
-#define class_empty.hpp.out
+#ifndef class_empty_hpp
+#define class_empty_hpp
 class StubSimple : public Simple {
 };
 
-#endif // class_empty.hpp.out
+#endif // class_empty_hpp

@@ -1,5 +1,5 @@
-#ifndef class_inherit.hpp.out
-#define class_inherit.hpp.out
+#ifndef class_inherit_hpp
+#define class_inherit_hpp
 class StubFoo : public Foo {
 public:
     virtual void func2();
@@ -128,4 +128,4 @@ struct StubData {
 };
 } //NS:StubInternalDaddySmurf
 
-#endif // class_inherit.hpp.out
+#endif // class_inherit_hpp

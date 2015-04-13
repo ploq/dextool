@@ -1,5 +1,5 @@
-#ifndef class_nested.hpp.out
-#define class_nested.hpp.out
+#ifndef class_nested_hpp
+#define class_nested_hpp
 class StubOuterClass : public OuterClass {
 public:
     StubOuterClass();
@@ -54,4 +54,4 @@ struct StubData {
 };
 } //NS:StubInternalInnerClass2
 
-#endif // class_nested.hpp.out
+#endif // class_nested_hpp
