@@ -10,6 +10,8 @@
  - Manager of lifetime for the stub and access to the instance for the tester.
  - Generated data in namespace to avoid name collisions.
  - ctor's. Problem is... a sensible name mangling.
+   Hmm maybe have to use extern function pointers?
+ - ctor's arguments must be stored.
 
 # Quality of Life
  - Data in the stub data struct groups separated by enter.
