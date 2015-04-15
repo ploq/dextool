@@ -1,0 +1,20 @@
+#include "class_in_ns.hpp"
+
+namespace foo {
+namespace bar {
+Smurf& StubSmurf::operator=(const Smurf& other) {
+}
+
+StubSmurf::StubSmurf() {
+}
+
+StubSmurf::StubSmurf(const Smurf& other) {
+}
+
+StubSmurf::~StubSmurf() {
+}
+
+} //NS:bar
+
+} //NS:foo
+

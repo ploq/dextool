@@ -1,0 +1,53 @@
+#include "class_inherit.hpp"
+
+void StubFoo::func2() {
+}
+
+void StubFoo::func3() {
+}
+
+namespace BarSpace {
+void StubBar::func5() {
+}
+
+} //NS:BarSpace
+
+void StubWarp::func2() {
+}
+
+void StubWarp::func3() {
+}
+
+void StubWarp::func4() {
+}
+
+void StubSmurf::func2() {
+}
+
+void StubSmurf::func3() {
+}
+
+void StubSmurf::func4() {
+}
+
+StubSmurf::StubSmurf() {
+}
+
+StubSmurf::~StubSmurf() {
+}
+
+void StubDaddySmurf::func2() {
+}
+
+void StubDaddySmurf::func3() {
+}
+
+void StubDaddySmurf::func4() {
+}
+
+StubDaddySmurf::StubDaddySmurf() {
+}
+
+StubDaddySmurf::~StubDaddySmurf() {
+}
+

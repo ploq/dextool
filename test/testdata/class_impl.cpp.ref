@@ -1,0 +1,14 @@
+#include "class_impl.hpp"
+
+StubSimple::StubSimple() {
+}
+
+StubSimple::StubSimple(char x) {
+}
+
+StubSimple::StubSimple(int y) {
+}
+
+StubSimple::~StubSimple() {
+}
+

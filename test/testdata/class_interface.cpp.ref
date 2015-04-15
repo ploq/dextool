@@ -1,0 +1,20 @@
+#include "class_interface.hpp"
+
+void StubSimple::func1() {
+}
+
+void StubSimple::operator=(const Simple& other) {
+}
+
+char* StubSimple::func3() {
+}
+
+int StubSimple::func4() {
+}
+
+StubSimple::StubSimple() {
+}
+
+StubSimple::~StubSimple() {
+}
+

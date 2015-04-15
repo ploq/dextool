@@ -1,0 +1,20 @@
+#include "class_nested.hpp"
+
+StubOuterClass::StubOuterClass() {
+}
+
+StubOuterClass::~StubOuterClass() {
+}
+
+StubInnerClass::StubInnerClass() {
+}
+
+StubInnerClass::~StubInnerClass() {
+}
+
+StubInnerClass2::StubInnerClass2() {
+}
+
+StubInnerClass2::~StubInnerClass2() {
+}
+
