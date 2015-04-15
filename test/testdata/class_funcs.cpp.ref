@@ -1,0 +1,10 @@
+#include "class_funcs.hpp"
+
+StubSimple::StubSimple() {
+}
+
+StubSimple::StubSimple(char foo) {
+}
+
+StubSimple::~StubSimple() {
+}

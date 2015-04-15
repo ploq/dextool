@@ -22,13 +22,18 @@ if [[ ! -d "$outdir" ]]; then
 fi
 
 for sourcef in testdata/*.hpp; do
-    expect=${sourcef}".ref"
-    out="$outdir/"$(basename ${sourcef})
+    expect_hdr="testdata/"$(basename ${sourcef})".ref"
+    expect_impl="testdata"/$(basename -s .hpp $sourcef)".cpp.ref"
+    out_hdr="$outdir/"$(basename ${sourcef})
+    out_impl="$outdir/"$(basename -s .hpp ${sourcef})".cpp"
+
     echo -e "${C_YELLOW}=== $sourcef  ===${C_NONE}"
-    echo -e "\t${expect}" "\t$PWD/${out}"
+    echo -e "\t${expect_hdr} ${expect_impl}" "\t$PWD/${out_hdr}"
     ../build/gen-test-double stub --debug $sourcef $outdir
-    diff -u "${expect}" "${out}"
-    # raw=$(diff -u "${expect}" "${out}")
+
+    diff -u "${expect_hdr}" "${out_hdr}"
+    test -e ${expect_impl} && diff -u "${expect_impl}" "${out_impl}"
+    # raw=$(diff -u "${expect_hdr}" "${out_hdr}")
     # echo $(echo $raw|wc -l)
     # if [[ $(echo $raw|wc -l) -ne 0 ]]; then
     #     echo -e "Failed\n"$raw
