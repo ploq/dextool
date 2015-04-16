@@ -3,16 +3,54 @@
 namespace foo {
 namespace bar {
 Smurf& StubSmurf::operator=(const Smurf& other) {
+    StubSmurf_cnt.opAssign++;
+    StubSmurf_static.opAssign_param_other = &other;
+
+    if (StubSmurf_callback.opAssign == 0) {
+        return StubSmurf_static.opAssign_return;
+    } else {
+        return StubSmurf_callback.opAssign->opAssign(other);
+    }
 }
 
 StubSmurf::StubSmurf() {
+    StubInternalSmurf::StubInit(&StubSmurf_callback);
+    StubInternalSmurf::StubInit(&StubSmurf_cnt);
+    StubInternalSmurf::StubInit(&StubSmurf_static);
 }
 
 StubSmurf::StubSmurf(const Smurf& other) {
 }
 
 StubSmurf::~StubSmurf() {
+    StubSmurf_cnt.dtorSmurf_cnt++;
+
+    if (StubSmurf_callback.dtorSmurf != 0) {
+        StubSmurf_callback.dtorSmurf();
+    }
 }
+
+namespace StubInternalSmurf {
+void StubInit(StubCallback* value) {
+    char* d = &value;
+    char* end = &value + sizeof(StubCallback);
+    for (; d < end; ++d)
+        *d = 0;
+}
+void StubInit(StubCounter& value) {
+    char* d = &value;
+    char* end = &value + sizeof(StubCounter);
+    for (; d < end; ++d)
+        *d = 0;
+}
+void StubInit(StubStatic& value) {
+    char* d = &value;
+    char* end = &value + sizeof(StubStatic);
+    for (; d < end; ++d)
+        *d = 0;
+}
+
+} //NS:StubInternalSmurf
 
 } //NS:bar
 

@@ -158,8 +158,14 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
                 break;
             case CXTokenKind.CXToken_Punctuation:
                 r.name ~= t.spelling;
+                if (t.spelling == "*")
+                    r.isPointer = true;
+                else if (t.spelling == "&")
+                    r.isRef = true;
                 break;
             case CXTokenKind.CXToken_Keyword:
+                if (t.spelling == "const")
+                    r.isConst = true;
                 if (t.spelling.among("operator"))
                     st = State.Done;
                 else if (!t.spelling.among("virtual"))
@@ -173,6 +179,11 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
             case CXTokenKind.CXToken_Punctuation:
                 if (t.spelling.among("&", "*")) {
                     r.name ~= t.spelling;
+                    // TODO ugly... must be a better way.
+                    if (t.spelling == "*")
+                        r.isPointer = true;
+                    else if (t.spelling == "&")
+                        r.isRef = true;
                 }
                 else
                     st = State.Done;

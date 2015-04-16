@@ -12,7 +12,8 @@ import std.range;
 import std.stdio;
 import std.string;
 import std.typecons;
-import std.experimental.logger;
+
+import logger = std.experimental.logger;
 
 import tested;
 
@@ -85,7 +86,7 @@ class StubContext {
         auto o = new CppModule;
         o.suppress_indent(1);
         o.include(cast(string) filename);
-        trace("foobar");
+        logger.trace("foobar");
         o.sep(2);
         o.append(impl);
 
@@ -108,9 +109,6 @@ alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
 // To avoid confusing all the different strings with the only differentiating
 // fact being the variable name the idea of lots-of-typing from Haskell is
 // borrowed. Type systems are awesome.
-alias CallbackNs = Typedef!(string, string.init, "CallbackNamespace");
-alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
-
 alias CppAccessSpecifier = Typedef!(CX_CXXAccessSpecifier, CX_CXXAccessSpecifier.init,
     "CppAccess");
 alias CppClassName = Typedef!(string, string.init, "CppClassName");
@@ -118,16 +116,23 @@ alias CppClassNesting = Typedef!(string, string.init, "CppNesting");
 alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
 alias CppType = Typedef!(string, string.init, "CppType");
 
-alias DataNs = Typedef!(string, string.init, "DataNamespace");
-alias DataStruct = Typedef!(string, string.init, "DataStructInNs");
-
 alias TypeName = Tuple!(string, "type", string, "name");
+
+alias CallbackNs = Typedef!(string, string.init, "CallbackNs");
+alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
+
+alias DataNs = Typedef!(string, string.init, "DataNs");
+alias CallbackStruct = Typedef!(string, string.init, "CallbackStructInNs");
+alias CallbackContVariable = Typedef!(TypeName, TypeName.init, "CallbackContVariable");
+alias CountStruct = Typedef!(string, string.init, "CountStructInNs");
+alias CountContVariable = Typedef!(TypeName, TypeName.init, "CountContVariable");
+alias StaticStruct = Typedef!(string, string.init, "StaticStructInNs");
+alias StaticContVariable = Typedef!(TypeName, TypeName.init, "StaticContVariable");
 
 /** Name mangling that occurs when translating to C++ code.
  */
 enum NameMangling {
     Plain, // no mangling
-    Method,
     Callback,
     CallCounter,
     ReturnType
@@ -172,7 +177,8 @@ struct ImplStubContext {
                     // current cursor when used in translator functions.
                     // therefor pushing current ns/class/struct to the stack
                     // for cases it is needed after processing current cursor.
-                    (ClassTranslateContext(prefix)).translate(c,
+                    auto name = CppClassName(c.spelling);
+                    (ClassTranslateContext(prefix, name)).translate(c,
                         nesting.values, hdr_impl.top.hdr, hdr_impl.top.impl);
                     nesting.push(level, CppClassStructNsName(c.spelling));
                 }
@@ -222,70 +228,161 @@ private:
  * ---
  */
 struct VariableContainer {
-    private alias InternalType = Tuple!(NameMangling, "mangling", TypeName, "typename");
-    private InternalType[] vars;
+    @disable this();
+
+    this(StubPrefix stub_prefix, CallbackNs cb_ns, CallbackPrefix cb_prefix,
+        DataNs data_ns, CallbackStruct cb_st, CountStruct cnt_st, StaticStruct st_st) {
+        this.stub_prefix = stub_prefix;
+        this.cb_ns = cb_ns;
+        this.cb_prefix = cb_prefix;
+        this.data_ns = data_ns;
+        this.cb_st = cb_st;
+        this.cnt_st = cnt_st;
+        this.st_st = st_st;
+    }
+
+    void push(in NameMangling mangling, in TypeName tn) pure @safe nothrow {
+        final switch (mangling) with (NameMangling) {
+        case Callback:
+            callback_vars ~= InternalType(mangling, tn);
+            break;
+        case CallCounter:
+            cnt_vars ~= InternalType(mangling, tn);
+            break;
+
+        case Plain:
+        case ReturnType:
+            static_vars ~= InternalType(mangling, tn);
+            break;
+        }
+    }
 
     void push(in NameMangling mangling, in CppType type, in string name) pure @safe nothrow {
-        vars ~= InternalType(mangling, TypeName(cast(TypedefType!CppType) type, name));
+        push(mangling, TypeName(cast(TypedefType!CppType) type, name));
     }
 
-    void push(in NameMangling mangling, in ref TypeName tn) {
-        vars ~= InternalType(mangling, tn);
-    }
-
-    void push(in NameMangling mangling, in ref TypeName[] tn) {
+    void push(in NameMangling mangling, in ref TypeName[] tn) pure @safe nothrow {
         import std.algorithm.iteration : map;
         import std.range : chain;
 
-        vars = chain(vars, tn.chain().map!(a => InternalType(mangling, a))).array().dup;
+        foreach (item; tn) {
+            push(mangling, item);
+        }
     }
 
-    void translate(in CallbackNs cb_ns, in CallbackPrefix cb_prefix,
-        in DataNs data_ns, in DataStruct data_st, CppModule hdr, CppModule impl) {
-        TypeName InternalToString(in ref InternalType it) pure @safe nothrow {
-            TypeName tn;
+    /** Number of variables stored.
+     */
+    @property auto length() {
+        return static_vars.length + callback_vars.length + cnt_vars.length;
+    }
 
-            final switch (it.mangling) with (NameMangling) {
-            case Plain:
-                return it.typename;
-            case Method:
-                return it.typename;
-            case Callback:
-                tn.type = cb_ns ~ "::" ~ cb_prefix ~ it.typename.type ~ "*";
-                tn.name = it.typename.name ~ "_callback";
-                return tn;
-            case CallCounter:
-                tn.type = it.typename.type;
-                tn.name = it.typename.name ~ "_cnt";
-                return tn;
-            case ReturnType:
-                tn.type = it.typename.type;
-                tn.name = it.typename.name ~ "_return";
-                return tn;
-            }
-        }
+    @property auto callbackLength() {
+        return callback_vars.length;
+    }
 
-        void doHeader() {
-            auto ns = hdr.namespace(cast(string) data_ns);
-            ns.suppress_indent(1);
-            auto st = ns.struct_(cast(string) data_st);
-            foreach (item; vars)
-                with (st) {
-                    TypeName tn = InternalToString(item);
-                    stmt(format("%s %s", tn.type, tn.name));
-                }
-            hdr.sep;
-        }
+    @property auto countLength() {
+        return cnt_vars.length;
+    }
 
-        if (vars.length == 0) {
+    @property auto staticLength() {
+        return static_vars.length;
+    }
+
+    void renderCallback(T0, T1)(ref T0 hdr, ref T1 impl) {
+        if (callback_vars.length == 0)
             return;
-        }
-        doHeader();
+
+        auto st = hdr.struct_(cast(string) cb_st);
+        foreach (item; callback_vars)
+            with (st) {
+                TypeName tn = InternalToString(item);
+                stmt(format("%s %s", tn.type, tn.name));
+            }
+        hdr.func("void", "StubInit", format("%s* %s", cast(string) cb_st, "value"))[$.begin = ";",
+            $.end = newline, $.noindent = true];
+        hdr.sep;
     }
+
+    void renderCount(T0, T1)(ref T0 hdr, ref T1 impl) {
+        if (cnt_vars.length == 0)
+            return;
+
+        auto st = hdr.struct_(cast(string) cnt_st);
+        foreach (item; cnt_vars)
+            with (st) {
+                TypeName tn = InternalToString(item);
+                stmt(format("%s %s", tn.type, tn.name));
+            }
+        hdr.func("void", "StubInit", format("%s* %s", cast(string) cnt_st, "value"))[$.begin = ";",
+            $.end = newline, $.noindent = true];
+        hdr.sep;
+    }
+
+    void renderStatic(T0, T1)(ref T0 hdr, ref T1 impl) {
+        if (static_vars.length == 0)
+            return;
+
+        auto st = hdr.struct_(cast(string) st_st);
+        foreach (item; static_vars)
+            with (st) {
+                TypeName tn = InternalToString(item);
+                stmt(format("%s %s", tn.type, tn.name));
+            }
+        hdr.func("void", "StubInit", format("%s* %s", cast(string) st_st, "value"))[$.begin = ";",
+            $.end = newline, $.noindent = true];
+        hdr.sep;
+    }
+
+private:
+    TypeName InternalToString(in InternalType it) pure @safe nothrow {
+        TypeName tn;
+
+        final switch (it.mangling) with (NameMangling) {
+        case Plain:
+            return it.typename;
+        case Callback:
+            tn.type = cb_ns ~ "::" ~ cb_prefix ~ it.typename.type ~ "*";
+            tn.name = it.typename.name;
+            return tn;
+        case CallCounter:
+            tn.type = it.typename.type;
+            tn.name = it.typename.name;
+            return tn;
+        case ReturnType:
+            tn.type = it.typename.type;
+            tn.name = it.typename.name ~ "_return";
+            return tn;
+        }
+    }
+
+    alias InternalType = Tuple!(NameMangling, "mangling", TypeName, "typename");
+    InternalType[] static_vars;
+    InternalType[] callback_vars;
+    InternalType[] cnt_vars;
+
+    immutable StubPrefix stub_prefix;
+    immutable CallbackNs cb_ns;
+    immutable CallbackPrefix cb_prefix;
+    immutable DataNs data_ns;
+    immutable CallbackStruct cb_st;
+    immutable CountStruct cnt_st;
+    immutable StaticStruct st_st;
 }
 
-/// Container of callbacks to generate code for.
+/// Public functions to generate callbacks for.
 struct CallbackContainer {
+    @disable this();
+
+    /**
+     * Params:
+     *  cb_ns = namespace containing generated code for callbacks.
+     *  cprefix = prefix for callback interfaces.
+     */
+    this(CallbackNs cb_ns, CallbackPrefix cprefix) {
+        this.cb_ns = cb_ns;
+        this.cprefix = cprefix;
+    }
+
     /** Add a callback to the container.
      * Params:
      *  type = return type of the method.
@@ -302,15 +399,17 @@ struct CallbackContainer {
         return items.any!(a => a.name == method);
     }
 
+    @property auto length() {
+        return items.length;
+    }
+
     /** Generate C++ code in the provided module.
      * Params:
-     *  cb_ns = namespace containing generated code for callbacks.
-     *  cprefix = prefix for callback interfaces.
      *  data_ns = namespace to generate code in.
      *  hdr = module for generated declaration code.
      *  impl = module for generated implementation code
      */
-    void translate(CallbackNs cb_ns, CallbackPrefix cprefix, CppModule hdr, CppModule impl) {
+    void translate(ref CppModule hdr, ref CppModule impl) {
         //TODO ugly with the cast. Cleanup. Maybe functions for converting?
         void doHeader() {
             auto ns = hdr.namespace(cast(string) cb_ns);
@@ -327,7 +426,7 @@ struct CallbackContainer {
             hdr.sep;
         }
 
-        if (items.length == 0) {
+        if (length == 0) {
             return;
         }
         doHeader();
@@ -337,6 +436,8 @@ private:
     alias CallbackType = Tuple!(CppType, "return_type", CppMethodName,
         "name", TypeName[], "params");
     CallbackType[] items;
+    CallbackNs cb_ns;
+    CallbackPrefix cprefix;
 }
 
 /** Translate a ClassDecl to a stub implementation.
@@ -352,12 +453,31 @@ struct ClassTranslateContext {
      * Params:
      *  prefix = prefix to use for the name of the stub class.
      */
-    this(StubPrefix prefix) {
+    this(StubPrefix prefix, CppClassName name) {
         this.prefix = prefix;
+
+        CallbackNs cb_ns = prefix ~ "Callback" ~ name;
+        CallbackPrefix cp = "I";
+        this.data_ns = DataNs(prefix ~ "Internal" ~ name);
+        CallbackStruct cb_st = prefix ~ "Callback";
+        CountStruct cnt_st = prefix ~ "Counter";
+        StaticStruct st_st = prefix ~ "Static";
+
+        this.vars = VariableContainer(prefix, cb_ns, cp, data_ns, cb_st, cnt_st, st_st);
+        this.callbacks = CallbackContainer(cb_ns, cp);
+        this.cb_var_name = CallbackContVariable(
+            TypeName(cast(string) data_ns ~ "::" ~ cast(string) cb_st,
+            cast(string) prefix ~ cast(string) name ~ "_callback"));
+        this.cnt_var_name = CountContVariable(
+            TypeName(cast(string) data_ns ~ "::" ~ cast(string) cnt_st,
+            cast(string) prefix ~ cast(string) name ~ "_cnt"));
+        this.st_var_name = StaticContVariable(
+            TypeName(cast(string) data_ns ~ "::" ~ cast(string) st_st,
+            cast(string) prefix ~ cast(string) name ~ "_static"));
     }
 
-    void translate(ref Cursor cursor, const ref CppNesting nesting, CppModule hdr,
-        CppModule impl) {
+    void translate(ref Cursor cursor, const ref CppNesting nesting,
+        ref CppModule hdr, ref CppModule impl) {
         import std.array : join;
 
         void doTraversal() {
@@ -365,19 +485,42 @@ struct ClassTranslateContext {
             visit_ast!ClassTranslateContext(c, this);
         }
 
-        void doCallbacks(out CallbackNs out_ns, out CallbackPrefix out_cp) {
-            CallbackNs cb_ns = prefix ~ "Callback" ~ name;
-            CallbackPrefix cp = "I";
-            callbacks.translate(cb_ns, cp, hdr, impl);
+        void doDataStruct() {
+            if (vars.length == 0)
+                return;
 
-            out_ns = cb_ns;
-            out_cp = cp;
-        }
+            auto ns = hdr.namespace(cast(string) data_ns);
+            ns.suppress_indent(1);
 
-        void doDataStruct(in CallbackNs cb_ns, in CallbackPrefix cb_prefix) {
-            DataNs data_ns = prefix ~ "Internal" ~ name;
-            DataStruct data_st = prefix ~ "Data";
-            vars.translate(cb_ns, cb_prefix, data_ns, data_st, hdr, impl);
+            vars.renderCallback(ns, impl);
+            hdr.sep;
+            vars.renderCount(ns, impl);
+            hdr.sep;
+            vars.renderStatic(ns, impl);
+            hdr.sep;
+            auto vars_getters_hdr = accessSpecifierTranslator(
+                CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic), this.class_code.hdr);
+            this.class_code.hdr.sep;
+            auto vars_hdr = accessSpecifierTranslator(
+                CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPrivate), this.class_code.hdr);
+            if (vars.callbackLength > 0) {
+                vars_getters_hdr.func(cast(string) cb_var_name.type ~ "&",
+                    cast(string) prefix ~ "GetCallback")[$.begin = ";",
+                    $.end = newline, $.noindent = true];
+                vars_hdr.stmt(cast(string) cb_var_name.type ~ " " ~ cb_var_name.name);
+            }
+            if (vars.countLength > 0) {
+                vars_getters_hdr.func(cast(string) cnt_var_name.type ~ "&",
+                    cast(string) prefix ~ "GetCounter")[$.begin = ";",
+                    $.end = newline, $.noindent = true];
+                vars_hdr.stmt(cast(string) cnt_var_name.type ~ " " ~ cnt_var_name.name);
+            }
+            if (vars.staticLength > 0) {
+                vars_getters_hdr.func(cast(string) st_var_name.type ~ "&",
+                    cast(string) prefix ~ "GetStatic")[$.begin = ";",
+                    $.end = newline, $.noindent = true];
+                vars_hdr.stmt(cast(string) st_var_name.type ~ " " ~ st_var_name.name);
+            }
         }
 
         this.top = CppHdrImpl(hdr, impl);
@@ -386,11 +529,8 @@ struct ClassTranslateContext {
 
         doTraversal();
 
-        CallbackNs cb_ns;
-        CallbackPrefix cb_prefix;
-        doCallbacks(cb_ns, cb_prefix);
-
-        doDataStruct(cb_ns, cb_prefix);
+        callbacks.translate(hdr, impl);
+        doDataStruct();
     }
 
     /** Traverse cursor and translate a subset of kinds.
@@ -414,9 +554,10 @@ struct ClassTranslateContext {
                 break;
             case false:
                 this.classdecl_used = true;
-                this.name = cast(CppClassName) c.spelling;
-                auto stubname = CppClassName(cast(string) prefix ~this.name);
+                auto name = CppClassName(c.spelling);
+                auto stubname = CppClassName(cast(string) prefix ~ name);
                 push(classTranslator(prefix, nesting, name, current.get));
+                class_code = current.get;
                 MethodTranslateContext(stubname, access_spec).translate(c,
                     vars, callbacks, current.get);
                 break;
@@ -444,12 +585,17 @@ struct ClassTranslateContext {
 private:
     bool classdecl_used;
     CppHdrImpl top;
+    CppHdrImpl class_code; // top of the new class created.
     StubPrefix prefix;
-    CppClassName name;
     VariableContainer vars;
     CallbackContainer callbacks;
     CppClassNesting nesting;
     Nullable!CppAccessSpecifier access_spec;
+
+    DataNs data_ns;
+    CallbackContVariable cb_var_name;
+    CountContVariable cnt_var_name;
+    StaticContVariable st_var_name;
 }
 
 CppModule consumeAccessSpecificer(ref Nullable!CppAccessSpecifier access_spec, ref CppModule hdr) {
@@ -665,9 +811,9 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
         callback_method = method_name;
         if (find(cast(string) method_name, "operator") != string.init) {
             callback_method = cppOperatorToName(method_name);
-            trace(cast(string) callback_method);
+            logger.trace(cast(string) callback_method);
             if (callback_method.isNull) {
-                errorf("Generating callback function for '%s' not supported",
+                logger.errorf("Generating callback function for '%s' not supported",
                     cast(string) method_name);
             }
         }
@@ -687,7 +833,7 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
         }
     }
 
-    void doImpl(in ref TypeName[] params, in ref string return_type, ref CppModule impl) {
+    void doImpl(in TypeName[] params, in string return_type, ref CppModule impl) {
         auto method_name = CppMethodName(c.spelling);
         auto node = impl.method_body(return_type, cast(string) class_name,
             cast(string) method_name, c.func.isConst, params.toString);
@@ -696,15 +842,15 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
 
     if (!c.func.isVirtual) {
         auto loc = c.location;
-        infof("%s:%d:%d:%s: Skipping, not a virtual function", loc.file.name,
-            loc.line, loc.column, c.spelling);
+        logger.infof("%s:%d:%d:%s: Skipping, not a virtual function",
+            loc.file.name, loc.line, loc.column, c.spelling);
         return;
     }
 
     auto params = parmDeclToTypeName(c);
     auto return_type = toString2(translateTypeCursor(c));
     auto tmp_return_type = toString2(translateType(c.func.resultType));
-    trace(return_type, "|", tmp_return_type);
+    logger.trace(return_type, "|", tmp_return_type);
     ///TODO investigate how tmp_return_type can be used. It is the type with
     //namespace nesting. For example foo::bar::Smurf&.
 
@@ -781,11 +927,11 @@ TypeName[] parmDeclToTypeName(ref Cursor cursor) {
         auto tok_group = param.tokens;
         auto type_spelling = toString2(tok_group);
         auto type = translateTypeCursor(param);
-        trace(type_spelling, " ", type, " ", param.spelling, "|", param.type.spelling);
+        logger.trace(type_spelling, "|", type, "|", param.spelling, "|", param.type.spelling);
         params ~= TypeName(toString3(type), param.spelling);
     }
 
-    trace(params);
+    logger.trace(params);
     return params;
 }
 

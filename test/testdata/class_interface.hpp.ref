@@ -11,6 +11,15 @@ public:
     StubSimple();
     virtual ~StubSimple();
 
+public:
+    StubInternalSimple::StubCallback& StubGetCallback();
+    StubInternalSimple::StubCounter& StubGetCounter();
+    StubInternalSimple::StubStatic& StubGetStatic();
+
+private:
+    StubInternalSimple::StubCallback StubSimple_callback;
+    StubInternalSimple::StubCounter StubSimple_cnt;
+    StubInternalSimple::StubStatic StubSimple_static;
 };
 
 namespace StubCallbackSimple {
@@ -22,21 +31,31 @@ struct IdtorSimple { virtual void dtorSimple() = 0; };
 } //NS:StubCallbackSimple
 
 namespace StubInternalSimple {
-struct StubData {
-    StubCallbackSimple::Ifunc1* func1_callback;
-    unsigned func1_cnt;
-    StubCallbackSimple::IopAssign* opAssign_callback;
-    unsigned opAssign_cnt;
-    Simple* opAssign_param_other;
-    StubCallbackSimple::Ifunc3* func3_callback;
-    unsigned func3_cnt;
-    char* func3_return;
-    StubCallbackSimple::Ifunc4* func4_callback;
-    unsigned func4_cnt;
-    int func4_return;
-    StubCallbackSimple::IdtorSimple* dtorSimple_callback;
-    unsigned dtorSimple_cnt;
+struct StubCallback {
+    StubCallbackSimple::Ifunc1* func1;
+    StubCallbackSimple::IopAssign* opAssign;
+    StubCallbackSimple::Ifunc3* func3;
+    StubCallbackSimple::Ifunc4* func4;
+    StubCallbackSimple::IdtorSimple* dtorSimple;
 };
+void StubInit(StubCallback* value);
+
+struct StubCounter {
+    unsigned func1;
+    unsigned opAssign;
+    unsigned func3;
+    unsigned func4;
+    unsigned dtorSimple;
+};
+void StubInit(StubCounter* value);
+
+struct StubStatic {
+    Simple* opAssign_param_other;
+    char* func3_return;
+    int func4_return;
+};
+void StubInit(StubStatic* value);
+
 } //NS:StubInternalSimple
 
 #endif // class_interface_hpp

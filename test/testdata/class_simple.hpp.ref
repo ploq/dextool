@@ -6,6 +6,13 @@ public:
     StubSimple(char foo);
     ~StubSimple();
 
+public:
+    StubInternalSimple::StubCallback& StubGetCallback();
+    StubInternalSimple::StubCounter& StubGetCounter();
+
+private:
+    StubInternalSimple::StubCallback StubSimple_callback;
+    StubInternalSimple::StubCounter StubSimple_cnt;
 };
 
 namespace StubCallbackSimple {
@@ -13,10 +20,16 @@ struct IdtorSimple { virtual void dtorSimple() = 0; };
 } //NS:StubCallbackSimple
 
 namespace StubInternalSimple {
-struct StubData {
-    StubCallbackSimple::IdtorSimple* dtorSimple_callback;
-    unsigned dtorSimple_cnt;
+struct StubCallback {
+    StubCallbackSimple::IdtorSimple* dtorSimple;
 };
+void StubInit(StubCallback* value);
+
+struct StubCounter {
+    unsigned dtorSimple;
+};
+void StubInit(StubCounter* value);
+
 } //NS:StubInternalSimple
 
 #endif // class_simple_hpp

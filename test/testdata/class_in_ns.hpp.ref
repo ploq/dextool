@@ -10,6 +10,15 @@ public:
     StubSmurf(const Smurf& other);
     virtual ~StubSmurf();
 
+public:
+    StubInternalSmurf::StubCallback& StubGetCallback();
+    StubInternalSmurf::StubCounter& StubGetCounter();
+    StubInternalSmurf::StubStatic& StubGetStatic();
+
+private:
+    StubInternalSmurf::StubCallback StubSmurf_callback;
+    StubInternalSmurf::StubCounter StubSmurf_cnt;
+    StubInternalSmurf::StubStatic StubSmurf_static;
 };
 
 namespace StubCallbackSmurf {
@@ -18,14 +27,24 @@ struct IdtorSmurf { virtual void dtorSmurf() = 0; };
 } //NS:StubCallbackSmurf
 
 namespace StubInternalSmurf {
-struct StubData {
-    StubCallbackSmurf::IopAssign* opAssign_callback;
-    unsigned opAssign_cnt;
+struct StubCallback {
+    StubCallbackSmurf::IopAssign* opAssign;
+    StubCallbackSmurf::IdtorSmurf* dtorSmurf;
+};
+void StubInit(StubCallback* value);
+
+struct StubCounter {
+    unsigned opAssign;
+    unsigned dtorSmurf;
+};
+void StubInit(StubCounter* value);
+
+struct StubStatic {
     Smurf* opAssign_param_other;
     Smurf* opAssign_return;
-    StubCallbackSmurf::IdtorSmurf* dtorSmurf_callback;
-    unsigned dtorSmurf_cnt;
 };
+void StubInit(StubStatic* value);
+
 } //NS:StubInternalSmurf
 
 } //NS:bar

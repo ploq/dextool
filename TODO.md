@@ -12,6 +12,9 @@
  - ctor's. Problem is... a sensible name mangling.
    Hmm maybe have to use extern function pointers?
  - ctor's arguments must be stored.
+ - include original file in stub generated.
+ - generated .cpp must include generated .hpp.
+ - user can supply their own Init-function of the stub by have a stub_classname_config.hpp in the same folder.
 
 # Quality of Life
  - Data in the stub data struct groups separated by enter.
