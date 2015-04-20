@@ -32,7 +32,7 @@ for sourcef in testdata/*.hpp; do
     ../build/gen-test-double stub --debug $sourcef $outdir
 
     diff -u "${expect_hdr}" "${out_hdr}"
-    # test -e ${expect_impl} && diff -u "${expect_impl}" "${out_impl}"
+    test -e ${expect_impl} && diff -u "${expect_impl}" "${out_impl}"
     # raw=$(diff -u "${expect_hdr}" "${out_hdr}")
     # echo $(echo $raw|wc -l)
     # if [[ $(echo $raw|wc -l) -ne 0 ]]; then

@@ -265,9 +265,7 @@ struct VariableContainer {
         import std.algorithm.iteration : map;
         import std.range : chain;
 
-        foreach (item; tn) {
-            push(mangling, item);
-        }
+        tn.each!(a => push(mangling, a));
     }
 
     /** Number of variables stored.
@@ -298,8 +296,7 @@ struct VariableContainer {
                 TypeName tn = InternalToString(item);
                 stmt(format("%s %s", tn.type, tn.name));
             }
-        hdr.func("void", "StubInit", format("%s* %s", cast(string) cb_st, "value"))[$.begin = ";",
-            $.end = newline, $.noindent = true];
+        renderInit(TypeName(cast(string) cb_st, "value"), hdr, impl);
         hdr.sep;
     }
 
@@ -313,8 +310,7 @@ struct VariableContainer {
                 TypeName tn = InternalToString(item);
                 stmt(format("%s %s", tn.type, tn.name));
             }
-        hdr.func("void", "StubInit", format("%s* %s", cast(string) cnt_st, "value"))[$.begin = ";",
-            $.end = newline, $.noindent = true];
+        renderInit(TypeName(cast(string) cnt_st, "value"), hdr, impl);
         hdr.sep;
     }
 
@@ -328,8 +324,7 @@ struct VariableContainer {
                 TypeName tn = InternalToString(item);
                 stmt(format("%s %s", tn.type, tn.name));
             }
-        hdr.func("void", "StubInit", format("%s* %s", cast(string) st_st, "value"))[$.begin = ";",
-            $.end = newline, $.noindent = true];
+        renderInit(TypeName(cast(string) st_st, "value"), hdr, impl);
         hdr.sep;
     }
 
@@ -353,6 +348,16 @@ private:
             tn.name = it.typename.name ~ "_return";
             return tn;
         }
+    }
+
+    /// Init function for a struct of data.
+    void renderInit(T0, T1)(TypeName tn, ref T0 hdr, ref T1 impl) {
+        void doHeader(TypeName tn, ref T0 hdr) {
+            hdr.func("void", "StubInit", format("%s* %s", tn.type, tn.name))[$.begin = ";",
+                $.end = newline, $.noindent = true];
+        }
+
+        doHeader(tn, hdr);
     }
 
     alias InternalType = Tuple!(NameMangling, "mangling", TypeName, "typename");
