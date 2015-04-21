@@ -6,9 +6,47 @@ void StubFoo::func2() {
 void StubFoo::func3() {
 }
 
+namespace StubInternalFoo {
+void StubInit(StubCallback* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalFoo
+
 namespace BarSpace {
 void StubBar::func5() {
 }
+
+namespace StubInternalBar {
+void StubInit(StubCallback* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalBar
 
 } //NS:BarSpace
 
@@ -20,6 +58,25 @@ void StubWarp::func3() {
 
 void StubWarp::func4() {
 }
+
+namespace StubInternalWarp {
+void StubInit(StubCallback* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalWarp
 
 void StubSmurf::func2() {
 }
@@ -36,6 +93,25 @@ StubSmurf::StubSmurf() {
 StubSmurf::~StubSmurf() {
 }
 
+namespace StubInternalSmurf {
+void StubInit(StubCallback* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalSmurf
+
 void StubDaddySmurf::func2() {
 }
 
@@ -50,4 +126,23 @@ StubDaddySmurf::StubDaddySmurf() {
 
 StubDaddySmurf::~StubDaddySmurf() {
 }
+
+namespace StubInternalDaddySmurf {
+void StubInit(StubCallback* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalDaddySmurf
 

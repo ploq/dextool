@@ -32,22 +32,27 @@ StubSmurf::~StubSmurf() {
 
 namespace StubInternalSmurf {
 void StubInit(StubCallback* value) {
-    char* d = &value;
-    char* end = &value + sizeof(StubCallback);
-    for (; d < end; ++d)
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
         *d = 0;
+    }
 }
-void StubInit(StubCounter& value) {
-    char* d = &value;
-    char* end = &value + sizeof(StubCounter);
-    for (; d < end; ++d)
+
+void StubInit(StubCounter* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
         *d = 0;
+    }
 }
-void StubInit(StubStatic& value) {
-    char* d = &value;
-    char* end = &value + sizeof(StubStatic);
-    for (; d < end; ++d)
+
+void StubInit(StubStatic* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubStatic);
+    for (; d != end; ++d) {
         *d = 0;
+    }
 }
 
 } //NS:StubInternalSmurf

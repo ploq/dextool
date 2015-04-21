@@ -9,3 +9,22 @@ StubSimple::StubSimple(char foo) {
 StubSimple::~StubSimple() {
 }
 
+namespace StubInternalSimple {
+void StubInit(StubCallback* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = static_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalSimple
+

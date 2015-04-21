@@ -324,7 +324,7 @@ struct VariableContainer {
                 TypeName tn = InternalToString(item);
                 stmt(format("%s %s", tn.type, tn.name));
             }
-        renderInit(TypeName(cast(string) st_st, "value"), hdr, impl);
+        renderInit(TypeName(cast(string) st_st ~ "", "value"), hdr, impl);
         hdr.sep;
     }
 
@@ -357,7 +357,20 @@ private:
                 $.end = newline, $.noindent = true];
         }
 
+        void doImpl(TypeName tn, ref T1 impl) {
+            auto f = impl.func("void", cast(string) stub_prefix ~ "Init", tn.type ~ "* " ~ tn.name);
+            with (f) {
+                stmt(E("char* d") = E("static_cast<char*>")(tn.name));
+                stmt(E("char* end") = E("d") + E("sizeof")(tn.type));
+                with (for_("", "d != end", "++d")) {
+                    stmt(E("*d") = 0);
+                }
+            }
+            impl.sep;
+        }
+
         doHeader(tn, hdr);
+        doImpl(tn, impl);
     }
 
     alias InternalType = Tuple!(NameMangling, "mangling", TypeName, "typename");
@@ -494,15 +507,26 @@ struct ClassTranslateContext {
             if (vars.length == 0)
                 return;
 
-            auto ns = hdr.namespace(cast(string) data_ns);
-            ns.suppress_indent(1);
+            auto ns_hdr = hdr.namespace(cast(string) data_ns);
+            ns_hdr.suppress_indent(1);
+            auto ns_impl = impl.namespace(cast(string) data_ns);
+            ns_impl.suppress_indent(1);
 
-            vars.renderCallback(ns, impl);
+            vars.renderCallback(ns_hdr, ns_impl);
             hdr.sep;
-            vars.renderCount(ns, impl);
+            impl.sep;
+            vars.renderCount(ns_hdr, ns_impl);
             hdr.sep;
-            vars.renderStatic(ns, impl);
+            impl.sep;
+            vars.renderStatic(ns_hdr, ns_impl);
             hdr.sep;
+            impl.sep;
+        }
+
+        void doDataStructInit() {
+            if (vars.length == 0)
+                return;
+
             auto vars_getters_hdr = accessSpecifierTranslator(
                 CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic), this.class_code.hdr);
             this.class_code.hdr.sep;
@@ -536,6 +560,7 @@ struct ClassTranslateContext {
 
         callbacks.translate(hdr, impl);
         doDataStruct();
+        doDataStructInit();
     }
 
     /** Traverse cursor and translate a subset of kinds.
