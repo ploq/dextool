@@ -117,7 +117,8 @@ alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
 alias CppType = Typedef!(string, string.init, "CppType");
 alias CppVariable = Typedef!(string, string.init, "CppVariable");
 
-alias TypeName = Tuple!(string, "type", string, "name");
+//alias TypeName = Tuple!(string, "type", string, "name");
+alias TypeName = Tuple!(CppType, "type", CppVariable, "name");
 
 alias CallbackNs = Typedef!(string, string.init, "CallbackNs");
 alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
@@ -332,8 +333,7 @@ struct VariableContainer {
     }
 
     void push(in NameMangling mangling, in CppType type, in CppVariable name) pure @safe nothrow {
-        push(mangling, TypeName(cast(TypedefType!CppType) type,
-            cast(TypedefType!CppVariable) name));
+        push(mangling, TypeName(type, name));
     }
 
     void push(in NameMangling mangling, in ref TypeName[] tn) pure @safe nothrow {
@@ -369,9 +369,9 @@ struct VariableContainer {
         foreach (item; callback_vars)
             with (st) {
                 TypeName tn = InternalToTypeName(item);
-                stmt(format("%s %s", tn.type, tn.name));
+                stmt(format("%s %s", cast(string) tn.type, cast(string) tn.name));
             }
-        renderInit(TypeName(cast(string) cb_st, "value"), hdr, impl);
+        renderInit(TypeName(cast(CppType) cb_st, CppVariable("value")), hdr, impl);
         hdr.sep;
     }
 
@@ -383,9 +383,9 @@ struct VariableContainer {
         foreach (item; cnt_vars)
             with (st) {
                 TypeName tn = InternalToTypeName(item);
-                stmt(format("%s %s", tn.type, tn.name));
+                stmt(format("%s %s", cast(string) tn.type, cast(string) tn.name));
             }
-        renderInit(TypeName(cast(string) cnt_st, "value"), hdr, impl);
+        renderInit(TypeName(cast(CppType) cnt_st, CppVariable("value")), hdr, impl);
         hdr.sep;
     }
 
@@ -397,14 +397,14 @@ struct VariableContainer {
         foreach (item; static_vars)
             with (st) {
                 TypeName tn = InternalToTypeName(item);
-                stmt(format("%s %s", tn.type, tn.name));
+                stmt(format("%s %s", cast(string) tn.type, cast(string) tn.name));
             }
-        renderInit(TypeName(cast(string) st_st ~ "", "value"), hdr, impl);
+        renderInit(TypeName(cast(CppType) st_st, CppVariable("value")), hdr, impl);
         hdr.sep;
     }
 
 private:
-    TypeName InternalToTypeName(in InternalType it) pure @safe nothrow {
+    TypeName InternalToTypeName(InternalType it) pure @safe nothrow const {
         TypeName tn;
 
         final switch (it.mangling) with (NameMangling) {
@@ -428,15 +428,16 @@ private:
     /// Init function for a struct of data.
     void renderInit(T0, T1)(TypeName tn, ref T0 hdr, ref T1 impl) {
         void doHeader(TypeName tn, ref T0 hdr) {
-            hdr.func("void", "StubInit", format("%s* %s", tn.type, tn.name))[$.begin = ";",
+            hdr.func("void", "StubInit", format("%s* %s",
+                cast(string) tn.type, cast(string) tn.name))[$.begin = ";",
                 $.end = newline, $.noindent = true];
         }
 
         void doImpl(TypeName tn, ref T1 impl) {
             auto f = impl.func("void", cast(string) stub_prefix ~ "Init", tn.type ~ "* " ~ tn.name);
             with (f) {
-                stmt(E("char* d") = E("static_cast<char*>")(tn.name));
-                stmt(E("char* end") = E("d") + E("sizeof")(tn.type));
+                stmt(E("char* d") = E("static_cast<char*>")(cast(string) tn.name));
+                stmt(E("char* end") = E("d") + E("sizeof")(cast(string) tn.type));
                 with (for_("", "d != end", "++d")) {
                     stmt(E("*d") = 0);
                 }
@@ -554,14 +555,14 @@ struct ClassTranslateContext {
         this.vars = VariableContainer(prefix, cb_ns, cp, data_ns, cb_st, cnt_st, st_st);
         this.callbacks = CallbackContainer(cb_ns, cp);
         this.cb_var_name = CallbackContVariable(
-            TypeName(cast(string) data_ns ~ "::" ~ cast(string) cb_st,
-            cast(string) prefix ~ cast(string) name ~ "_callback"));
+            TypeName(CppType(cast(string) data_ns ~ "::" ~ cast(string) cb_st),
+            CppVariable(cast(string) prefix ~ cast(string) name ~ "_callback")));
         this.cnt_var_name = CountContVariable(
-            TypeName(cast(string) data_ns ~ "::" ~ cast(string) cnt_st,
-            cast(string) prefix ~ cast(string) name ~ "_cnt"));
+            TypeName(CppType(cast(string) data_ns ~ "::" ~ cast(string) cnt_st),
+            CppVariable(cast(string) prefix ~ cast(string) name ~ "_cnt")));
         this.st_var_name = StaticContVariable(
-            TypeName(cast(string) data_ns ~ "::" ~ cast(string) st_st,
-            cast(string) prefix ~ cast(string) name ~ "_static"));
+            TypeName(CppType(cast(string) data_ns ~ "::" ~ cast(string) st_st),
+            CppVariable(cast(string) prefix ~ cast(string) name ~ "_static")));
     }
 
     void translate(ref Cursor cursor, const ref CppNesting nesting,
@@ -870,6 +871,18 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
     alias toString2 = translator.Type.toString;
     alias toString = generator.stub.toString;
 
+    //void methodToCallbackVars(in CppMethodName method, out CallbackContVariable cb,
+    //                          out CountContVariable cnt, out StaticContVariable static_) {
+    //    auto callback_method = mangleToCallbackMethod(method_name);
+    //    if (callback_method.isNull) {
+    //        logger.errorf("Generating callback function for '%s' not supported",
+    //                      cast(string) method_name);
+    //        callback_method = CppMethodName("<not supported " ~ cast(string) method_name ~ ">");
+    //    }
+    //
+    //    cnt = CountContVariable()
+    //}
+
     void pushVarsForCallback(in TypeName[] params,
         in CppMethodName callback_method, in string return_type, ref VariableContainer vars) {
         vars.push(NameMangling.Callback, cast(CppType) callback_method,
@@ -877,8 +890,8 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
         vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(CppVariable) callback_method);
 
         TypeName[] p = params.map!(
-            a => TypeName(cast(string) mangleTypeToCallbackStructType(CppType(a.type)),
-            callback_method ~ "_param_" ~ a.name)).array();
+            a => TypeName(mangleTypeToCallbackStructType(CppType(a.type)),
+            CppVariable(callback_method ~ "_param_" ~ a.name))).array();
         vars.push(NameMangling.Plain, p);
 
         if (return_type.strip != "void") {
@@ -1004,7 +1017,7 @@ TypeName[] parmDeclToTypeName(ref Cursor cursor) {
         auto type_spelling = toString2(tok_group);
         auto type = translateTypeCursor(param);
         logger.trace(type_spelling, "|", type, "|", param.spelling, "|", param.type.spelling);
-        params ~= TypeName(toString3(type), param.spelling);
+        params ~= TypeName(CppType(toString3(type)), CppVariable(param.spelling));
     }
 
     logger.trace(params);
@@ -1012,18 +1025,18 @@ TypeName[] parmDeclToTypeName(ref Cursor cursor) {
 }
 
 /// Convert a vector of TypeName to string pairs.
-auto toStrings(in ref TypeName[] vars) pure @safe nothrow {
+auto toStrings(in TypeName[] vars) pure @safe nothrow {
     string[] params;
 
     foreach (tn; vars) {
-        params ~= to!string(tn.type) ~ " " ~ to!string(tn.name);
+        params ~= cast(string) tn.type ~ " " ~ cast(string) tn.name;
     }
 
     return params;
 }
 
 /// Convert a vector of TypeName to a comma separated string.
-auto toString(in ref TypeName[] vars) pure @safe nothrow {
+auto toString(in TypeName[] vars) pure @safe nothrow {
     auto params = vars.toStrings;
     return join(params, ", ");
 }
