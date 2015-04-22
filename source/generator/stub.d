@@ -331,8 +331,9 @@ struct VariableContainer {
         }
     }
 
-    void push(in NameMangling mangling, in CppType type, in string name) pure @safe nothrow {
-        push(mangling, TypeName(cast(TypedefType!CppType) type, name));
+    void push(in NameMangling mangling, in CppType type, in CppVariable name) pure @safe nothrow {
+        push(mangling, TypeName(cast(TypedefType!CppType) type,
+            cast(TypedefType!CppVariable) name));
     }
 
     void push(in NameMangling mangling, in ref TypeName[] tn) pure @safe nothrow {
@@ -844,8 +845,9 @@ void dtorTranslator(Cursor c, in StubPrefix prefix, ref VariableContainer vars,
         hdr.sep();
 
         callbacks.push(CppType("void"), callback_name, TypeName[].init);
-        vars.push(NameMangling.Callback, cast(CppType) callback_name, cast(string) callback_name);
-        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(string) callback_name);
+        vars.push(NameMangling.Callback, cast(CppType) callback_name,
+            cast(CppVariable) callback_name);
+        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(CppVariable) callback_name);
     }
 
     void doImpl(CppClassName name) {
@@ -871,8 +873,8 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
     void pushVarsForCallback(in TypeName[] params,
         in CppMethodName callback_method, in string return_type, ref VariableContainer vars) {
         vars.push(NameMangling.Callback, cast(CppType) callback_method,
-            cast(string) callback_method);
-        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(string) callback_method);
+            cast(CppVariable) callback_method);
+        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(CppVariable) callback_method);
 
         TypeName[] p = params.map!(
             a => TypeName(cast(string) mangleTypeToCallbackStructType(CppType(a.type)),
@@ -881,7 +883,8 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
 
         if (return_type.strip != "void") {
             vars.push(NameMangling.ReturnType,
-                mangleTypeToCallbackStructType(CppType(return_type)), cast(string) callback_method);
+                mangleTypeToCallbackStructType(CppType(return_type)),
+                cast(CppVariable) callback_method);
         }
     }
 
