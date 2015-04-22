@@ -115,6 +115,7 @@ alias CppClassName = Typedef!(string, string.init, "CppClassName");
 alias CppClassNesting = Typedef!(string, string.init, "CppNesting");
 alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
 alias CppType = Typedef!(string, string.init, "CppType");
+alias CppVariable = Typedef!(string, string.init, "CppVariable");
 
 alias TypeName = Tuple!(string, "type", string, "name");
 
@@ -136,6 +137,79 @@ enum NameMangling {
     Callback,
     CallCounter,
     ReturnType
+}
+
+auto cppOperatorToName(in ref CppMethodName name) pure nothrow @safe {
+    Nullable!CppMethodName r;
+
+    switch (cast(string) name) {
+    case "operator=":
+        r = CppMethodName("opAssign");
+        break;
+    default:
+        break;
+    }
+
+    return r;
+}
+
+/// Null if it was unable to convert.
+auto mangleToVariable(in CppMethodName method) pure nothrow @safe {
+    Nullable!CppVariable rval;
+
+    if (find(cast(string) method, "operator") != string.init) {
+        auto callback_method = cppOperatorToName(method);
+
+        if (!callback_method.isNull)
+            rval = cast(CppVariable) callback_method;
+    }
+    else {
+        rval = cast(CppVariable) method;
+    }
+
+    return rval;
+}
+
+/// Null if it was unable to convert.
+auto mangleToCallbackMethod(in CppMethodName method) pure nothrow @safe {
+    Nullable!CppMethodName rval;
+    // same mangle schema but different return types so resuing but in a safe
+    // manner not don't affect the rest of the program.
+    auto tmp = mangleToVariable(method);
+    if (!tmp.isNull) {
+        rval = cast(CppMethodName) tmp.get;
+    }
+
+    return rval;
+}
+
+auto mangleToCallbackStructVariable(in StubPrefix prefix, in CppClassName name) pure nothrow @safe {
+    return CppVariable(cast(string) prefix ~ cast(string) name ~ "_callback");
+}
+
+/// Null if it was unable to convert.
+auto mangleToReturnVariable(in CppMethodName method) pure nothrow @safe {
+    Nullable!CppVariable rval;
+
+    if (find(cast(string) method, "operator") != string.init) {
+        auto callback_method = cppOperatorToName(method);
+
+        if (!callback_method.isNull)
+            rval = CppVariable(cast(string) callback_method ~ "_return");
+    }
+
+    return rval;
+}
+
+auto mangleTypeToCallbackStructType(in CppType type) pure @safe {
+    import std.algorithm.searching : find;
+
+    string r = (cast(string) type).replace("const", "");
+    if (find(r, "&") != string.init) {
+        r = r.replace("&", "") ~ "*";
+    }
+
+    return CppType(r.strip);
 }
 
 /** Traverse the AST and generate a stub by filling the CppModules with data.
@@ -293,7 +367,7 @@ struct VariableContainer {
         auto st = hdr.struct_(cast(string) cb_st);
         foreach (item; callback_vars)
             with (st) {
-                TypeName tn = InternalToString(item);
+                TypeName tn = InternalToTypeName(item);
                 stmt(format("%s %s", tn.type, tn.name));
             }
         renderInit(TypeName(cast(string) cb_st, "value"), hdr, impl);
@@ -307,7 +381,7 @@ struct VariableContainer {
         auto st = hdr.struct_(cast(string) cnt_st);
         foreach (item; cnt_vars)
             with (st) {
-                TypeName tn = InternalToString(item);
+                TypeName tn = InternalToTypeName(item);
                 stmt(format("%s %s", tn.type, tn.name));
             }
         renderInit(TypeName(cast(string) cnt_st, "value"), hdr, impl);
@@ -321,7 +395,7 @@ struct VariableContainer {
         auto st = hdr.struct_(cast(string) st_st);
         foreach (item; static_vars)
             with (st) {
-                TypeName tn = InternalToString(item);
+                TypeName tn = InternalToTypeName(item);
                 stmt(format("%s %s", tn.type, tn.name));
             }
         renderInit(TypeName(cast(string) st_st ~ "", "value"), hdr, impl);
@@ -329,7 +403,7 @@ struct VariableContainer {
     }
 
 private:
-    TypeName InternalToString(in InternalType it) pure @safe nothrow {
+    TypeName InternalToTypeName(in InternalType it) pure @safe nothrow {
         TypeName tn;
 
         final switch (it.mangling) with (NameMangling) {
@@ -421,33 +495,28 @@ struct CallbackContainer {
         return items.length;
     }
 
-    /** Generate C++ code in the provided module.
+    /** Generate C++ code in the provided module for all callbacks.
      * Params:
      *  data_ns = namespace to generate code in.
      *  hdr = module for generated declaration code.
      *  impl = module for generated implementation code
      */
-    void translate(ref CppModule hdr, ref CppModule impl) {
-        //TODO ugly with the cast. Cleanup. Maybe functions for converting?
-        void doHeader() {
-            auto ns = hdr.namespace(cast(string) cb_ns);
-            ns.suppress_indent(1);
-            foreach (c; items) {
-                auto s = ns.struct_(cast(string) cprefix ~ cast(string) c.name);
-                s[$.begin = " {", $.noindent = true];
-                auto m = s.method(true, cast(string) c.return_type,
-                    cast(string) c.name, false, c.params.toString);
-                m[$.begin = "", $.end = " = 0; ", $.noindent = true];
-                m.set_indentation(1);
-            }
-
-            hdr.sep;
-        }
-
-        if (length == 0) {
+    void renderInterfaces(ref CppModule hdr) {
+        if (length == 0)
             return;
+
+        auto ns_hdr = hdr.namespace(cast(string) cb_ns);
+        ns_hdr.suppress_indent(1);
+        foreach (c; items) {
+            auto s = ns_hdr.struct_(cast(string) cprefix ~ cast(string) c.name);
+            s[$.begin = " {", $.noindent = true];
+            auto m = s.method(true, cast(string) c.return_type,
+                cast(string) c.name, false, c.params.toString);
+            m[$.begin = "", $.end = " = 0; ", $.noindent = true];
+            m.set_indentation(1);
         }
-        doHeader();
+
+        hdr.sep;
     }
 
 private:
@@ -558,7 +627,7 @@ struct ClassTranslateContext {
 
         doTraversal();
 
-        callbacks.translate(hdr, impl);
+        callbacks.renderInterfaces(hdr);
         doDataStruct();
         doDataStructInit();
     }
@@ -792,20 +861,6 @@ void dtorTranslator(Cursor c, in StubPrefix prefix, ref VariableContainer vars,
     doImpl(name);
 }
 
-auto cppOperatorToName(in ref CppMethodName name) pure nothrow @safe {
-    Nullable!CppMethodName r;
-
-    switch (cast(string) name) {
-    case "operator=":
-        r = CppMethodName("opAssign");
-        break;
-    default:
-        break;
-    }
-
-    return r;
-}
-
 void functionTranslator(Cursor c, in ref CppClassName class_name,
     ref VariableContainer vars, ref CallbackContainer callbacks,
     ref Nullable!CppAccessSpecifier access_spec, ref CppModule hdr, ref CppModule impl) {
@@ -813,60 +868,48 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
     alias toString2 = translator.Type.toString;
     alias toString = generator.stub.toString;
 
-    //TODO refactor by moving to translator/Type.d
-    string rawTypeToString(in string raw) {
-        import std.algorithm.searching : find;
+    void pushVarsForCallback(in TypeName[] params,
+        in CppMethodName callback_method, in string return_type, ref VariableContainer vars) {
+        vars.push(NameMangling.Callback, cast(CppType) callback_method,
+            cast(string) callback_method);
+        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(string) callback_method);
 
-        string r = raw.replace("const", "");
-        if (find(r, "&") != string.init) {
-            r = r.replace("&", "") ~ "*";
+        TypeName[] p = params.map!(
+            a => TypeName(cast(string) mangleTypeToCallbackStructType(CppType(a.type)),
+            callback_method ~ "_param_" ~ a.name)).array();
+        vars.push(NameMangling.Plain, p);
+
+        if (return_type.strip != "void") {
+            vars.push(NameMangling.ReturnType,
+                mangleTypeToCallbackStructType(CppType(return_type)), cast(string) callback_method);
         }
-
-        return r.strip;
     }
 
-    void doHeader(in ref TypeName[] params, in ref string return_type, ref CppModule hdr) {
+    void doHeader(in ref TypeName[] params, in string return_type, ref CppModule hdr) {
         //TODO refactor, callback_method and method_name are confusing.
-        import std.algorithm.searching : find;
         import std.algorithm.iteration : map;
-        import std.range : chain;
 
         auto method_name = CppMethodName(c.spelling);
         auto node = hdr.method(c.func.isVirtual, return_type,
             cast(string) method_name, c.func.isConst, params.toString);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
 
-        //TODO idea. Try and simplify by using enums for operators.
-        Nullable!CppMethodName callback_method;
-        callback_method = method_name;
-        if (find(cast(string) method_name, "operator") != string.init) {
-            callback_method = cppOperatorToName(method_name);
-            logger.trace(cast(string) callback_method);
-            if (callback_method.isNull) {
-                logger.errorf("Generating callback function for '%s' not supported",
-                    cast(string) method_name);
-            }
+        auto callback_method = mangleToCallbackMethod(method_name);
+        if (callback_method.isNull) {
+            logger.errorf("Generating callback function for '%s' not supported",
+                cast(string) method_name);
+            callback_method = CppMethodName("<not supported " ~ cast(string) method_name ~ ">");
         }
 
         callbacks.push(CppType(return_type), callback_method.get, params);
-        vars.push(NameMangling.Callback, cast(CppType) callback_method.get,
-            cast(string) callback_method.get);
-        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(string) callback_method.get);
-
-        TypeName[] p = params.chain().map!(a => TypeName(rawTypeToString(a.type),
-            callback_method.get ~ "_param_" ~ a.name)).array();
-        vars.push(NameMangling.Plain, p);
-
-        if (return_type.strip != "void") {
-            vars.push(NameMangling.ReturnType,
-                CppType(rawTypeToString(return_type)), cast(string) callback_method.get);
-        }
+        pushVarsForCallback(params, callback_method.get, return_type, vars);
     }
 
     void doImpl(in TypeName[] params, in string return_type, ref CppModule impl) {
         auto method_name = CppMethodName(c.spelling);
         auto node = impl.method_body(return_type, cast(string) class_name,
             cast(string) method_name, c.func.isConst, params.toString);
+
         impl.sep;
     }
 
