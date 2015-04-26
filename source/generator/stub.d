@@ -337,9 +337,6 @@ struct VariableContainer {
     }
 
     void push(in NameMangling mangling, in ref TypeName[] tn) pure @safe nothrow {
-        import std.algorithm.iteration : map;
-        import std.range : chain;
-
         tn.each!(a => push(mangling, a));
     }
 
@@ -864,7 +861,7 @@ void dtorTranslator(Cursor c, in StubPrefix prefix, ref VariableContainer vars,
     doImpl(name);
 }
 
-void functionTranslator(Cursor c, in ref CppClassName class_name,
+void functionTranslator(Cursor c, in CppClassName class_name,
     ref VariableContainer vars, ref CallbackContainer callbacks,
     ref Nullable!CppAccessSpecifier access_spec, ref CppModule hdr, ref CppModule impl) {
     //TODO ugly... fix this aliases.
@@ -916,10 +913,42 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
     }
 
-    void doImpl(in TypeName[] params, in string return_type, ref CppModule impl) {
-        auto method_name = CppMethodName(c.spelling);
+    void doImpl(in TypeName[] params, in string return_type,
+        in CppClassName class_name, in CppMethodName method,
+        in CppMethodName callback_method, ref CppModule impl) {
+        import std.algorithm : findAmong, map;
+
         auto node = impl.method_body(return_type, cast(string) class_name,
-            cast(string) method_name, c.func.isConst, params.toString);
+            cast(string) method, c.func.isConst, params.toString);
+
+        auto helper(TypeName a) {
+            if (findAmong(cast(string) a.type, ['*', '&'])) {
+                return "&" ~ cast(string) a.name;
+            }
+            return cast(string) a.name;
+        }
+
+        with (node) {
+            stmt("%s_cnt.%s++".format(cast(string) class_name, cast(string) callback_method));
+            foreach (a; params) {
+                logger.trace(a);
+                stmt("%s_static.%s_param_%s = %s".format(cast(string) class_name,
+                    cast(string) callback_method, cast(string) a.name, helper(a)));
+            }
+            sep(2);
+
+            with (if_("%s_callback.%s == 0".format(cast(string) class_name,
+                    cast(string) callback_method))) {
+                stmt("return %s_static.%s_return".format(cast(string) class_name,
+                    cast(string) callback_method));
+            }
+            with (else_()) {
+                string sparams = params.map!(a => cast(string) a.name).join(", ");
+                stmt("return %s_callback.%s->%s(%s)".format(cast(string) class_name,
+                    cast(string) callback_method, cast(string) callback_method, sparams));
+            }
+
+        }
 
         impl.sep;
     }
@@ -940,7 +969,7 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
     pushVarsForCallback(params, callback_method, toString2(return_type), vars, callbacks);
 
     doHeader(params, toString2(return_type), method, hdr);
-    doImpl(params, toString2(return_type), impl);
+    doImpl(params, toString2(return_type), class_name, method, callback_method, impl);
 }
 
 CppHdrImpl namespaceTranslator(CppClassStructNsName nest, ref CppHdrImpl hdr_impl) {

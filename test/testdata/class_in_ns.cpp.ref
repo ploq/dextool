@@ -8,7 +8,8 @@ Smurf& StubSmurf::operator=(const Smurf& other) {
 
     if (StubSmurf_callback.opAssign == 0) {
         return StubSmurf_static.opAssign_return;
-    } else {
+    }
+    else {
         return StubSmurf_callback.opAssign->opAssign(other);
     }
 }
