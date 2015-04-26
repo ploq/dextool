@@ -871,20 +871,9 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
     alias toString2 = translator.Type.toString;
     alias toString = generator.stub.toString;
 
-    //void methodToCallbackVars(in CppMethodName method, out CallbackContVariable cb,
-    //                          out CountContVariable cnt, out StaticContVariable static_) {
-    //    auto callback_method = mangleToCallbackMethod(method_name);
-    //    if (callback_method.isNull) {
-    //        logger.errorf("Generating callback function for '%s' not supported",
-    //                      cast(string) method_name);
-    //        callback_method = CppMethodName("<not supported " ~ cast(string) method_name ~ ">");
-    //    }
-    //
-    //    cnt = CountContVariable()
-    //}
-
     void pushVarsForCallback(in TypeName[] params,
-        in CppMethodName callback_method, in string return_type, ref VariableContainer vars) {
+        in CppMethodName callback_method, in string return_type,
+        ref VariableContainer vars, ref CallbackContainer callbacks) {
         vars.push(NameMangling.Callback, cast(CppType) callback_method,
             cast(CppVariable) callback_method);
         vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(CppVariable) callback_method);
@@ -899,26 +888,32 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
                 mangleTypeToCallbackStructType(CppType(return_type)),
                 cast(CppVariable) callback_method);
         }
+
+        callbacks.push(CppType(return_type), callback_method, params);
     }
 
-    void doHeader(in ref TypeName[] params, in string return_type, ref CppModule hdr) {
-        //TODO refactor, callback_method and method_name are confusing.
+    /// Extract data needed for code generation.
+    void analyzeCursor(Cursor c, out TypeName[] params, out TypeKind return_type,
+        out CppMethodName method, out CppMethodName callback_method_) {
+        params = parmDeclToTypeName(c);
+        return_type = translateTypeCursor(c);
+        method = CppMethodName(c.spelling);
+
+        auto callback_method = mangleToCallbackMethod(CppMethodName(c.spelling));
+        if (callback_method.isNull) {
+            logger.errorf("Generating callback function for '%s' not supported", c.spelling);
+            callback_method = CppMethodName("<not supported " ~ c.spelling ~ ">");
+        }
+        callback_method_ = callback_method.get;
+    }
+
+    void doHeader(in TypeName[] params, in string return_type,
+        in CppMethodName method, ref CppModule hdr) {
         import std.algorithm.iteration : map;
 
-        auto method_name = CppMethodName(c.spelling);
         auto node = hdr.method(c.func.isVirtual, return_type,
-            cast(string) method_name, c.func.isConst, params.toString);
+            cast(string) method, c.func.isConst, params.toString);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
-
-        auto callback_method = mangleToCallbackMethod(method_name);
-        if (callback_method.isNull) {
-            logger.errorf("Generating callback function for '%s' not supported",
-                cast(string) method_name);
-            callback_method = CppMethodName("<not supported " ~ cast(string) method_name ~ ">");
-        }
-
-        callbacks.push(CppType(return_type), callback_method.get, params);
-        pushVarsForCallback(params, callback_method.get, return_type, vars);
     }
 
     void doImpl(in TypeName[] params, in string return_type, ref CppModule impl) {
@@ -936,15 +931,16 @@ void functionTranslator(Cursor c, in ref CppClassName class_name,
         return;
     }
 
-    auto params = parmDeclToTypeName(c);
-    auto return_type = toString2(translateTypeCursor(c));
-    auto tmp_return_type = toString2(translateType(c.func.resultType));
-    logger.trace(return_type, "|", tmp_return_type);
-    ///TODO investigate how tmp_return_type can be used. It is the type with
-    //namespace nesting. For example foo::bar::Smurf&.
+    TypeName[] params;
+    TypeKind return_type;
+    CppMethodName method;
+    CppMethodName callback_method;
 
-    doHeader(params, return_type, hdr);
-    doImpl(params, return_type, impl);
+    analyzeCursor(c, params, return_type, method, callback_method);
+    pushVarsForCallback(params, callback_method, toString2(return_type), vars, callbacks);
+
+    doHeader(params, toString2(return_type), method, hdr);
+    doImpl(params, toString2(return_type), impl);
 }
 
 CppHdrImpl namespaceTranslator(CppClassStructNsName nest, ref CppHdrImpl hdr_impl) {
