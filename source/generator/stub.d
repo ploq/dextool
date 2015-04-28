@@ -111,19 +111,19 @@ alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
 // borrowed. Type systems are awesome.
 alias CppAccessSpecifier = Typedef!(CX_CXXAccessSpecifier, CX_CXXAccessSpecifier.init,
     "CppAccess");
+///TODO create a type callled StubClassName to differentiate between class-being-stubbed and generated stub.
 alias CppClassName = Typedef!(string, string.init, "CppClassName");
 alias CppClassNesting = Typedef!(string, string.init, "CppNesting");
 alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
 alias CppType = Typedef!(string, string.init, "CppType");
 alias CppVariable = Typedef!(string, string.init, "CppVariable");
 
-//alias TypeName = Tuple!(string, "type", string, "name");
 alias TypeName = Tuple!(CppType, "type", CppVariable, "name");
 
 alias CallbackNs = Typedef!(string, string.init, "CallbackNs");
 alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
 
-alias DataNs = Typedef!(string, string.init, "DataNs");
+alias StubNs = Typedef!(string, string.init, "StubInternalNs");
 alias CallbackStruct = Typedef!(string, string.init, "CallbackStructInNs");
 alias CallbackContVariable = Typedef!(TypeName, TypeName.init, "CallbackContVariable");
 alias CountStruct = Typedef!(string, string.init, "CountStructInNs");
@@ -188,6 +188,14 @@ auto mangleToCallbackStructVariable(in StubPrefix prefix, in CppClassName name) 
     return CppVariable(cast(string) prefix ~ cast(string) name ~ "_callback");
 }
 
+auto mangleToStaticStructVariable(in StubPrefix prefix, in CppClassName name) pure nothrow @safe {
+    return CppVariable(cast(string) prefix ~ cast(string) name ~ "_static");
+}
+
+auto mangleToCountStructVariable(in StubPrefix prefix, in CppClassName name) pure nothrow @safe {
+    return CppVariable(cast(string) prefix ~ cast(string) name ~ "_cnt");
+}
+
 /// Null if it was unable to convert.
 auto mangleToReturnVariable(in CppMethodName method) pure nothrow @safe {
     Nullable!CppVariable rval;
@@ -211,6 +219,10 @@ auto mangleTypeToCallbackStructType(in CppType type) pure @safe {
     }
 
     return CppType(r.strip);
+}
+
+auto mangleToStubClassName(in StubPrefix prefix, in CppClassName name) pure nothrow @safe {
+    return CppClassName(prefix ~ name);
 }
 
 /** Traverse the AST and generate a stub by filling the CppModules with data.
@@ -306,7 +318,7 @@ struct VariableContainer {
     @disable this();
 
     this(StubPrefix stub_prefix, CallbackNs cb_ns, CallbackPrefix cb_prefix,
-        DataNs data_ns, CallbackStruct cb_st, CountStruct cnt_st, StaticStruct st_st) {
+        StubNs data_ns, CallbackStruct cb_st, CountStruct cnt_st, StaticStruct st_st) {
         this.stub_prefix = stub_prefix;
         this.cb_ns = cb_ns;
         this.cb_prefix = cb_prefix;
@@ -454,7 +466,7 @@ private:
     immutable StubPrefix stub_prefix;
     immutable CallbackNs cb_ns;
     immutable CallbackPrefix cb_prefix;
-    immutable DataNs data_ns;
+    immutable StubNs data_ns;
     immutable CallbackStruct cb_st;
     immutable CountStruct cnt_st;
     immutable StaticStruct st_st;
@@ -541,16 +553,18 @@ struct ClassTranslateContext {
      */
     this(StubPrefix prefix, CppClassName name) {
         this.prefix = prefix;
+        this.name = name;
 
         CallbackNs cb_ns = prefix ~ "Callback" ~ name;
         CallbackPrefix cp = "I";
-        this.data_ns = DataNs(prefix ~ "Internal" ~ name);
+        this.data_ns = StubNs(prefix ~ "Internal" ~ name);
         CallbackStruct cb_st = prefix ~ "Callback";
         CountStruct cnt_st = prefix ~ "Counter";
         StaticStruct st_st = prefix ~ "Static";
 
         this.vars = VariableContainer(prefix, cb_ns, cp, data_ns, cb_st, cnt_st, st_st);
         this.callbacks = CallbackContainer(cb_ns, cp);
+        ///TODO refactore to using the mangle functions for _callback, _cnt and _static.
         this.cb_var_name = CallbackContVariable(
             TypeName(CppType(cast(string) data_ns ~ "::" ~ cast(string) cb_st),
             CppVariable(cast(string) prefix ~ cast(string) name ~ "_callback")));
@@ -620,6 +634,28 @@ struct ClassTranslateContext {
             }
         }
 
+        void doCtorBody(in StubNs stub_ns, in StubPrefix prefix,
+            in CppClassName name, CppModule[] ctor_code) {
+            if (vars.length == 0)
+                return;
+
+            string init_ = cast(string) stub_ns ~ "::StubInit";
+            foreach (impl; ctor_code) {
+                if (vars.callbackLength > 0) {
+                    impl.stmt(E(init_)("&" ~ cast(string) mangleToCallbackStructVariable(prefix,
+                        name)));
+                }
+                if (vars.countLength > 0) {
+                    impl.stmt(E(init_)("&" ~ cast(string) mangleToCountStructVariable(prefix,
+                        name)));
+                }
+                if (vars.staticLength > 0) {
+                    impl.stmt(E(init_)("&" ~ cast(string) mangleToStaticStructVariable(prefix,
+                        name)));
+                }
+            }
+        }
+
         this.top = CppHdrImpl(hdr, impl);
         this.nesting = CppClassNesting(nesting.map!(a => cast(string) a).join("::"));
         push(top);
@@ -629,6 +665,7 @@ struct ClassTranslateContext {
         callbacks.renderInterfaces(hdr);
         doDataStruct();
         doDataStructInit();
+        doCtorBody(data_ns, prefix, name, ctor_code);
     }
 
     /** Traverse cursor and translate a subset of kinds.
@@ -652,7 +689,7 @@ struct ClassTranslateContext {
                 break;
             case false:
                 this.classdecl_used = true;
-                auto name = CppClassName(c.spelling);
+                ///TODO change ot using the name mangling function.
                 auto stubname = CppClassName(cast(string) prefix ~ name);
                 push(classTranslator(prefix, nesting, name, current.get));
                 class_code = current.get;
@@ -663,7 +700,7 @@ struct ClassTranslateContext {
             break;
         case CXCursor_Constructor:
             push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr), current.impl));
-            ctorTranslator(c, prefix, current.hdr, current.impl);
+            ctorTranslator(c, prefix, current.hdr, current.impl, ctor_code);
             descend = false;
             break;
         case CXCursor_Destructor:
@@ -684,16 +721,20 @@ private:
     bool classdecl_used;
     CppHdrImpl top;
     CppHdrImpl class_code; // top of the new class created.
-    StubPrefix prefix;
+    CppModule[] ctor_code; // delayed content creation for c'tors to after analyze.
+    immutable StubPrefix prefix;
+    immutable CppClassName name;
+    CppClassNesting nesting;
+
     VariableContainer vars;
     CallbackContainer callbacks;
-    CppClassNesting nesting;
+    ///TODO nullable is kind a wrong. Should be an algebraic type of two.
     Nullable!CppAccessSpecifier access_spec;
 
-    DataNs data_ns;
-    CallbackContVariable cb_var_name;
-    CountContVariable cnt_var_name;
-    StaticContVariable st_var_name;
+    immutable StubNs data_ns;
+    immutable CallbackContVariable cb_var_name;
+    immutable CountContVariable cnt_var_name;
+    immutable StaticContVariable st_var_name;
 }
 
 CppModule consumeAccessSpecificer(ref Nullable!CppAccessSpecifier access_spec, ref CppModule hdr) {
@@ -815,24 +856,26 @@ CppHdrImpl classTranslator(StubPrefix prefix, CppClassNesting nesting,
     return CppHdrImpl(doHeader(hdr_impl.hdr), hdr_impl.impl);
 }
 
-void ctorTranslator(Cursor c, in StubPrefix prefix, ref CppModule hdr, ref CppModule impl) {
+void ctorTranslator(Cursor c, in StubPrefix prefix, ref CppModule hdr,
+    ref CppModule impl, ref CppModule[] ctor_code) {
     void doHeader(CppClassName name, in ref TypeName[] params) {
         auto p = params.toString;
         auto node = hdr.ctor(cast(string) name, p);
         node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
     }
 
-    void doImpl(CppClassName name, in ref TypeName[] params) {
+    void doImpl(in CppClassName name, in TypeName[] params, ref CppModule[] ctor_code) {
         auto s_name = cast(string) name;
         auto p = params.toString;
         auto node = impl.ctor_body(s_name, p);
+        ctor_code ~= node;
         impl.sep;
     }
 
     CppClassName name = prefix ~ c.spelling;
     auto params = parmDeclToTypeName(c);
     doHeader(name, params);
-    doImpl(name, params);
+    doImpl(name, params, ctor_code);
 }
 
 void dtorTranslator(Cursor c, in StubPrefix prefix, ref VariableContainer vars,
@@ -848,17 +891,26 @@ void dtorTranslator(Cursor c, in StubPrefix prefix, ref VariableContainer vars,
         vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(CppVariable) callback_name);
     }
 
-    void doImpl(CppClassName name) {
-        auto s_name = cast(string) name;
+    void doImpl(in CppClassName name, in CppClassName stub_name, in CppMethodName callback_name) {
+        auto s_name = cast(string) stub_name;
         auto node = impl.dtor_body(s_name);
+        ///TODO refactore to using mangle functions.
+        with (node) {
+            stmt(E(s_name ~ "_cnt").e("dtor" ~ cast(string) name ~ "_cnt") ~ E("++"));
+            sep(2);
+            with (if_(E(s_name ~ "_callback").e("dtor" ~ cast(string) name) ~ E(" != 0"))) {
+                stmt(E(s_name ~ "_callback").e("dtor" ~ cast(string) name)(""));
+            }
+        }
         impl.sep;
     }
 
-    CppClassName name = prefix ~ c.spelling.removechars("~");
-    CppMethodName callback_name = "dtor" ~ c.spelling.removechars("~");
+    CppClassName name = c.spelling.removechars("~");
+    CppClassName stub_name = prefix ~ name;
+    CppMethodName callback_name = "dtor" ~ name;
 
-    doHeader(name, callback_name);
-    doImpl(name);
+    doHeader(stub_name, callback_name);
+    doImpl(name, stub_name, callback_name);
 }
 
 void functionTranslator(Cursor c, in CppClassName class_name,

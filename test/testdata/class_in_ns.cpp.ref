@@ -21,6 +21,9 @@ StubSmurf::StubSmurf() {
 }
 
 StubSmurf::StubSmurf(const Smurf& other) {
+    StubInternalSmurf::StubInit(&StubSmurf_callback);
+    StubInternalSmurf::StubInit(&StubSmurf_cnt);
+    StubInternalSmurf::StubInit(&StubSmurf_static);
 }
 
 StubSmurf::~StubSmurf() {
