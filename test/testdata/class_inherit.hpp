@@ -5,15 +5,16 @@
 
 class Foo {
 public:
-    virtual void func2();
-    virtual void func3();
-}
+    virtual void func2() {}
+    virtual void func3() {}
+};
 
 namespace BarSpace {
 class Bar {
 public:
-    virtual void func5();
-}}
+    virtual void func5() {}
+};
+}
 
 class Warp : public Foo {
 private:
@@ -21,17 +22,17 @@ private:
 };
 
 /// Description
-class Smurf : public Foo, private BareSpace::Bar, public Warp
+class Smurf : public Foo, private BarSpace::Bar, public Warp
 {
 public:
-    Smurf();
-    virtual ~Smurf();
+    Smurf() {}
+    virtual ~Smurf() {}
 };
 
 class DaddySmurf : public Warp {
 public:
-    DaddySmurf();
-    virtual ~DaddySmurf();
+    DaddySmurf() {}
+    virtual ~DaddySmurf() {}
 
     virtual void func2() = 0;
 };

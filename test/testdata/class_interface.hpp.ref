@@ -1,26 +1,6 @@
-#ifndef class_interface_hpp
-#define class_interface_hpp
-class StubSimple : public Simple {
-public:
-    virtual void func1();
-    virtual void operator=(const Simple& other);
-private:
-    virtual char* func3();
-    virtual int func4();
-public:
-    StubSimple();
-    virtual ~StubSimple();
-
-public:
-    StubInternalSimple::StubCallback& StubGetCallback();
-    StubInternalSimple::StubCounter& StubGetCounter();
-    StubInternalSimple::StubStatic& StubGetStatic();
-
-private:
-    StubInternalSimple::StubCallback StubSimple_callback;
-    StubInternalSimple::StubCounter StubSimple_cnt;
-    StubInternalSimple::StubStatic StubSimple_static;
-};
+#ifndef stub_class_interface_hpp
+#define stub_class_interface_hpp
+#include "class_interface.hpp"
 
 namespace StubCallbackSimple {
 struct Ifunc1 { virtual void func1() = 0; };
@@ -58,4 +38,26 @@ void StubInit(StubStatic* value);
 
 } //NS:StubInternalSimple
 
-#endif // class_interface_hpp
+class StubSimple : public Simple {
+public:
+    virtual void func1();
+    virtual void operator=(const Simple& other);
+private:
+    virtual char* func3();
+    virtual int func4();
+public:
+    StubSimple();
+    virtual ~StubSimple();
+
+public:
+    StubInternalSimple::StubCallback& StubGetCallback();
+    StubInternalSimple::StubCounter& StubGetCounter();
+    StubInternalSimple::StubStatic& StubGetStatic();
+
+private:
+    StubInternalSimple::StubCallback StubSimple_callback;
+    StubInternalSimple::StubCounter StubSimple_cnt;
+    StubInternalSimple::StubStatic StubSimple_static;
+};
+
+#endif // stub_class_interface_hpp

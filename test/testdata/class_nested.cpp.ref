@@ -1,20 +1,98 @@
-#include "class_nested.hpp"
+#include "stub_class_nested.hpp"
+
+namespace StubInternalOuterClass {
+void StubInit(StubCallback* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalOuterClass
 
 StubOuterClass::StubOuterClass() {
+    StubInternalOuterClass::StubInit(&StubOuterClass_callback);
+    StubInternalOuterClass::StubInit(&StubOuterClass_cnt);
 }
 
 StubOuterClass::~StubOuterClass() {
+    StubOuterClass_cnt.dtorOuterClass++;
+
+    if (StubOuterClass_callback.dtorOuterClass != 0) {
+        StubOuterClass_callback.dtorOuterClass->dtorOuterClass();
+    }
 }
 
+namespace StubInternalInnerClass {
+void StubInit(StubCallback* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalInnerClass
+
 StubInnerClass::StubInnerClass() {
+    StubInternalInnerClass::StubInit(&StubInnerClass_callback);
+    StubInternalInnerClass::StubInit(&StubInnerClass_cnt);
 }
 
 StubInnerClass::~StubInnerClass() {
+    StubInnerClass_cnt.dtorInnerClass++;
+
+    if (StubInnerClass_callback.dtorInnerClass != 0) {
+        StubInnerClass_callback.dtorInnerClass->dtorInnerClass();
+    }
 }
 
+namespace StubInternalInnerClass2 {
+void StubInit(StubCallback* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalInnerClass2
+
 StubInnerClass2::StubInnerClass2() {
+    StubInternalInnerClass2::StubInit(&StubInnerClass2_callback);
+    StubInternalInnerClass2::StubInit(&StubInnerClass2_cnt);
 }
 
 StubInnerClass2::~StubInnerClass2() {
+    StubInnerClass2_cnt.dtorInnerClass2++;
+
+    if (StubInnerClass2_callback.dtorInnerClass2 != 0) {
+        StubInnerClass2_callback.dtorInnerClass2->dtorInnerClass2();
+    }
 }
 

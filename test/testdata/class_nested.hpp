@@ -9,7 +9,6 @@ public:
     void func1();
     int func2();
 
-private:
     class InnerClass {
     public:
         InnerClass();

@@ -1,13 +1,40 @@
-#include "class_in_ns.hpp"
+#include "stub_class_in_ns.hpp"
 
 namespace foo {
 namespace bar {
+namespace StubInternalSmurf {
+void StubInit(StubCallback* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubStatic* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubStatic);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalSmurf
+
 Smurf& StubSmurf::operator=(const Smurf& other) {
     StubSmurf_cnt.opAssign++;
-    StubSmurf_static.opAssign_param_other = &other;
+    StubSmurf_static.opAssign_param_other = const_cast<Smurf*>(&other);
 
     if (StubSmurf_callback.opAssign == 0) {
-        return StubSmurf_static.opAssign_return;
+        return *StubSmurf_static.opAssign_return;
     }
     else {
         return StubSmurf_callback.opAssign->opAssign(other);
@@ -27,39 +54,12 @@ StubSmurf::StubSmurf(const Smurf& other) {
 }
 
 StubSmurf::~StubSmurf() {
-    StubSmurf_cnt.dtorSmurf_cnt++;
+    StubSmurf_cnt.dtorSmurf++;
 
     if (StubSmurf_callback.dtorSmurf != 0) {
-        StubSmurf_callback.dtorSmurf();
+        StubSmurf_callback.dtorSmurf->dtorSmurf();
     }
 }
-
-namespace StubInternalSmurf {
-void StubInit(StubCallback* value) {
-    char* d = static_cast<char*>(value);
-    char* end = d + sizeof(StubCallback);
-    for (; d != end; ++d) {
-        *d = 0;
-    }
-}
-
-void StubInit(StubCounter* value) {
-    char* d = static_cast<char*>(value);
-    char* end = d + sizeof(StubCounter);
-    for (; d != end; ++d) {
-        *d = 0;
-    }
-}
-
-void StubInit(StubStatic* value) {
-    char* d = static_cast<char*>(value);
-    char* end = d + sizeof(StubStatic);
-    for (; d != end; ++d) {
-        *d = 0;
-    }
-}
-
-} //NS:StubInternalSmurf
 
 } //NS:bar
 

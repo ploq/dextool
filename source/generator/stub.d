@@ -462,7 +462,7 @@ private:
         void doImpl(TypeName tn, ref T1 impl) {
             auto f = impl.func("void", cast(string) stub_prefix ~ "Init", tn.type ~ "* " ~ tn.name);
             with (f) {
-                stmt(E("char* d") = E("static_cast<char*>")(cast(string) tn.name));
+                stmt(E("char* d") = E("reinterpret_cast<char*>")(cast(string) tn.name));
                 stmt(E("char* end") = E("d") + E("sizeof")(cast(string) tn.type));
                 with (for_("", "d != end", "++d")) {
                     stmt(E("*d") = 0);
@@ -676,12 +676,18 @@ struct ClassTranslateContext {
         }
 
         auto top = CppHdrImpl(hdr, impl);
+        auto internal = CppHdrImpl(hdr.base, impl.base);
+        internal.hdr.suppress_indent(1);
+        internal.impl.suppress_indent(1);
+        auto stub = CppHdrImpl(hdr.base, impl.base);
+        stub.hdr.suppress_indent(1);
+        stub.impl.suppress_indent(1);
         this.nesting = CppClassNesting(nesting.map!(a => cast(string) a).join("::"));
 
-        doTraversal(this, top);
+        doTraversal(this, stub);
 
-        callbacks.renderInterfaces(hdr);
-        doDataStruct(top.hdr, top.impl);
+        callbacks.renderInterfaces(internal.hdr);
+        doDataStruct(internal.hdr, internal.impl);
         doDataStructInit();
         doCtorBody(data_ns, prefix, name, ctor_code);
     }
@@ -707,12 +713,18 @@ struct ClassTranslateContext {
                 break;
             case false:
                 this.classdecl_used = true;
-                ///TODO change to using the name mangling function.
-                auto stubname = CppClassName(cast(string) prefix ~ name);
-                push(classTranslator(prefix, nesting, name, current.get));
-                class_code = current.get;
-                MethodTranslateContext(stubname, access_spec).translate(c,
-                    vars, callbacks, current.get);
+                if (access_spec.among(CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier,
+                        CX_CXXAccessSpecifier.CX_CXXPublic)) {
+                    ///TODO change to using the name mangling function.
+                    auto stubname = CppClassName(cast(string) prefix ~ name);
+                    push(classTranslator(prefix, nesting, name, current.get));
+                    class_code = current.get;
+                    MethodTranslateContext(stubname, access_spec).translate(c,
+                        vars, callbacks, current.get);
+                }
+                else {
+                    descend = false;
+                }
                 break;
             }
             break;
@@ -745,8 +757,7 @@ private:
 
     VariableContainer vars;
     CallbackContainer callbacks;
-    ///TODO nullable is kind a wrong. Should be an algebraic type of two.
-    Nullable!CppAccessSpecifier access_spec;
+    CppAccessSpecifier access_spec;
 
     immutable StubNs data_ns;
     immutable CallbackContVariable cb_var_name;
@@ -754,15 +765,11 @@ private:
     immutable StaticContVariable st_var_name;
 }
 
-CppModule consumeAccessSpecificer(ref Nullable!CppAccessSpecifier access_spec, ref CppModule hdr) {
-    CppModule r = hdr;
+CppModule consumeAccessSpecificer(ref CppAccessSpecifier access_spec, ref CppModule hdr) {
+    hdr = accessSpecifierTranslator(access_spec, hdr);
 
-    if (!access_spec.isNull) {
-        r = accessSpecifierTranslator(access_spec.get, hdr);
-    }
-
-    access_spec.nullify;
-    return r;
+    access_spec = CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier;
+    return hdr;
 }
 
 /** Translate class methods to stub implementation.
@@ -771,7 +778,7 @@ struct MethodTranslateContext {
     VisitNodeModule!CppHdrImpl visitor_stack;
     alias visitor_stack this;
 
-    this(CppClassName class_name, Nullable!CppAccessSpecifier access_spec) {
+    this(CppClassName class_name, CppAccessSpecifier access_spec) {
         this.name = class_name;
         this.access_spec = access_spec;
     }
@@ -798,8 +805,7 @@ struct MethodTranslateContext {
                 push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr),
                     current.impl));
             }
-            functionTranslator(c, name, vars, callbacks, access_spec, current.hdr,
-                current.impl);
+            functionTranslator(c, name, vars, callbacks, current.hdr, current.impl);
             descend = false;
             break;
         case CXCursor_CXXAccessSpecifier:
@@ -821,7 +827,7 @@ private:
 
     NullableRef!VariableContainer vars;
     NullableRef!CallbackContainer callbacks;
-    Nullable!CppAccessSpecifier access_spec;
+    CppAccessSpecifier access_spec;
 }
 
 /** Translate an access specifier to code suitable for a c++ header.
@@ -912,12 +918,14 @@ void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer var
         const CppMethodName callback_name) {
         auto s_name = cast(string) stub_name;
         auto node = impl.dtor_body(s_name);
+
+        string name_ = cast(string) name;
         ///TODO refactore to using mangle functions.
         with (node) {
-            stmt(E(s_name ~ "_cnt").e("dtor" ~ cast(string) name ~ "_cnt") ~ E("++"));
+            stmt(E(s_name ~ "_cnt").e("dtor" ~ name_) ~ E("++"));
             sep(2);
-            with (if_(E(s_name ~ "_callback").e("dtor" ~ cast(string) name) ~ E(" != 0"))) {
-                stmt(E(s_name ~ "_callback").e("dtor" ~ cast(string) name)(""));
+            with (if_(E(s_name ~ "_callback").e("dtor" ~ name_) ~ E(" != 0"))) {
+                stmt(E(s_name ~ "_callback").e("dtor" ~ name_) ~ E("->") ~ E("dtor" ~ name_)(""));
             }
         }
         impl.sep;
@@ -932,8 +940,8 @@ void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer var
 }
 
 void functionTranslator(Cursor c, const CppClassName class_name,
-    ref VariableContainer vars, ref CallbackContainer callbacks,
-    ref Nullable!CppAccessSpecifier access_spec, ref CppModule hdr, ref CppModule impl) {
+    ref VariableContainer vars, ref CallbackContainer callbacks, ref CppModule hdr,
+    ref CppModule impl) {
     //TODO ugly... fix this aliases.
     alias toString2 = translator.Type.toString;
     alias toString = generator.stub.toString;
@@ -988,34 +996,58 @@ void functionTranslator(Cursor c, const CppClassName class_name,
         const CppMethodName callback_method, ref CppModule impl) {
         import std.algorithm : findAmong, map;
 
-        auto node = impl.method_body(return_type, cast(string) class_name,
-            cast(string) method, c.func.isConst, params.toString);
-
-        auto helper(TypeName a) {
-            if (findAmong(cast(string) a.type, ['*', '&'])) {
-                return "&" ~ cast(string) a.name;
+        auto helper_params(TypeName a) {
+            string type_ = cast(string) a.type;
+            if (findAmong(type_, ['*', '&']).length != 0) {
+                //TODO how can this be done with ranges?
+                if (type_.startsWith("const")) {
+                    type_ = type_[5 .. $ - 1].strip;
+                }
+                return E("const_cast<" ~ type_ ~ "*>")("&" ~ cast(string) a.name);
             }
             return cast(string) a.name;
         }
 
-        with (node) {
+        auto helper_return(string return_type) {
+            string star;
+            if (findAmong(return_type, ['&']).length != 0) {
+                star = "*";
+            }
+            logger.trace(return_type, " ", star);
+
+            return "return %s%s_static.%s_return".format(star,
+                cast(string) class_name, cast(string) callback_method);
+        }
+
+        auto func = impl.method_body(return_type, cast(string) class_name,
+            cast(string) method, c.func.isConst, params.toString);
+        with (func) {
             stmt("%s_cnt.%s++".format(cast(string) class_name, cast(string) callback_method));
             foreach (a; params) {
-                logger.trace(a);
                 stmt("%s_static.%s_param_%s = %s".format(cast(string) class_name,
-                    cast(string) callback_method, cast(string) a.name, helper(a)));
+                    cast(string) callback_method, cast(string) a.name, helper_params(a)));
             }
             sep(2);
 
-            with (if_("%s_callback.%s == 0".format(cast(string) class_name,
-                    cast(string) callback_method))) {
-                stmt("return %s_static.%s_return".format(cast(string) class_name,
-                    cast(string) callback_method));
+            string sparams = params.map!(a => cast(string) a.name).join(", ");
+            if (return_type == "void") {
+                with (if_("%s_callback.%s != 0".format(cast(string) class_name,
+                        cast(string) callback_method))) {
+                    stmt("%s_callback.%s->%s(%s)".format(cast(string) class_name,
+                        cast(string) callback_method, cast(string) callback_method,
+                        sparams));
+                }
             }
-            with (else_()) {
-                string sparams = params.map!(a => cast(string) a.name).join(", ");
-                stmt("return %s_callback.%s->%s(%s)".format(cast(string) class_name,
-                    cast(string) callback_method, cast(string) callback_method, sparams));
+            else {
+                with (if_("%s_callback.%s == 0".format(cast(string) class_name,
+                        cast(string) callback_method))) {
+                    stmt(helper_return(return_type));
+                }
+                with (else_()) {
+                    stmt("return %s_callback.%s->%s(%s)".format(cast(string) class_name,
+                        cast(string) callback_method, cast(string) callback_method,
+                        sparams));
+                }
             }
 
         }

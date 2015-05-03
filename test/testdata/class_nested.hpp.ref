@@ -1,18 +1,6 @@
-#ifndef class_nested_hpp
-#define class_nested_hpp
-class StubOuterClass : public OuterClass {
-public:
-    StubOuterClass();
-    ~StubOuterClass();
-
-public:
-    StubInternalOuterClass::StubCallback& StubGetCallback();
-    StubInternalOuterClass::StubCounter& StubGetCounter();
-
-private:
-    StubInternalOuterClass::StubCallback StubOuterClass_callback;
-    StubInternalOuterClass::StubCounter StubOuterClass_cnt;
-};
+#ifndef stub_class_nested_hpp
+#define stub_class_nested_hpp
+#include "class_nested.hpp"
 
 namespace StubCallbackOuterClass {
 struct IdtorOuterClass { virtual void dtorOuterClass() = 0; };
@@ -31,18 +19,18 @@ void StubInit(StubCounter* value);
 
 } //NS:StubInternalOuterClass
 
-class StubInnerClass : public OuterClass::InnerClass {
+class StubOuterClass : public OuterClass {
 public:
-    StubInnerClass();
-    ~StubInnerClass();
+    StubOuterClass();
+    ~StubOuterClass();
 
 public:
-    StubInternalInnerClass::StubCallback& StubGetCallback();
-    StubInternalInnerClass::StubCounter& StubGetCounter();
+    StubInternalOuterClass::StubCallback& StubGetCallback();
+    StubInternalOuterClass::StubCounter& StubGetCounter();
 
 private:
-    StubInternalInnerClass::StubCallback StubInnerClass_callback;
-    StubInternalInnerClass::StubCounter StubInnerClass_cnt;
+    StubInternalOuterClass::StubCallback StubOuterClass_callback;
+    StubInternalOuterClass::StubCounter StubOuterClass_cnt;
 };
 
 namespace StubCallbackInnerClass {
@@ -62,18 +50,18 @@ void StubInit(StubCounter* value);
 
 } //NS:StubInternalInnerClass
 
-class StubInnerClass2 : public OuterClass::InnerClass::InnerClass2 {
+class StubInnerClass : public OuterClass::InnerClass {
 public:
-    StubInnerClass2();
-    ~StubInnerClass2();
+    StubInnerClass();
+    ~StubInnerClass();
 
 public:
-    StubInternalInnerClass2::StubCallback& StubGetCallback();
-    StubInternalInnerClass2::StubCounter& StubGetCounter();
+    StubInternalInnerClass::StubCallback& StubGetCallback();
+    StubInternalInnerClass::StubCounter& StubGetCounter();
 
 private:
-    StubInternalInnerClass2::StubCallback StubInnerClass2_callback;
-    StubInternalInnerClass2::StubCounter StubInnerClass2_cnt;
+    StubInternalInnerClass::StubCallback StubInnerClass_callback;
+    StubInternalInnerClass::StubCounter StubInnerClass_cnt;
 };
 
 namespace StubCallbackInnerClass2 {
@@ -93,4 +81,18 @@ void StubInit(StubCounter* value);
 
 } //NS:StubInternalInnerClass2
 
-#endif // class_nested_hpp
+class StubInnerClass2 : public OuterClass::InnerClass::InnerClass2 {
+public:
+    StubInnerClass2();
+    ~StubInnerClass2();
+
+public:
+    StubInternalInnerClass2::StubCallback& StubGetCallback();
+    StubInternalInnerClass2::StubCounter& StubGetCounter();
+
+private:
+    StubInternalInnerClass2::StubCallback StubInnerClass2_callback;
+    StubInternalInnerClass2::StubCounter StubInnerClass2_cnt;
+};
+
+#endif // stub_class_nested_hpp

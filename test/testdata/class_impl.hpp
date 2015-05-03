@@ -5,7 +5,7 @@
 
 class Simple {
 public:
-    Simple();
+    Simple() {}
     Simple(char x) { this->x = 0; }
     Simple(int y) : x(y) { x = y; }
     ~Simple() { this->x = 0; }

@@ -23,8 +23,8 @@ function test_compl_code() {
     main=$4
 
     echo -e "${C_YELLOW}=== Compile $impl  ===${C_NONE}"
-    echo "g++ -o $outdir/binary -I$outdir -I$inclpath $impl $main"
-    g++ -o "$outdir"/binary -I"$outdir" -I"$inclpath" "$impl" "$main"
+    echo "g++ -std=c++11 -o $outdir/binary -I$outdir -I$inclpath $impl $main"
+    g++ -std=c++11 -o "$outdir"/binary -I"$outdir" -I"$inclpath" "$impl" "$main"
     "$outdir"/binary
 }
 
