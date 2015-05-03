@@ -1,3 +1,5 @@
+// Test that stub code is only generated for virtual functions.
+
 typedef char* some_pointer;
 
 class Simple {

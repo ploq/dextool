@@ -66,7 +66,8 @@ class StubContext {
      * Params:
      *  prefix = prefix to use for the name of the stub class.
      */
-    this(StubPrefix prefix) {
+    this(StubPrefix prefix, HdrFilename filename) {
+        this.filename = filename;
         this.hdr = new CppModule;
         hdr.suppress_indent(1);
         this.impl = new CppModule;
@@ -83,13 +84,15 @@ class StubContext {
      * Params:
      *  filename = intended output filename, used for ifdef guard.
      */
-    string output_header(HdrFilename filename) {
+    string output_header(HdrFilename out_filename) {
         import std.string : translate;
 
         dchar[dchar] table = ['.' : '_', '-' : '_'];
 
         ///TODO add user defined header.
-        auto o = CppHModule(translate(cast(string) filename, table));
+        auto o = CppHModule(translate(cast(string) out_filename, table));
+        o.content.include(cast(string) filename);
+        o.content.sep(2);
         o.content.append(this.hdr);
 
         return o.render;
@@ -100,7 +103,6 @@ class StubContext {
         auto o = new CppModule;
         o.suppress_indent(1);
         o.include(cast(string) filename);
-        logger.trace("foobar");
         o.sep(2);
         o.append(impl);
 
@@ -112,6 +114,7 @@ private:
     CppModule impl;
 
     ImplStubContext ctx;
+    HdrFilename filename;
 }
 
 private:
@@ -561,6 +564,7 @@ struct ClassTranslateContext {
     VisitNodeModule!CppHdrImpl visitor_stack;
     alias visitor_stack this;
 
+    @disable this();
     /**
      * Params:
      *  prefix = prefix to use for the name of the stub class.
@@ -594,12 +598,13 @@ struct ClassTranslateContext {
         ref CppModule hdr, ref CppModule impl) {
         import std.array : join;
 
-        void doTraversal() {
+        void doTraversal(ref ClassTranslateContext ctx, CppHdrImpl top) {
+            ctx.push(top);
             auto c = Cursor(cursor);
             visit_ast!ClassTranslateContext(c, this);
         }
 
-        void doDataStruct() {
+        void doDataStruct(ref CppModule hdr, ref CppModule impl) {
             if (vars.length == 0)
                 return;
 
@@ -670,14 +675,13 @@ struct ClassTranslateContext {
             }
         }
 
-        this.top = CppHdrImpl(hdr, impl);
+        auto top = CppHdrImpl(hdr, impl);
         this.nesting = CppClassNesting(nesting.map!(a => cast(string) a).join("::"));
-        push(top);
 
-        doTraversal();
+        doTraversal(this, top);
 
         callbacks.renderInterfaces(hdr);
-        doDataStruct();
+        doDataStruct(top.hdr, top.impl);
         doDataStructInit();
         doCtorBody(data_ns, prefix, name, ctor_code);
     }
@@ -703,7 +707,7 @@ struct ClassTranslateContext {
                 break;
             case false:
                 this.classdecl_used = true;
-                ///TODO change ot using the name mangling function.
+                ///TODO change to using the name mangling function.
                 auto stubname = CppClassName(cast(string) prefix ~ name);
                 push(classTranslator(prefix, nesting, name, current.get));
                 class_code = current.get;
@@ -733,7 +737,6 @@ struct ClassTranslateContext {
 
 private:
     bool classdecl_used;
-    CppHdrImpl top;
     CppHdrImpl class_code; // top of the new class created.
     CppModule[] ctor_code; // delayed content creation for c'tors to after analyze.
     immutable StubPrefix prefix;

@@ -23,7 +23,9 @@ function test_compl_code() {
     main=$4
 
     echo -e "${C_YELLOW}=== Compile $impl  ===${C_NONE}"
-    gcc -o "$outdir"/binary -I"$outdir" -I"$inclpath" "$impl" "$main"
+    echo "g++ -o $outdir/binary -I$outdir -I$inclpath $impl $main"
+    g++ -o "$outdir"/binary -I"$outdir" -I"$inclpath" "$impl" "$main"
+    "$outdir"/binary
 }
 
 function test_gen_code() {
@@ -32,8 +34,8 @@ function test_gen_code() {
 
     expect_hdr="testdata/"$(basename ${inhdr})".ref"
     expect_impl="testdata"/$(basename -s .hpp $inhdr)".cpp.ref"
-    out_hdr="$outdir/"$(basename ${inhdr})
-    out_impl="$outdir/"$(basename -s .hpp ${inhdr})".cpp"
+    out_hdr="$outdir/stub_"$(basename ${inhdr})
+    out_impl="$outdir/stub_"$(basename -s .hpp ${inhdr})".cpp"
 
     echo -e "${C_YELLOW}=== $inhdr  ===${C_NONE}"
     echo -e "\t${expect_hdr} ${expect_impl}" "\t$PWD/${out_hdr}"
@@ -49,12 +51,16 @@ if [[ ! -d "$outdir" ]]; then
 fi
 
 for sourcef in testdata/*.hpp; do
-    rm "$outdir"/*.hpp
-    rm "$outdir"/*.cpp
+    rm "$outdir"/*
     test_gen_code "$outdir" "$sourcef"
 
-    out_impl="$outdir/"$(basename -s .hpp ${sourcef})".cpp"
-    test_compl_code "$outdir" "testdata" "$out_impl" main1.cpp
+    out_impl="$outdir/stub_"$(basename -s .hpp ${sourcef})".cpp"
+    case "$sourcef" in
+        *class_funcs*) ;;
+        *)
+        test_compl_code "$outdir" "testdata" "$out_impl" main1.cpp
+        ;;
+    esac
 
     # raw=$(diff -u "${expect_hdr}" "${out_hdr}")
     # echo $(echo $raw|wc -l)

@@ -1,5 +1,7 @@
-#ifndef class_impl_hpp
-#define class_impl_hpp
+#ifndef stub_class_impl_hpp
+#define stub_class_impl_hpp
+#include "class_impl.hpp"
+
 class StubSimple : public Simple {
 public:
     StubSimple();
@@ -33,4 +35,4 @@ void StubInit(StubCounter* value);
 
 } //NS:StubInternalSimple
 
-#endif // class_impl_hpp
+#endif // stub_class_impl_hpp

@@ -1,15 +1,26 @@
-#include "class_impl.hpp"
+#include "stub_class_impl.hpp"
 
 StubSimple::StubSimple() {
+    StubInternalSimple::StubInit(&StubSimple_callback);
+    StubInternalSimple::StubInit(&StubSimple_cnt);
 }
 
 StubSimple::StubSimple(char x) {
+    StubInternalSimple::StubInit(&StubSimple_callback);
+    StubInternalSimple::StubInit(&StubSimple_cnt);
 }
 
 StubSimple::StubSimple(int y) {
+    StubInternalSimple::StubInit(&StubSimple_callback);
+    StubInternalSimple::StubInit(&StubSimple_cnt);
 }
 
 StubSimple::~StubSimple() {
+    StubSimple_cnt.dtorSimple_cnt++;
+
+    if (StubSimple_callback.dtorSimple != 0) {
+        StubSimple_callback.dtorSimple();
+    }
 }
 
 namespace StubInternalSimple {

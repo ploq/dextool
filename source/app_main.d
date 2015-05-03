@@ -100,11 +100,14 @@ int gen_stub(in string infile, in string outdir) {
 
     auto hdr_ext = ".hpp";
     auto impl_ext = ".cpp";
+    auto prefix = StubPrefix("Stub");
 
     auto base_filename = infile.baseName.stripExtension;
     HdrFilename hdr_filename = HdrFilename(base_filename ~ hdr_ext);
-    string hdr_out_filename = buildPath(outdir, cast(string) hdr_filename);
-    string impl_out_filename = buildPath(outdir, cast(string) base_filename ~ impl_ext);
+    HdrFilename stub_hdr_filename = HdrFilename((cast(string) prefix).toLower ~ "_" ~ hdr_filename);
+    string hdr_out_filename = buildPath(outdir, cast(string) stub_hdr_filename);
+    string impl_out_filename = buildPath(outdir,
+        (cast(string) prefix).toLower ~ "_" ~ base_filename ~ impl_ext);
 
     if (!file.exists(infile)) {
         logger.errorf("File '%s' do not exist", infile);
@@ -116,7 +119,7 @@ int gen_stub(in string infile, in string outdir) {
     auto file_ctx = new Context(infile);
     file_ctx.log_diagnostic();
 
-    auto ctx = new StubContext(StubPrefix("Stub"));
+    auto ctx = new StubContext(prefix, HdrFilename(infile.baseName));
     ctx.translate(file_ctx.cursor);
 
     auto outfile_hdr = try_open_file(hdr_out_filename, "w");
@@ -132,8 +135,8 @@ int gen_stub(in string infile, in string outdir) {
     scope(exit) outfile_impl.close();
 
     try {
-        outfile_hdr.write(ctx.output_header(hdr_filename));
-        outfile_impl.write(ctx.output_impl(hdr_filename));
+        outfile_hdr.write(ctx.output_header(stub_hdr_filename));
+        outfile_impl.write(ctx.output_impl(stub_hdr_filename));
     }
     catch (ErrnoException ex) {
         logger.trace(text(ex));

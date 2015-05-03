@@ -1,6 +1,8 @@
-#ifndef class_empty_hpp
-#define class_empty_hpp
+#ifndef stub_class_empty_hpp
+#define stub_class_empty_hpp
+#include "class_empty.hpp"
+
 class StubSimple : public Simple {
 };
 
-#endif // class_empty_hpp
+#endif // stub_class_empty_hpp

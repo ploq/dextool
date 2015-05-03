@@ -1,12 +1,21 @@
-#include "class_funcs.hpp"
+#include "stub_class_funcs.hpp"
 
 StubSimple::StubSimple() {
+    StubInternalSimple::StubInit(&StubSimple_callback);
+    StubInternalSimple::StubInit(&StubSimple_cnt);
 }
 
 StubSimple::StubSimple(char foo) {
+    StubInternalSimple::StubInit(&StubSimple_callback);
+    StubInternalSimple::StubInit(&StubSimple_cnt);
 }
 
 StubSimple::~StubSimple() {
+    StubSimple_cnt.dtorSimple_cnt++;
+
+    if (StubSimple_callback.dtorSimple != 0) {
+        StubSimple_callback.dtorSimple();
+    }
 }
 
 namespace StubInternalSimple {
