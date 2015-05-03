@@ -16,23 +16,46 @@ function check_status() {
     fi
 }
 
+function test_compl_code() {
+    outdir=$1
+    inclpath=$2
+    impl=$3
+    main=$4
+
+    echo -e "${C_YELLOW}=== Compile $impl  ===${C_NONE}"
+    gcc -o "$outdir"/binary -I"$outdir" -I"$inclpath" "$impl" "$main"
+}
+
+function test_gen_code() {
+    outdir=$1
+    inhdr=$2
+
+    expect_hdr="testdata/"$(basename ${inhdr})".ref"
+    expect_impl="testdata"/$(basename -s .hpp $inhdr)".cpp.ref"
+    out_hdr="$outdir/"$(basename ${inhdr})
+    out_impl="$outdir/"$(basename -s .hpp ${inhdr})".cpp"
+
+    echo -e "${C_YELLOW}=== $inhdr  ===${C_NONE}"
+    echo -e "\t${expect_hdr} ${expect_impl}" "\t$PWD/${out_hdr}"
+    ../build/gen-test-double stub --debug $inhdr $outdir
+
+    diff -u "${expect_hdr}" "${out_hdr}"
+    test -e ${expect_impl} && diff -u "${expect_impl}" "${out_impl}"
+}
+
 outdir="outdata"
 if [[ ! -d "$outdir" ]]; then
     mkdir "$outdir"
 fi
 
 for sourcef in testdata/*.hpp; do
-    expect_hdr="testdata/"$(basename ${sourcef})".ref"
-    expect_impl="testdata"/$(basename -s .hpp $sourcef)".cpp.ref"
-    out_hdr="$outdir/"$(basename ${sourcef})
+    rm "$outdir"/*.hpp
+    rm "$outdir"/*.cpp
+    test_gen_code "$outdir" "$sourcef"
+
     out_impl="$outdir/"$(basename -s .hpp ${sourcef})".cpp"
+    test_compl_code "$outdir" "testdata" "$out_impl" main1.cpp
 
-    echo -e "${C_YELLOW}=== $sourcef  ===${C_NONE}"
-    echo -e "\t${expect_hdr} ${expect_impl}" "\t$PWD/${out_hdr}"
-    ../build/gen-test-double stub --debug $sourcef $outdir
-
-    diff -u "${expect_hdr}" "${out_hdr}"
-    test -e ${expect_impl} && diff -u "${expect_impl}" "${out_impl}"
     # raw=$(diff -u "${expect_hdr}" "${out_hdr}")
     # echo $(echo $raw|wc -l)
     # if [[ $(echo $raw|wc -l) -ne 0 ]]; then
