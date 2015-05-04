@@ -64,35 +64,3 @@ StubInnerClass::~StubInnerClass() {
     }
 }
 
-namespace StubInternalInnerClass2 {
-void StubInit(StubCallback* value) {
-    char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCallback);
-    for (; d != end; ++d) {
-        *d = 0;
-    }
-}
-
-void StubInit(StubCounter* value) {
-    char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCounter);
-    for (; d != end; ++d) {
-        *d = 0;
-    }
-}
-
-} //NS:StubInternalInnerClass2
-
-StubInnerClass2::StubInnerClass2() {
-    StubInternalInnerClass2::StubInit(&StubInnerClass2_callback);
-    StubInternalInnerClass2::StubInit(&StubInnerClass2_cnt);
-}
-
-StubInnerClass2::~StubInnerClass2() {
-    StubInnerClass2_cnt.dtorInnerClass2++;
-
-    if (StubInnerClass2_callback.dtorInnerClass2 != 0) {
-        StubInnerClass2_callback.dtorInnerClass2->dtorInnerClass2();
-    }
-}
-

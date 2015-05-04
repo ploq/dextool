@@ -257,6 +257,7 @@ struct ImplStubContext {
         this.impl = impl;
         impl.suppress_indent(1);
         hdr_impl.push(0, CppHdrImpl(hdr, impl));
+        access_spec.push(0, CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier));
     }
 
     void incr() {
@@ -266,6 +267,7 @@ struct ImplStubContext {
     void decr() {
         nesting.pop(level);
         hdr_impl.pop(level);
+        access_spec.pop(level);
         this.level--;
     }
 
@@ -276,7 +278,14 @@ struct ImplStubContext {
         with (CXCursorKind) {
             switch (c.kind) {
             case CXCursor_ClassDecl:
-                if (c.isDefinition) {
+                if (c.isDefinition
+                        && access_spec.top.get.among(
+                        CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier,
+                        CX_CXXAccessSpecifier.CX_CXXPublic)) {
+                    logger.trace("creating stub");
+                    logger.trace(
+                        access_spec.values.map!(
+                        a => to!string(cast(TypedefType!CppAccessSpecifier) a)).join(", "));
                     // interesting part is nesting of ns/class/struct up to
                     // current cursor when used in translator functions.
                     // therefor pushing current ns/class/struct to the stack
@@ -298,6 +307,10 @@ struct ImplStubContext {
             case CXCursor_CXXBaseSpecifier:
                 decend = false;
                 break;
+            case CXCursor_CXXAccessSpecifier:
+                // affects classes on the same level so therefor modifying level by pushing it up.
+                access_spec.push(level - 1, CppAccessSpecifier(c.access.accessSpecifier));
+                break;
             default:
                 break;
             }
@@ -313,6 +326,7 @@ private:
     CppModule impl;
     IdStack!(int, CppHdrImpl) hdr_impl;
     IdStack!(int, CppClassStructNsName) nesting;
+    IdStack!(int, CppAccessSpecifier) access_spec;
 }
 
 /** Variables discovered during traversal of AST that data storage in the stub.
@@ -713,18 +727,12 @@ struct ClassTranslateContext {
                 break;
             case false:
                 this.classdecl_used = true;
-                if (access_spec.among(CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier,
-                        CX_CXXAccessSpecifier.CX_CXXPublic)) {
-                    ///TODO change to using the name mangling function.
-                    auto stubname = CppClassName(cast(string) prefix ~ name);
-                    push(classTranslator(prefix, nesting, name, current.get));
-                    class_code = current.get;
-                    MethodTranslateContext(stubname, access_spec).translate(c,
-                        vars, callbacks, current.get);
-                }
-                else {
-                    descend = false;
-                }
+                ///TODO change to using the name mangling function.
+                auto stubname = CppClassName(cast(string) prefix ~ name);
+                push(classTranslator(prefix, nesting, name, current.get));
+                class_code = current.get;
+                MethodTranslateContext(stubname, access_spec).translate(c,
+                    vars, callbacks, current.get);
                 break;
             }
             break;

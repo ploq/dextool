@@ -1,11 +1,39 @@
-#include "class_simple.hpp"
+#include "stub_class_simple.hpp"
+
+namespace StubInternalSimple {
+void StubInit(StubCallback* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubCallback);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubCounter* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubCounter);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+} //NS:StubInternalSimple
 
 StubSimple::StubSimple() {
+    StubInternalSimple::StubInit(&StubSimple_callback);
+    StubInternalSimple::StubInit(&StubSimple_cnt);
 }
 
 StubSimple::StubSimple(char foo) {
+    StubInternalSimple::StubInit(&StubSimple_callback);
+    StubInternalSimple::StubInit(&StubSimple_cnt);
 }
 
 StubSimple::~StubSimple() {
+    StubSimple_cnt.dtorSimple++;
+
+    if (StubSimple_callback.dtorSimple != 0) {
+        StubSimple_callback.dtorSimple->dtorSimple();
+    }
 }
 

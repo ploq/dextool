@@ -1,19 +1,6 @@
-#ifndef class_simple_hpp
-#define class_simple_hpp
-class StubSimple : public Simple {
-public:
-    StubSimple();
-    StubSimple(char foo);
-    ~StubSimple();
-
-public:
-    StubInternalSimple::StubCallback& StubGetCallback();
-    StubInternalSimple::StubCounter& StubGetCounter();
-
-private:
-    StubInternalSimple::StubCallback StubSimple_callback;
-    StubInternalSimple::StubCounter StubSimple_cnt;
-};
+#ifndef stub_class_simple_hpp
+#define stub_class_simple_hpp
+#include "class_simple.hpp"
 
 namespace StubCallbackSimple {
 struct IdtorSimple { virtual void dtorSimple() = 0; };
@@ -32,4 +19,19 @@ void StubInit(StubCounter* value);
 
 } //NS:StubInternalSimple
 
-#endif // class_simple_hpp
+class StubSimple : public Simple {
+public:
+    StubSimple();
+    StubSimple(char foo);
+    ~StubSimple();
+
+public:
+    StubInternalSimple::StubCallback& StubGetCallback();
+    StubInternalSimple::StubCounter& StubGetCounter();
+
+private:
+    StubInternalSimple::StubCallback StubSimple_callback;
+    StubInternalSimple::StubCounter StubSimple_cnt;
+};
+
+#endif // stub_class_simple_hpp

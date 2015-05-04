@@ -51,12 +51,17 @@ if [[ ! -d "$outdir" ]]; then
 fi
 
 for sourcef in testdata/*.hpp; do
-    rm "$outdir"/*
+    if [[ -d "$outdir" ]]; then
+        set +e
+        rm "$outdir"/*
+        set -e
+    fi
     test_gen_code "$outdir" "$sourcef"
 
     out_impl="$outdir/stub_"$(basename -s .hpp ${sourcef})".cpp"
     case "$sourcef" in
         *class_funcs*) ;;
+        *class_simple*) ;;
         *)
         test_compl_code "$outdir" "testdata" "$out_impl" main1.cpp
         ;;
