@@ -21,3 +21,10 @@
  - Date in the header when it was generated.
  - Support for header with copyright notice in generated.
  - A pure stub interface that have all callbacks inherited.
+
+# Architecture
+ - Change AST traversal to strictly follow the Visitor pattern. The apply
+   function should NOT take a cursor but rather an interface with all node
+   types of interest. Descend variable is a bandaid and should thus be able to
+   remove.
+ - Break up stub in submodules. Should increase maintainability and reusability.
