@@ -172,6 +172,8 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
                 }
                 break;
             case CXTokenKind.CXToken_Punctuation:
+                if (t.spelling.among("(", ")", ","))
+                    break;
                 r.name ~= t.spelling;
                 if (t.spelling == "*")
                     r.isPointer = true;

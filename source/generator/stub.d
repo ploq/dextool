@@ -242,6 +242,15 @@ auto mangleToStubClassName(const StubPrefix prefix, const CppClassName name) pur
     return CppClassName(prefix ~ name);
 }
 
+/// If the variable name is empty return a TypeName with a random name derived from idx.
+auto genRandomName(const TypeName tn, ulong idx) {
+    if ((cast(string) tn.name).strip.length == 0) {
+        return TypeName(tn.type, CppVariable("x" ~ to!string(idx)));
+    }
+
+    return tn;
+}
+
 /** Traverse the AST and generate a stub by filling the CppModules with data.
  *
  * Params:
@@ -979,6 +988,9 @@ void functionTranslator(Cursor c, const CppClassName class_name,
     void analyzeCursor(Cursor c, out TypeName[] params, out TypeKind return_type,
         out CppMethodName method, out CppMethodName callback_method_) {
         params = parmDeclToTypeName(c);
+        foreach (idx, tn; params) {
+            params[idx] = genRandomName(tn, idx);
+        }
         return_type = translateTypeCursor(c);
         method = CppMethodName(c.spelling);
 

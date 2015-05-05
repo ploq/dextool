@@ -53,7 +53,7 @@ version (unittest) {
 class Context {
     /** Initialize context from file
      * Params:
-     *  input_file = filename of code to parse
+     *  input_file_ = filename of code to parse
      */
     this(string input_file_) {
         input_file = input_file_;
