@@ -51,7 +51,9 @@ function test_gen_code() {
     ../build/gen-test-double stub --debug $inhdr $outdir
 
     diff -u "${expect_hdr}" "${out_hdr}"
-    test -e ${expect_impl} && diff -u "${expect_impl}" "${out_impl}"
+    if [[ -e "${expect_impl}" ]]; then
+        diff -u "${expect_impl}" "${out_impl}"
+    fi
 }
 
 outdir="outdata"
@@ -59,6 +61,7 @@ if [[ ! -d "$outdir" ]]; then
     mkdir "$outdir"
 fi
 
+echo "Stage 1"
 for sourcef in testdata/stage_1/*.hpp; do
     test_gen_code "$outdir" "$sourcef"
 
@@ -73,6 +76,11 @@ for sourcef in testdata/stage_1/*.hpp; do
 
     rm "$outdir"/*
 done
+
+echo "Stage 2"
+test_gen_code "$outdir" "testdata/stage_2/ifs1.hpp"
+test_compl_code "$outdir" "testdata/stage_2" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
+
 rm -r "$outdir"
 
 exit 0
