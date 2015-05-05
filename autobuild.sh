@@ -1,6 +1,6 @@
 #!/bin/bash
 ROOT=$PWD
-INOTIFY_PATH="$ROOT/source $ROOT/clang $ROOT/dub.json $ROOT/dsrcgen/source $ROOT/test/testdata"
+INOTIFY_PATH="$ROOT/source $ROOT/clang $ROOT/dub.json $ROOT/dsrcgen/source $ROOT/test/testdata $ROOT/test/run_tests.sh"
 
 C_NONE='\e[m'
 C_RED='\e[1;31m'

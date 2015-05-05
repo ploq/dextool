@@ -6,6 +6,15 @@ C_RED='\e[1;31m'
 C_YELLOW='\e[1;33m'
 C_GREEN='\e[1;32m'
 
+# Test strategy.
+# Stage 1. Generation.
+#  - Test stub generation of increasing difficulty. The result is compared to references.
+#  - Test compiling generated code with gcc. Generated binary and execute.
+#  Stage 2. Distributed.
+#  - Test stub generation when the interface to stub is recursive and in more than one file.
+#  Stage 3. Functionality.
+#  - Implement tests that uses the generated stubs.
+
 function check_status() {
     CHECK_STATUS_RVAL=$?
     MSG=$1
@@ -32,8 +41,8 @@ function test_gen_code() {
     outdir=$1
     inhdr=$2
 
-    expect_hdr="testdata/"$(basename ${inhdr})".ref"
-    expect_impl="testdata"/$(basename -s .hpp $inhdr)".cpp.ref"
+    expect_hdr="$(dirname ${inhdr})/"$(basename ${inhdr})".ref"
+    expect_impl="$(dirname ${inhdr})"/$(basename -s .hpp $inhdr)".cpp.ref"
     out_hdr="$outdir/stub_"$(basename ${inhdr})
     out_impl="$outdir/stub_"$(basename -s .hpp ${inhdr})".cpp"
 
@@ -50,12 +59,7 @@ if [[ ! -d "$outdir" ]]; then
     mkdir "$outdir"
 fi
 
-for sourcef in testdata/*.hpp; do
-    if [[ -d "$outdir" ]]; then
-        set +e
-        rm "$outdir"/*
-        set -e
-    fi
+for sourcef in testdata/stage_1/*.hpp; do
     test_gen_code "$outdir" "$sourcef"
 
     out_impl="$outdir/stub_"$(basename -s .hpp ${sourcef})".cpp"
@@ -63,18 +67,12 @@ for sourcef in testdata/*.hpp; do
         *class_funcs*) ;;
         *class_simple*) ;;
         *)
-        test_compl_code "$outdir" "testdata" "$out_impl" main1.cpp
+        test_compl_code "$outdir" "testdata/stage_1" "$out_impl" main1.cpp
         ;;
     esac
 
-    # raw=$(diff -u "${expect_hdr}" "${out_hdr}")
-    # echo $(echo $raw|wc -l)
-    # if [[ $(echo $raw|wc -l) -ne 0 ]]; then
-    #     echo -e "Failed\n"$raw
-    #     exit 1
-    # fi
+    rm "$outdir"/*
 done
-
 rm -r "$outdir"
 
 exit 0
