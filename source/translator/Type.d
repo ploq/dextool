@@ -24,7 +24,7 @@ module translator.Type;
 import std.array;
 import std.conv;
 import std.string;
-import std.experimental.logger;
+import logger = std.experimental.logger;
 
 import clang.c.index;
 import clang.Cursor;
@@ -56,12 +56,12 @@ body {
 
     auto tmp_c = type.declaration;
     auto tmp_t = tmp_c.typedefUnderlyingType;
-    trace(format("%s %s c:%s t:%s", tmp_c.spelling, abilities(tmp_t),
+    logger.trace(format("%s %s c:%s t:%s", tmp_c.spelling, abilities(tmp_t),
         abilities(tmp_c), abilities(type)));
 
     with (CXTypeKind) {
         if (type.kind == CXType_BlockPointer || type.isFunctionPointerType)
-            error("Implement missing translation of function pointer");
+            logger.error("Implement missing translation of function pointer");
         //    result = translateFunctionPointerType(type);
 
         if (type.isWideCharType)
@@ -91,7 +91,7 @@ body {
                 break;
 
             default:
-                trace(format("%s|%s|%s|%s", type.kind, type.declaration,
+                logger.trace(format("%s|%s|%s|%s", type.kind, type.declaration,
                     type.isValid, type.typeKindSpelling));
                 result.name = type.spelling;
             }
@@ -141,7 +141,7 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
     import clang.Token : toString;
     import clang.SourceRange : toString;
 
-    trace(clang.SourceRange.toString(cursor.extent));
+    logger.trace(clang.SourceRange.toString(cursor.extent));
 
     enum State {
         Prefix,
@@ -152,11 +152,12 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
     TypeKind r = cursor.toProperty();
     auto tokens = cursor.tokens();
     auto cursor_identifier = cursor.spelling; // name of the cursors identifier but NOT the type.
-    trace(tokens.length, "|", tokens.toString, "|", cursor.type.spelling, "|", cursor_identifier);
+    logger.trace(tokens.length, "|", tokens.toString, "|",
+        cursor.type.spelling, "|", cursor_identifier);
 
     State st;
     foreach (t; tokens) {
-        trace(clang.Token.toString(t), " ", text(st));
+        logger.trace(clang.Token.toString(t), " ", text(st));
 
         final switch (st) {
         case State.Prefix:
@@ -216,10 +217,14 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
         }
     }
 
+    logger.trace(r);
     return r;
 }
 
 private:
+
+enum keywords = ["operator", "virtual", "const"];
+enum operators = ["(", ")", "*", "&"];
 
 /** The name of the type is retrieved from the token it is derived from.
  *
@@ -231,10 +236,10 @@ string nameFromToken(Cursor type) {
     auto tokens = type.tokens();
     string name;
 
-    trace(tokens.length, " ", tokens.toString, " ", type.spelling);
+    logger.trace(tokens.length, " ", tokens.toString, " ", type.spelling);
 
     foreach (t; tokens) {
-        trace(clang.Token.toString(t));
+        logger.trace(clang.Token.toString(t));
         switch (t.spelling) {
         case "":
             break;
