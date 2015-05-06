@@ -35,6 +35,14 @@ void StubFoo::func3() {
     }
 }
 
+StubInternalFoo::StubCallback& StubFoo::StubGetCallback() {
+    return this->StubFoo_callback;
+}
+
+StubInternalFoo::StubCounter& StubFoo::StubGetCounter() {
+    return this->StubFoo_cnt;
+}
+
 namespace BarSpace {
 namespace StubInternalBar {
 void StubInit(StubCallback* value) {
@@ -61,6 +69,14 @@ void StubBar::func5() {
     if (StubBar_callback.func5 != 0) {
         StubBar_callback.func5->func5();
     }
+}
+
+StubInternalBar::StubCallback& StubBar::StubGetCallback() {
+    return this->StubBar_callback;
+}
+
+StubInternalBar::StubCounter& StubBar::StubGetCounter() {
+    return this->StubBar_cnt;
 }
 
 } //NS:BarSpace
@@ -106,6 +122,14 @@ void StubWarp::func4() {
     if (StubWarp_callback.func4 != 0) {
         StubWarp_callback.func4->func4();
     }
+}
+
+StubInternalWarp::StubCallback& StubWarp::StubGetCallback() {
+    return this->StubWarp_callback;
+}
+
+StubInternalWarp::StubCounter& StubWarp::StubGetCounter() {
+    return this->StubWarp_cnt;
 }
 
 namespace StubInternalSmurf {
@@ -172,6 +196,14 @@ StubSmurf::~StubSmurf() {
     }
 }
 
+StubInternalSmurf::StubCallback& StubSmurf::StubGetCallback() {
+    return this->StubSmurf_callback;
+}
+
+StubInternalSmurf::StubCounter& StubSmurf::StubGetCounter() {
+    return this->StubSmurf_cnt;
+}
+
 namespace StubInternalDaddySmurf {
 void StubInit(StubCallback* value) {
     char* d = reinterpret_cast<char*>(value);
@@ -226,5 +258,13 @@ StubDaddySmurf::~StubDaddySmurf() {
     if (StubDaddySmurf_callback.dtorDaddySmurf != 0) {
         StubDaddySmurf_callback.dtorDaddySmurf->dtorDaddySmurf();
     }
+}
+
+StubInternalDaddySmurf::StubCallback& StubDaddySmurf::StubGetCallback() {
+    return this->StubDaddySmurf_callback;
+}
+
+StubInternalDaddySmurf::StubCounter& StubDaddySmurf::StubGetCounter() {
+    return this->StubDaddySmurf_cnt;
 }
 

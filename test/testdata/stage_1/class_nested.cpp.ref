@@ -32,6 +32,14 @@ StubOuterClass::~StubOuterClass() {
     }
 }
 
+StubInternalOuterClass::StubCallback& StubOuterClass::StubGetCallback() {
+    return this->StubOuterClass_callback;
+}
+
+StubInternalOuterClass::StubCounter& StubOuterClass::StubGetCounter() {
+    return this->StubOuterClass_cnt;
+}
+
 namespace StubInternalInnerClass {
 void StubInit(StubCallback* value) {
     char* d = reinterpret_cast<char*>(value);
@@ -62,5 +70,13 @@ StubInnerClass::~StubInnerClass() {
     if (StubInnerClass_callback.dtorInnerClass != 0) {
         StubInnerClass_callback.dtorInnerClass->dtorInnerClass();
     }
+}
+
+StubInternalInnerClass::StubCallback& StubInnerClass::StubGetCallback() {
+    return this->StubInnerClass_callback;
+}
+
+StubInternalInnerClass::StubCounter& StubInnerClass::StubGetCounter() {
+    return this->StubInnerClass_cnt;
 }
 

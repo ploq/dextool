@@ -37,3 +37,11 @@ StubSimple::~StubSimple() {
     }
 }
 
+StubInternalSimple::StubCallback& StubSimple::StubGetCallback() {
+    return this->StubSimple_callback;
+}
+
+StubInternalSimple::StubCounter& StubSimple::StubGetCounter() {
+    return this->StubSimple_cnt;
+}
+

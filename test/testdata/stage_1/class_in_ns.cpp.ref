@@ -61,6 +61,18 @@ StubSmurf::~StubSmurf() {
     }
 }
 
+StubInternalSmurf::StubCallback& StubSmurf::StubGetCallback() {
+    return this->StubSmurf_callback;
+}
+
+StubInternalSmurf::StubCounter& StubSmurf::StubGetCounter() {
+    return this->StubSmurf_cnt;
+}
+
+StubInternalSmurf::StubStatic& StubSmurf::StubGetStatic() {
+    return this->StubSmurf_static;
+}
+
 } //NS:bar
 
 } //NS:foo

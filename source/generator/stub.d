@@ -640,8 +640,8 @@ struct ClassTranslateContext {
 
         callbacks.renderInterfaces(internal.hdr);
         doDataStruct(internal.hdr, internal.impl);
-        doDataStructInit(prefix, cb_var_name, cnt_var_name, st_var_name, vars,
-            this.class_code.hdr, stub.impl);
+        doDataStructInit(prefix, CppClassName(prefix ~ name), cb_var_name,
+            cnt_var_name, st_var_name, vars, this.class_code.hdr, stub.impl);
         doCtorBody(data_ns, prefix, name, ctor_code);
     }
 
@@ -715,17 +715,25 @@ private:
         impl.sep;
     }
 
-    void doDataStructInitHelper(const TypeName tn, const CppMethodName method,
-        ref CppModule pub_hdr, ref CppModule priv_hdr, ref CppModule impl) {
+    void doDataStructInitHelper(const CppClassName class_name, const TypeName tn,
+        const CppMethodName method, ref CppModule pub_hdr, ref CppModule priv_hdr,
+        ref CppModule impl) {
         auto type = cast(string) tn.type;
+        auto return_type = cast(string) tn.type ~ "&";
         auto name = cast(string) tn.name;
         auto method_ = cast(string) method;
+        auto var_name = type ~ " " ~ name;
 
-        pub_hdr.func(type ~ "&", method_)[$.begin = ";", $.end = newline, $.noindent = true];
-        priv_hdr.stmt(type ~ " " ~ name);
+        pub_hdr.func(return_type, method_)[$.begin = ";", $.end = newline, $.noindent = true];
+        priv_hdr.stmt(var_name);
+
+        with (impl.method_body(return_type, cast(string) class_name, method_, false)) {
+            return_("this->" ~ name);
+        }
+        impl.sep;
     }
 
-    void doDataStructInit(const StubPrefix prefix,
+    void doDataStructInit(const StubPrefix prefix, const CppClassName class_name,
         const CallbackContVariable cb_var_name,
         const CountContVariable cnt_var_name,
         const StaticContVariable st_var_name, VariableContainer vars,
@@ -739,17 +747,17 @@ private:
         auto vars_hdr = accessSpecifierTranslator(
             CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPrivate), hdr);
         if (vars.callbackLength > 0) {
-            doDataStructInitHelper(cast(TypeName) cb_var_name,
+            doDataStructInitHelper(class_name, cast(TypeName) cb_var_name,
                 CppMethodName(cast(string) prefix ~ "GetCallback"),
                 vars_getters_hdr, vars_hdr, impl);
         }
         if (vars.countLength > 0) {
-            doDataStructInitHelper(cast(TypeName) cnt_var_name,
+            doDataStructInitHelper(class_name, cast(TypeName) cnt_var_name,
                 CppMethodName(cast(string) prefix ~ "GetCounter"), vars_getters_hdr,
                 vars_hdr, impl);
         }
         if (vars.staticLength > 0) {
-            doDataStructInitHelper(cast(TypeName) st_var_name,
+            doDataStructInitHelper(class_name, cast(TypeName) st_var_name,
                 CppMethodName(cast(string) prefix ~ "GetStatic"), vars_getters_hdr,
                 vars_hdr, impl);
         }
