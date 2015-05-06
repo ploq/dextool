@@ -23,3 +23,7 @@ public import generator.stub.stub;
 public import generator.stub.types;
 
 public import generator.stub.context;
+
+public import generator.stub.containers;
+
+public import generator.stub.misc;
