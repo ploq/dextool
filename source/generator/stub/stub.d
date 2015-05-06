@@ -16,7 +16,7 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-module generator.stub;
+module generator.stub.stub;
 
 import std.algorithm;
 import std.ascii;
@@ -57,7 +57,8 @@ version (unittest) {
     shared static this() {
         import std.exception;
 
-        enforce(runUnitTests!(generator.stub)(new ConsoleTestResultWriter), "Unit tests failed.");
+        enforce(runUnitTests!(generator.stub.stub)(new ConsoleTestResultWriter),
+            "Unit tests failed.");
     }
 }
 
@@ -983,7 +984,7 @@ void functionTranslator(Cursor c, const CppClassName class_name,
     ref CppModule impl) {
     //TODO ugly... fix this aliases.
     alias toString2 = translator.Type.toString;
-    alias toString = generator.stub.toString;
+    alias toString = generator.stub.stub.toString;
 
     void pushVarsForCallback(const TypeName[] params,
         const CppMethodName callback_method, const string return_type,
