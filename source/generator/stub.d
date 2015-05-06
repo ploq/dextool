@@ -647,15 +647,18 @@ struct ClassTranslateContext {
             impl.sep;
         }
 
-        void doDataStructInit() {
+        void doDataStructInit(const CallbackContVariable cb_var_name,
+            const CountContVariable cnt_var_name,
+            const StaticContVariable st_var_name, VariableContainer vars,
+            ref CppModule hdr, ref CppModule impl) {
             if (vars.length == 0)
                 return;
 
             auto vars_getters_hdr = accessSpecifierTranslator(
-                CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic), this.class_code.hdr);
-            this.class_code.hdr.sep;
+                CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic), hdr);
+            hdr.sep;
             auto vars_hdr = accessSpecifierTranslator(
-                CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPrivate), this.class_code.hdr);
+                CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPrivate), hdr);
             if (vars.callbackLength > 0) {
                 vars_getters_hdr.func(cast(string) cb_var_name.type ~ "&",
                     cast(string) prefix ~ "GetCallback")[$.begin = ";",
@@ -680,6 +683,7 @@ struct ClassTranslateContext {
             const CppClassName name, CppModule[] ctor_code) {
             if (vars.length == 0)
                 return;
+            // c'tors must all call the init functions for the data structures.
 
             string init_ = cast(string) stub_ns ~ "::StubInit";
             foreach (impl; ctor_code) {
@@ -711,7 +715,8 @@ struct ClassTranslateContext {
 
         callbacks.renderInterfaces(internal.hdr);
         doDataStruct(internal.hdr, internal.impl);
-        doDataStructInit();
+        doDataStructInit(cb_var_name, cnt_var_name, st_var_name, vars,
+            this.class_code.hdr, stub.impl);
         doCtorBody(data_ns, prefix, name, ctor_code);
     }
 
