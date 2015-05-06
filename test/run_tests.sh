@@ -81,6 +81,10 @@ echo "Stage 2"
 test_gen_code "$outdir" "testdata/stage_2/ifs1.hpp"
 test_compl_code "$outdir" "testdata/stage_2" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
+echo "Stage 3"
+test_gen_code "$outdir" "testdata/stage_3/ifs1.hpp"
+test_compl_code "$outdir" "testdata/stage_3" "$outdir/stub_ifs1.cpp" "testdata/stage_3/main.cpp"
+
 rm -r "$outdir"
 
 exit 0
