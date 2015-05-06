@@ -627,81 +627,6 @@ struct ClassTranslateContext {
             visit_ast!ClassTranslateContext(c, this);
         }
 
-        void doDataStruct(ref CppModule hdr, ref CppModule impl) {
-            if (vars.length == 0)
-                return;
-
-            auto ns_hdr = hdr.namespace(cast(string) data_ns);
-            ns_hdr.suppress_indent(1);
-            auto ns_impl = impl.namespace(cast(string) data_ns);
-            ns_impl.suppress_indent(1);
-
-            vars.renderCallback(ns_hdr, ns_impl);
-            hdr.sep;
-            impl.sep;
-            vars.renderCount(ns_hdr, ns_impl);
-            hdr.sep;
-            impl.sep;
-            vars.renderStatic(ns_hdr, ns_impl);
-            hdr.sep;
-            impl.sep;
-        }
-
-        void doDataStructInit(const CallbackContVariable cb_var_name,
-            const CountContVariable cnt_var_name,
-            const StaticContVariable st_var_name, VariableContainer vars,
-            ref CppModule hdr, ref CppModule impl) {
-            if (vars.length == 0)
-                return;
-
-            auto vars_getters_hdr = accessSpecifierTranslator(
-                CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic), hdr);
-            hdr.sep;
-            auto vars_hdr = accessSpecifierTranslator(
-                CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPrivate), hdr);
-            if (vars.callbackLength > 0) {
-                vars_getters_hdr.func(cast(string) cb_var_name.type ~ "&",
-                    cast(string) prefix ~ "GetCallback")[$.begin = ";",
-                    $.end = newline, $.noindent = true];
-                vars_hdr.stmt(cast(string) cb_var_name.type ~ " " ~ cb_var_name.name);
-            }
-            if (vars.countLength > 0) {
-                vars_getters_hdr.func(cast(string) cnt_var_name.type ~ "&",
-                    cast(string) prefix ~ "GetCounter")[$.begin = ";",
-                    $.end = newline, $.noindent = true];
-                vars_hdr.stmt(cast(string) cnt_var_name.type ~ " " ~ cnt_var_name.name);
-            }
-            if (vars.staticLength > 0) {
-                vars_getters_hdr.func(cast(string) st_var_name.type ~ "&",
-                    cast(string) prefix ~ "GetStatic")[$.begin = ";",
-                    $.end = newline, $.noindent = true];
-                vars_hdr.stmt(cast(string) st_var_name.type ~ " " ~ st_var_name.name);
-            }
-        }
-
-        void doCtorBody(const StubNs stub_ns, const StubPrefix prefix,
-            const CppClassName name, CppModule[] ctor_code) {
-            if (vars.length == 0)
-                return;
-            // c'tors must all call the init functions for the data structures.
-
-            string init_ = cast(string) stub_ns ~ "::StubInit";
-            foreach (impl; ctor_code) {
-                if (vars.callbackLength > 0) {
-                    impl.stmt(E(init_)("&" ~ cast(string) mangleToCallbackStructVariable(prefix,
-                        name)));
-                }
-                if (vars.countLength > 0) {
-                    impl.stmt(E(init_)("&" ~ cast(string) mangleToCountStructVariable(prefix,
-                        name)));
-                }
-                if (vars.staticLength > 0) {
-                    impl.stmt(E(init_)("&" ~ cast(string) mangleToStaticStructVariable(prefix,
-                        name)));
-                }
-            }
-        }
-
         auto top = CppHdrImpl(hdr, impl);
         auto internal = CppHdrImpl(hdr.base, impl.base);
         internal.hdr.suppress_indent(1);
@@ -715,7 +640,7 @@ struct ClassTranslateContext {
 
         callbacks.renderInterfaces(internal.hdr);
         doDataStruct(internal.hdr, internal.impl);
-        doDataStructInit(cb_var_name, cnt_var_name, st_var_name, vars,
+        doDataStructInit(prefix, cb_var_name, cnt_var_name, st_var_name, vars,
             this.class_code.hdr, stub.impl);
         doCtorBody(data_ns, prefix, name, ctor_code);
     }
@@ -767,6 +692,90 @@ struct ClassTranslateContext {
             break;
         }
         return descend;
+    }
+
+private:
+    void doDataStruct(ref CppModule hdr, ref CppModule impl) {
+        if (vars.length == 0)
+            return;
+
+        auto ns_hdr = hdr.namespace(cast(string) data_ns);
+        ns_hdr.suppress_indent(1);
+        auto ns_impl = impl.namespace(cast(string) data_ns);
+        ns_impl.suppress_indent(1);
+
+        vars.renderCallback(ns_hdr, ns_impl);
+        hdr.sep;
+        impl.sep;
+        vars.renderCount(ns_hdr, ns_impl);
+        hdr.sep;
+        impl.sep;
+        vars.renderStatic(ns_hdr, ns_impl);
+        hdr.sep;
+        impl.sep;
+    }
+
+    void doDataStructInitHelper(const TypeName tn, const CppMethodName method,
+        ref CppModule pub_hdr, ref CppModule priv_hdr, ref CppModule impl) {
+        auto type = cast(string) tn.type;
+        auto name = cast(string) tn.name;
+        auto method_ = cast(string) method;
+
+        pub_hdr.func(type ~ "&", method_)[$.begin = ";", $.end = newline, $.noindent = true];
+        priv_hdr.stmt(type ~ " " ~ name);
+    }
+
+    void doDataStructInit(const StubPrefix prefix,
+        const CallbackContVariable cb_var_name,
+        const CountContVariable cnt_var_name,
+        const StaticContVariable st_var_name, VariableContainer vars,
+        ref CppModule hdr, ref CppModule impl) {
+        if (vars.length == 0)
+            return;
+
+        auto vars_getters_hdr = accessSpecifierTranslator(
+            CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic), hdr);
+        hdr.sep;
+        auto vars_hdr = accessSpecifierTranslator(
+            CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPrivate), hdr);
+        if (vars.callbackLength > 0) {
+            doDataStructInitHelper(cast(TypeName) cb_var_name,
+                CppMethodName(cast(string) prefix ~ "GetCallback"),
+                vars_getters_hdr, vars_hdr, impl);
+        }
+        if (vars.countLength > 0) {
+            doDataStructInitHelper(cast(TypeName) cnt_var_name,
+                CppMethodName(cast(string) prefix ~ "GetCounter"), vars_getters_hdr,
+                vars_hdr, impl);
+        }
+        if (vars.staticLength > 0) {
+            doDataStructInitHelper(cast(TypeName) st_var_name,
+                CppMethodName(cast(string) prefix ~ "GetStatic"), vars_getters_hdr,
+                vars_hdr, impl);
+        }
+    }
+
+    void doCtorBody(const StubNs stub_ns, const StubPrefix prefix,
+        const CppClassName name, CppModule[] ctor_code) {
+        if (vars.length == 0)
+            return;
+        // c'tors must all call the init functions for the data structures.
+
+        string init_ = cast(string) stub_ns ~ "::StubInit";
+        foreach (impl; ctor_code) {
+            if (vars.callbackLength > 0) {
+                impl.stmt(E(init_)("&" ~ cast(string) mangleToCallbackStructVariable(prefix,
+                    name)));
+            }
+            if (vars.countLength > 0) {
+                impl.stmt(E(init_)("&" ~ cast(string) mangleToCountStructVariable(prefix,
+                    name)));
+            }
+            if (vars.staticLength > 0) {
+                impl.stmt(E(init_)("&" ~ cast(string) mangleToStaticStructVariable(prefix,
+                    name)));
+            }
+        }
     }
 
 private:
