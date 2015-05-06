@@ -19,3 +19,5 @@
 module generator.stub;
 
 public import generator.stub.stub;
+
+public import generator.stub.types;

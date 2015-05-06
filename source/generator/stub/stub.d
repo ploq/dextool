@@ -43,15 +43,7 @@ import dsrcgen.cpp;
 import translator.Type;
 
 import generator.analyzer;
-
-/// Prefix used for prepending generated code with a unique string to avoid name collisions.
-alias StubPrefix = Typedef!(string, string.init, "StubPrefix");
-/// Name of a C++ class/struct/namespace.
-alias CppClassStructNsName = Typedef!(string, string.init, "CppNestingNs");
-/// Nesting of C++ class/struct/namespace.
-alias CppNesting = CppClassStructNsName[];
-
-alias HdrFilename = Typedef!(string, string.init, "HeaderFilename");
+import generator.stub.types;
 
 version (unittest) {
     shared static this() {
@@ -119,35 +111,6 @@ private:
 }
 
 private:
-//TODO use the following typedefs in CppHdrImpl to avoid confusing hdr and impl.
-alias CppModuleHdr = Typedef!(CppModule, CppModule.init, "CppHeader");
-alias CppModuleImpl = Typedef!(CppModule, CppModule.init, "CppImplementation");
-alias CppHdrImpl = Tuple!(CppModule, "hdr", CppModule, "impl");
-
-// To avoid confusing all the different strings with the only differentiating
-// fact being the variable name the idea of lots-of-typing from Haskell is
-// borrowed. Type systems are awesome.
-alias CppAccessSpecifier = Typedef!(CX_CXXAccessSpecifier, CX_CXXAccessSpecifier.init,
-    "CppAccess");
-///TODO create a type callled StubClassName to differentiate between class-being-stubbed and generated stub.
-alias CppClassName = Typedef!(string, string.init, "CppClassName");
-alias CppClassNesting = Typedef!(string, string.init, "CppNesting");
-alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
-alias CppType = Typedef!(string, string.init, "CppType");
-alias CppVariable = Typedef!(string, string.init, "CppVariable");
-
-alias TypeName = Tuple!(CppType, "type", CppVariable, "name");
-
-alias CallbackNs = Typedef!(string, string.init, "CallbackNs");
-alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
-
-alias StubNs = Typedef!(string, string.init, "StubInternalNs");
-alias CallbackStruct = Typedef!(string, string.init, "CallbackStructInNs");
-alias CallbackContVariable = Typedef!(TypeName, TypeName.init, "CallbackContVariable");
-alias CountStruct = Typedef!(string, string.init, "CountStructInNs");
-alias CountContVariable = Typedef!(TypeName, TypeName.init, "CountContVariable");
-alias StaticStruct = Typedef!(string, string.init, "StaticStructInNs");
-alias StaticContVariable = Typedef!(TypeName, TypeName.init, "StaticContVariable");
 
 /** Name mangling that occurs when translating to C++ code.
  */
