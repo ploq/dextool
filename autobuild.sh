@@ -25,6 +25,7 @@ export LD_LIBRARY_PATH=$ROOT:$LD_LIBRARY_PATH
 # test_passed
 # doc_check_counter
 # doc_build
+# slocs
 STATE="init"
 
 # return value from check_status. 0 is good, anything else is bad.
@@ -74,11 +75,18 @@ function state_release_test() {
     popd
 }
 
-function doc_build() {
+function state_doc_build() {
     dub build -b docs
     check_status "Generate Documentation"
     echo "firefox $ROOT/docs/"
     DOC_CNT=0
+}
+
+function state_sloc() {
+    which dscanner
+    if [[ $? -eq 0 ]]; then
+        dscanner --sloc clang/*.d dsrcgen/source/dsrcgen/* source/*
+    fi
 }
 
 function play_sound() {
@@ -142,8 +150,13 @@ do
             DOC_CNT=$(($DOC_CNT + 1))
             ;;
         "doc_build")
+            STATE="slocs"
+            state_doc_build
+            play_sound "ok"
+            ;;
+        "slocs")
             STATE="wait"
-            doc_build
+            state_sloc
             play_sound "ok"
             ;;
         *) echo "Unknown state $STATE"
