@@ -28,7 +28,7 @@ version (unittest) {
     }
 }
 
-@property auto toString(ref Token tok) {
+@property auto toString(Token tok) {
     import std.conv;
 
     if (tok.isValid) {

@@ -41,7 +41,7 @@ import clang.Visitor;
  * v = isValid
  * V = isVirtualBase
  */
-string abilities(ref Cursor c) {
+string abilities(Cursor c) {
     string s = format("%s%s%s%s%s%s%s%s%s%s%s%s", c.isAttribute ? "a" : "",
         c.isDeclaration ? "d" : "", c.isDefinition ? "D" : "",
         c.isExpression ? "e" : "", c.isEmpty ? "n" : "",
@@ -61,7 +61,7 @@ string abilities(ref Cursor c) {
  * v = isVariadic
  * V = isVirtual
  */
-string abilities(ref FunctionCursor c) {
+string abilities(FunctionCursor c) {
     string s = abilities(c.cursor);
     s ~= format(" %s%s%s%s%s", c.isConst ? "c" : "", c.isPureVirtual ? "p" : "",
         c.isStatic ? "s" : "", c.isVariadic ? "v" : "", c.isVirtual ? "V" : "");
@@ -74,7 +74,7 @@ string abilities(ref FunctionCursor c) {
  * s = isSigned
  * u = isUnderlyingTypeEnum
  */
-string abilities(ref EnumCursor c) {
+string abilities(EnumCursor c) {
     string s = abilities(c.cursor);
     s ~= format(" %s%s", c.isSigned ? "s" : "", c.isUnderlyingTypeEnum ? "u" : "");
 

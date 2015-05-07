@@ -34,7 +34,7 @@ import clang.Util;
  * V = isVolatile
  * w = isWideCharType
  */
-string abilities(ref Type t) {
+string abilities(Type t) {
     string s = format("%s%s%s%s%s%s%s%s%s%s%s", t.isAnonymous ? "a" : "",
         t.isConst ? "c" : "", t.isEnum ? "e" : "", t.isExposed ? "E" : "",
         t.isFunctionPointerType ? "f" : "", t.isPOD ? "p" : "",

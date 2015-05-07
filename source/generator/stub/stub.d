@@ -272,8 +272,9 @@ void functionTranslator(Cursor c, const CppClassName class_name,
 
     if (!c.func.isVirtual) {
         auto loc = c.location;
-        logger.infof("%s:%d:%d:%s: Skipping, not a virtual function",
+        logger.warningf("%s:%d:%d:%s: Skipping, not a virtual function",
             loc.file.name, loc.line, loc.column, c.spelling);
+        logger.trace(clang.Cursor.abilities(c.func));
         return;
     }
 
