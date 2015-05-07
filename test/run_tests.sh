@@ -33,13 +33,17 @@ function test_compl_code() {
 
     echo -e "${C_YELLOW}=== Compile $impl  ===${C_NONE}"
     echo "g++ -std=c++11 -o $outdir/binary -I$outdir -I$inclpath $impl $main"
-    g++ -std=c++11 -o "$outdir"/binary -I"$outdir" -I"$inclpath" "$impl" "$main"
+    g++ -std=c++11 -o "$outdir"/binary -I"$outdir" $inclpath "$impl" "$main"
     "$outdir"/binary
 }
 
 function test_gen_code() {
     outdir=$1
     inhdr=$2
+
+    if [[ -n "$3" ]]; then
+        cflags="-- $3"
+    fi
 
     expect_hdr="$(dirname ${inhdr})/"$(basename ${inhdr})".ref"
     expect_impl="$(dirname ${inhdr})"/$(basename -s .hpp $inhdr)".cpp.ref"
@@ -48,7 +52,7 @@ function test_gen_code() {
 
     echo -e "${C_YELLOW}=== $inhdr  ===${C_NONE}"
     echo -e "\t${expect_hdr} ${expect_impl}" "\t$PWD/${out_hdr}"
-    ../build/gen-test-double stub --debug -d $outdir $inhdr
+    ../build/gen-test-double stub --debug -d $outdir $inhdr $cflags
 
     diff -u "${expect_hdr}" "${out_hdr}"
     if [[ -e "${expect_impl}" ]]; then
@@ -70,7 +74,7 @@ for sourcef in testdata/stage_1/*.hpp; do
         *class_funcs*) ;;
         *class_simple*) ;;
         *)
-        test_compl_code "$outdir" "testdata/stage_1" "$out_impl" main1.cpp
+        test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp
         ;;
     esac
 
@@ -79,11 +83,14 @@ done
 
 echo "Stage 2"
 test_gen_code "$outdir" "testdata/stage_2/case1/ifs1.hpp"
-test_compl_code "$outdir" "testdata/stage_2/case1" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
+test_compl_code "$outdir" "-Itestdata/stage_2/case1" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
+
+test_gen_code "$outdir" "testdata/stage_2/case2/ifs1.hpp" "-Itestdata/stage_2/case2/sub"
+test_compl_code "$outdir" "-Itestdata/stage_2/case2 -Itestdata/stage_2/case2/sub" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
 echo "Stage 3"
 test_gen_code "$outdir" "testdata/stage_3/ifs1.hpp"
-test_compl_code "$outdir" "testdata/stage_3" "$outdir/stub_ifs1.cpp" "testdata/stage_3/main.cpp"
+test_compl_code "$outdir" "-Itestdata/stage_3" "$outdir/stub_ifs1.cpp" "testdata/stage_3/main.cpp"
 
 rm -r "$outdir"
 

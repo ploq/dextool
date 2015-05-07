@@ -55,12 +55,18 @@ class Context {
      * Params:
      *  input_file_ = filename of code to parse
      */
-    this(string input_file_) {
+    this(string input_file_, const string[] args = null) {
         input_file = input_file_;
         index = Index(false, false);
 
+        if (args !is null) {
+            // skip logging of the internal includes (compiler_args) as to not confuse the user.
+            user_args = args.idup;
+            logger.infof("Compiler flags: %s %s", base_args.join(" "), user_args.join(" "));
+        }
+
         // the last argument determines if comments are parsed and therefor
-        // accessible in the AST
+        // accessible in the AST. Default is not.
         translation_unit = TranslationUnit.parse(index, input_file,
             compilerArgs, compiler.extraHeaders);
     }
@@ -79,14 +85,11 @@ class Context {
 
 private:
     string[] compilerArgs() {
-        return base_args ~ extraArgs;
-    }
-
-    string[] extraArgs() {
-        import std.array : array;
+        import std.array : array, join;
         import std.algorithm : map;
 
-        return compiler.extraIncludePaths.map!(e => "-I" ~ e).array();
+        auto compiler_args = compiler.extraIncludePaths.map!(e => "-I" ~ e).array();
+        return base_args ~ compiler_args ~ user_args;
     }
 
     static const string[] base_args = ["-xc++"];
@@ -94,6 +97,7 @@ private:
     Index index;
     TranslationUnit translation_unit;
     Compiler compiler;
+    immutable string[] user_args;
 }
 
 /// No errors occured during translation.

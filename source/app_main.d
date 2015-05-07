@@ -34,11 +34,12 @@ import dsrcgen.cpp;
 
 static string doc = "
 usage:
-  gen-test-double stub [options] FILE
+  gen-test-double stub [options] FILE [--] [CFLAGS...]
   gen-test-double mock [options] FILE
 
 arguments:
  FILE           C++ header to generate stubs from
+ CFLAGS         Compiler flags.
 
 options:
  -h, --help     show this
@@ -97,7 +98,7 @@ auto try_open_file(string filename, string mode) @trusted nothrow {
     return rval;
 }
 
-int gen_stub(in string infile, in string outdir) {
+int gen_stub(const string infile, const string outdir, const ref string[] cflags) {
     import std.exception;
     import std.path : baseName, buildPath, stripExtension;
     import generator;
@@ -120,7 +121,7 @@ int gen_stub(in string infile, in string outdir) {
 
     logger.infof("Generating stub from file '%s'", infile);
 
-    auto file_ctx = new Context(infile);
+    auto file_ctx = new Context(infile, cflags);
     file_ctx.log_diagnostic();
 
     auto ctx = new StubContext(prefix, HdrFilename(infile.baseName));
@@ -172,8 +173,13 @@ void prepare_env(ref ArgValue[string] parsed) {
 int do_test_double(ref ArgValue[string] parsed) {
     int exit_status = -1;
 
+    string[] cflags;
+    if (parsed["--"].isTrue) {
+        cflags = parsed["CFLAGS"].asList;
+    }
+
     if (parsed["stub"].isTrue) {
-        exit_status = gen_stub(parsed["FILE"].toString, parsed["-d"].toString);
+        exit_status = gen_stub(parsed["FILE"].toString, parsed["-d"].toString, cflags);
     }
     else if (parsed["mock"].isTrue) {
         logger.error("Mock generation not implemented yet");
