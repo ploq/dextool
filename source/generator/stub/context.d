@@ -94,14 +94,16 @@ private:
 
 package:
 
-/** Traverse the AST and generate a stub by filling the CppModules with data.
- *
- * Params:
- *  prefix = prefix to use for the name of the stub classes.
- *  hdr = C++ code for a header for the stub
- *  impl = C++ code for the implementation of the stub
- */
+/// Traverse the AST and generate a stub by filling the CppModules with data.
 struct ImplStubContext {
+
+    /** Context for total stubbing of a c++ header file.
+     *
+     * Params:
+     *  prefix = prefix to use for the name of the stub classes.
+     *  hdr = C++ code for a header for the stub
+     *  impl = C++ code for the implementation of the stub
+     */
     this(StubPrefix prefix, CppModule hdr, CppModule impl) {
         this.prefix = prefix;
         this.hdr = hdr;
@@ -191,9 +193,11 @@ struct ClassTranslateContext {
     alias visitor_stack this;
 
     @disable this();
-    /**
+
+    /** Context for stubbing a class with a specific prefix.
      * Params:
      *  prefix = prefix to use for the name of the stub class.
+     *  name = name of the c++ class being stubbed.
      */
     this(StubPrefix prefix, CppClassName name) {
         this.prefix = prefix;

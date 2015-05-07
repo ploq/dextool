@@ -222,7 +222,7 @@ struct CallbackContainer {
 
     /** Add a callback to the container.
      * Params:
-     *  type = return type of the method.
+     *  return_type = return type of the method.
      *  method = method name of the callback.
      *  params = parameters the method callback shall accept.
      */
@@ -242,9 +242,7 @@ struct CallbackContainer {
 
     /** Generate C++ code in the provided module for all callbacks.
      * Params:
-     *  data_ns = namespace to generate code in.
      *  hdr = module for generated declaration code.
-     *  impl = module for generated implementation code
      */
     void renderInterfaces(ref CppModule hdr) {
         if (length == 0)

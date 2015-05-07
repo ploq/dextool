@@ -48,9 +48,8 @@ CppModule consumeAccessSpecificer(ref CppAccessSpecifier access_spec, ref CppMod
  * invalid then no harm is done by returning it.
  *
  * Params:
- *  cursor = Cursor to translate
+ *  kind = type of access specifier (public, protected, private).
  *  hdr = Header module to append the translation to.
- *  impl = Implementation module to append the translation to (not used).
  */
 CppModule accessSpecifierTranslator(CppAccessSpecifier kind, ref CppModule hdr) {
     CppModule node = hdr;

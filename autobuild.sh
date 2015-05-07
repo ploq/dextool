@@ -86,6 +86,7 @@ function state_sloc() {
     which dscanner
     if [[ $? -eq 0 ]]; then
         dscanner --sloc clang/*.d dsrcgen/source/dsrcgen/* source/*
+        check_status "Code stats"
     fi
 }
 
