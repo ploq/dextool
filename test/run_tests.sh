@@ -48,7 +48,7 @@ function test_gen_code() {
 
     echo -e "${C_YELLOW}=== $inhdr  ===${C_NONE}"
     echo -e "\t${expect_hdr} ${expect_impl}" "\t$PWD/${out_hdr}"
-    ../build/gen-test-double stub --debug $inhdr $outdir
+    ../build/gen-test-double stub --debug -d $outdir $inhdr
 
     diff -u "${expect_hdr}" "${out_hdr}"
     if [[ -e "${expect_impl}" ]]; then

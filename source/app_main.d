@@ -34,12 +34,16 @@ import dsrcgen.cpp;
 
 static string doc = "
 usage:
-  gen-test-double stub [options] <infile> <outdir>
-  gen-test-double mock [options] <infile> <outdir>
+  gen-test-double stub [options] FILE
+  gen-test-double mock [options] FILE
+
+arguments:
+ FILE           C++ header to generate stubs from
 
 options:
  -h, --help     show this
- -d, --debug    turn on debug output for tracing of generator flow
+ -d=<dest>      destination of generated files [default: .]
+ --debug        turn on debug output for tracing of generator flow
 ";
 
 class SimpleLogger : logger.Logger {
@@ -169,7 +173,7 @@ int do_test_double(ref ArgValue[string] parsed) {
     int exit_status = -1;
 
     if (parsed["stub"].isTrue) {
-        exit_status = gen_stub(parsed["<infile>"].toString, parsed["<outdir>"].toString);
+        exit_status = gen_stub(parsed["FILE"].toString, parsed["-d"].toString);
     }
     else if (parsed["mock"].isTrue) {
         logger.error("Mock generation not implemented yet");
