@@ -78,8 +78,8 @@ for sourcef in testdata/stage_1/*.hpp; do
 done
 
 echo "Stage 2"
-test_gen_code "$outdir" "testdata/stage_2/ifs1.hpp"
-test_compl_code "$outdir" "testdata/stage_2" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
+test_gen_code "$outdir" "testdata/stage_2/case1/ifs1.hpp"
+test_compl_code "$outdir" "testdata/stage_2/case1" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
 echo "Stage 3"
 test_gen_code "$outdir" "testdata/stage_3/ifs1.hpp"
