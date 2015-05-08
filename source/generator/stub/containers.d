@@ -30,6 +30,18 @@ import dsrcgen.cpp;
 import generator.stub.types;
 import generator.stub.misc;
 
+import tested;
+
+version (unittest) {
+    shared static this() {
+        import std.exception;
+
+        //runUnitTests!app(new JsonTestResultWriter("results.json"));
+        enforce(runUnitTests!(generator.stub.containers)(new ConsoleTestResultWriter),
+            "Unit tests failed.");
+    }
+}
+
 package:
 
 /** Variables discovered during traversal of AST that data storage in the stub.
@@ -268,4 +280,41 @@ private:
     CallbackType[] items;
     CallbackNs cb_ns;
     CallbackPrefix cprefix;
+}
+
+@name("Test CallbackContainer length")
+unittest {
+    CallbackContainer cb = CallbackContainer(CallbackNs("foo"), CallbackPrefix("Stub"));
+    assert(cb.length == 0, "expected 0, actual " ~ to!string(cb.length));
+
+    cb.push(CppType("void"), CppMethodName("smurf"), TypeName[].init);
+    assert(cb.length == 1, "expected 1, actual " ~ to!string(cb.length));
+}
+
+@name("Test CallbackContainer exists")
+unittest {
+    CallbackContainer cb = CallbackContainer(CallbackNs("foo"), CallbackPrefix("Stub"));
+    cb.push(CppType("void"), CppMethodName("smurf"), TypeName[].init);
+
+    assert(cb.exists(CppMethodName("smurf")), "expected true");
+}
+
+@name("Test CallbackContainer rendering")
+unittest {
+    CallbackContainer cb = CallbackContainer(CallbackNs("Foo"), CallbackPrefix("Stub"));
+
+    cb.push(CppType("void"), CppMethodName("smurf"), TypeName[].init);
+    auto m = new CppModule;
+    m.suppress_indent(1);
+
+    cb.renderInterfaces(m);
+
+    auto rval = m.render;
+    auto exp = "namespace Foo {
+struct Stubsmurf { virtual void smurf() = 0; };
+} //NS:Foo
+
+";
+
+    assert(rval == exp, rval);
 }
