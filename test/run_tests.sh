@@ -33,7 +33,7 @@ function test_compl_code() {
 
     echo -e "${C_YELLOW}=== Compile $impl  ===${C_NONE}"
     echo "g++ -std=c++11 -o $outdir/binary -I$outdir -I$inclpath $impl $main"
-    g++ -std=c++11 -o "$outdir"/binary -I"$outdir" $inclpath "$impl" "$main"
+    g++ -std=c++0x -o "$outdir"/binary -I"$outdir" $inclpath "$impl" "$main"
     "$outdir"/binary
 }
 
@@ -45,10 +45,12 @@ function test_gen_code() {
         cflags="-- $3"
     fi
 
-    expect_hdr="$(dirname ${inhdr})/"$(basename ${inhdr})".ref"
-    expect_impl="$(dirname ${inhdr})"/$(basename -s .hpp $inhdr)".cpp.ref"
+    inhdr_base=$(basename ${inhdr})
+
+    expect_hdr="$(dirname ${inhdr})/"${inhdr_base}".ref"
+    expect_impl="$(dirname ${inhdr})"/${inhdr_base%.hpp}".cpp.ref"
     out_hdr="$outdir/stub_"$(basename ${inhdr})
-    out_impl="$outdir/stub_"$(basename -s .hpp ${inhdr})".cpp"
+    out_impl="$outdir/stub_"${inhdr_base%.hpp}".cpp"
 
     echo -e "${C_YELLOW}=== $inhdr  ===${C_NONE}"
     echo -e "\t${expect_hdr} ${expect_impl}" "\t$PWD/${out_hdr}"
@@ -69,7 +71,10 @@ echo "Stage 1"
 for sourcef in testdata/stage_1/*.hpp; do
     test_gen_code "$outdir" "$sourcef"
 
-    out_impl="$outdir/stub_"$(basename -s .hpp ${sourcef})".cpp"
+
+    inhdr_base=$(basename ${sourcef})
+
+    out_impl="$outdir/stub_"${inhdr_base%.hpp}".cpp"
     case "$sourcef" in
         *class_funcs*) ;;
         *class_simple*) ;;
