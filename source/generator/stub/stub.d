@@ -186,7 +186,7 @@ void functionTranslator(Cursor c, const CppClassName class_name,
         foreach (idx, tn; params) {
             params[idx] = genRandomName(tn, idx);
         }
-        return_type = translateTypeCursor(c);
+        return_type = translateType(c.func.resultType);
         method = CppMethodName(c.spelling);
 
         auto callback_method = mangleToCallbackMethod(CppMethodName(c.spelling));

@@ -79,8 +79,8 @@ struct Type {
     }
 
     @property string typeKindSpelling() {
-        auto r = clang_getTypeKindSpelling(cx.kind);
-        return toD(r);
+        auto r = toD(clang_getTypeKindSpelling(cx.kind));
+        return r;
     }
 
     /** Return the canonical type for a CXType.

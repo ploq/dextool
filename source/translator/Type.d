@@ -38,7 +38,7 @@ struct TypeKind {
     bool isPointer;
 }
 
-string toString(in TypeKind type) {
+string toString(const TypeKind type) {
     return type.name;
 }
 
@@ -52,12 +52,15 @@ in {
     assert(type.isValid);
 }
 body {
+    import std.algorithm;
+    import std.array;
+
     TypeKind result;
 
     auto tmp_c = type.declaration;
     auto tmp_t = tmp_c.typedefUnderlyingType;
-    logger.trace(format("%s %s c:%s t:%s", tmp_c.spelling, abilities(tmp_t),
-        abilities(tmp_c), abilities(type)));
+    logger.trace(format("%s %s %s %s c:%s t:%s", type.spelling,
+        to!string(type.kind), tmp_c.spelling, abilities(tmp_t), abilities(tmp_c), abilities(type)));
 
     with (CXTypeKind) {
         if (type.kind == CXType_BlockPointer || type.isFunctionPointerType)
@@ -89,6 +92,10 @@ body {
             case CXType_LValueReference:
                 result = translateReference(type);
                 break;
+            case CXType_FunctionProto:
+                result.name = type.spelling.filter!(a => !a.among('(', ')')).cache.map!(
+                    a => cast(char) a).array.strip(' ');
+                break;
 
             default:
                 logger.trace(format("%s|%s|%s|%s", type.kind, type.declaration,
@@ -97,7 +104,22 @@ body {
             }
         }
     }
+    logger.trace(result);
 
+    return result;
+}
+
+TypeKind analyzeType(Type type) {
+    import std.algorithm;
+    import std.array;
+
+    TypeKind result = toProperty(type);
+
+    string t = type.spelling;
+    auto name = t.filter!(a => !a.among('&', '*')).cache().map!(a => cast(char) a).array().splitter(
+        ' ').filter!(a => !a.among("const")).cache().array().join;
+
+    result.name = cast(string) name;
     return result;
 }
 
@@ -105,18 +127,26 @@ body {
  * Params:
  *  cursor = A cursor that have a type property.
  */
-TypeKind toProperty(ref Cursor cursor) {
+TypeKind toProperty(Cursor cursor) {
+    return cursor.type.toProperty;
+}
+
+/** Extract properties from a Type like const, pointer, reference.
+ * Params:
+ *  type = A cursor that have a type property.
+ */
+TypeKind toProperty(Type type) {
     TypeKind result;
 
-    if (cursor.type.isConst) {
+    if (type.isConst) {
         result.isConst = true;
     }
 
-    if (cursor.type.declaration.isReference) {
+    if (type.declaration.isReference) {
         result.isRef = true;
     }
 
-    if (cursor.type.kind == CXTypeKind.CXType_Pointer) {
+    if (type.kind == CXTypeKind.CXType_Pointer) {
         result.isPointer = true;
     }
 
@@ -151,7 +181,8 @@ TypeKind translateTypeCursor(ref Cursor cursor) {
 
     TypeKind r = cursor.toProperty();
     auto tokens = cursor.tokens();
-    auto cursor_identifier = cursor.spelling; // name of the cursors identifier but NOT the type.
+    // name of the cursors identifier but NOT the type.
+    auto cursor_identifier = cursor.spelling;
     logger.trace(tokens.length, "|", tokens.toString, "|",
         cursor.type.spelling, "|", cursor_identifier);
 
@@ -266,10 +297,9 @@ body {
 
     if (type.isConst) {
         result.isConst = true;
-        result.name = "const ";
     }
 
-    result.name ~= type.spelling;
+    result.name = type.spelling;
 
     return result;
 }
@@ -318,10 +348,9 @@ body {
 
     if (valueTypeIsConst(type)) {
         result.isConst = true;
-        result.name = "const ";
     }
 
-    result.name ~= translateType(type.pointeeType).name ~ "*";
+    result.name = translateType(type.pointeeType).name ~ "*";
 
     return result;
 }
@@ -345,10 +374,10 @@ body {
 
     if (valueTypeIsConst(type)) {
         result.isConst = true;
-        result.name = "const ";
     }
 
-    result.name ~= translateType(type.pointeeType).name ~ "&";
+    result.name = translateType(type.pointeeType).name ~ "&";
+    //result.name = type.spelling;
 
     return result;
 }

@@ -29,9 +29,9 @@ void StubInit(StubStatic* value) {
 
 } //NS:StubInternalSmurf
 
-Smurf& StubSmurf::operator=(const Smurf& other) {
+foo::bar::Smurf& StubSmurf::operator=(const foo::bar::Smurf& other) {
     StubSmurf_cnt.opAssign++;
-    StubSmurf_static.opAssign_param_other = const_cast<Smurf*>(&other);
+    StubSmurf_static.opAssign_param_other = const_cast<foo::bar::Smurf*>(&other);
 
     if (StubSmurf_callback.opAssign == 0) {
         return *StubSmurf_static.opAssign_return;
@@ -47,7 +47,7 @@ StubSmurf::StubSmurf() {
     StubInternalSmurf::StubInit(&StubSmurf_static);
 }
 
-StubSmurf::StubSmurf(const Smurf& other) {
+StubSmurf::StubSmurf(const foo::bar::Smurf& other) {
     StubInternalSmurf::StubInit(&StubSmurf_callback);
     StubInternalSmurf::StubInit(&StubSmurf_cnt);
     StubInternalSmurf::StubInit(&StubSmurf_static);

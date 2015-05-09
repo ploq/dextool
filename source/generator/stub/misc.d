@@ -164,8 +164,9 @@ TypeName[] parmDeclToTypeName(ref Cursor cursor) {
         log_node(param, 0);
         auto tok_group = param.tokens;
         auto type_spelling = toString2(tok_group);
-        auto type = translateTypeCursor(param);
-        logger.trace(type_spelling, "|", type, "|", param.spelling, "|", param.type.spelling);
+        //auto type = translateTypeCursor(param);
+        auto type = translateType(param.type);
+        logger.trace(type_spelling, "|", type, "|", param.spelling, "|", param.type.spelling, "|", param.type.canonicalType.spelling);
         params ~= TypeName(CppType(toString3(type)), CppVariable(param.spelling));
     }
 
