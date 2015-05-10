@@ -18,7 +18,7 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.stub.misc;
 
-import std.algorithm : find;
+import std.algorithm : canFind;
 import std.array : join;
 import std.conv : to;
 import std.string : replace, strip;
@@ -62,7 +62,7 @@ auto cppOperatorToName(const ref CppMethodName name) pure nothrow @safe {
 auto mangleToVariable(const CppMethodName method) pure nothrow @safe {
     Nullable!CppVariable rval;
 
-    if (find(cast(string) method, "operator") != string.init) {
+    if (canFind(cast(string) method, "operator")) {
         auto callback_method = cppOperatorToName(method);
 
         if (!callback_method.isNull)
@@ -104,7 +104,7 @@ auto mangleToCountStructVariable(const StubPrefix prefix, const CppClassName nam
 auto mangleToReturnVariable(const CppMethodName method) pure nothrow @safe {
     Nullable!CppVariable rval;
 
-    if (find(cast(string) method, "operator") != string.init) {
+    if (canFind(cast(string) method, "operator")) {
         auto callback_method = cppOperatorToName(method);
 
         if (!callback_method.isNull)
@@ -115,10 +115,8 @@ auto mangleToReturnVariable(const CppMethodName method) pure nothrow @safe {
 }
 
 auto mangleTypeToCallbackStructType(const CppType type) pure @safe {
-    import std.algorithm.searching : find;
-
     string r = (cast(string) type).replace("const", "");
-    if (find(r, "&") != string.init) {
+    if (canFind(r, "&")) {
         r = r.replace("&", "") ~ "*";
     }
 
@@ -129,7 +127,9 @@ auto mangleToStubClassName(const StubPrefix prefix, const CppClassName name) pur
     return CppClassName(prefix ~ name);
 }
 
-/// If the variable name is empty return a TypeName with a random name derived from idx.
+/** If the variable name is empty return a TypeName with a random name derived
+ * from idx.
+ */
 auto genRandomName(const TypeName tn, ulong idx) {
     if ((cast(string) tn.name).strip.length == 0) {
         return TypeName(tn.type, CppVariable("x" ~ to!string(idx)));
@@ -138,7 +138,7 @@ auto genRandomName(const TypeName tn, ulong idx) {
     return tn;
 }
 
-/** Travers a node tree and gather all paramdecl converting them to a string.
+/** Travers a node tree and gather all paramdecl to an array.
  * Params:
  * cursor = A node containing ParmDecl nodes as children.
  * Example:
@@ -152,21 +152,14 @@ auto genRandomName(const TypeName tn, ulong idx) {
  *   x [CXCursor_ParmDecl Type(CXType(CXType_Char_S))
  *   y [CXCursor_ParmDecl Type(CXType(CXType_Char_S))
  * ---
- * It is translated to the string "char x, char y".
+ * It is translated to the array [("char", "x"), ("char", "y")].
  */
-TypeName[] parmDeclToTypeName(ref Cursor cursor) {
-    alias toString2 = clang.Token.toString;
+TypeName[] parmDeclToTypeName(Cursor cursor) {
     alias toString3 = translator.Type.toString;
     TypeName[] params;
-    auto f_group = cursor.tokens;
+
     foreach (param; cursor.func.parameters) {
-        //TODO remove junk/variables only used in trace(..)
-        log_node(param, 0);
-        auto tok_group = param.tokens;
-        auto type_spelling = toString2(tok_group);
-        //auto type = translateTypeCursor(param);
         auto type = translateType(param.type);
-        logger.trace(type_spelling, "|", type, "|", param.spelling, "|", param.type.spelling, "|", param.type.canonicalType.spelling);
         params ~= TypeName(CppType(toString3(type)), CppVariable(param.spelling));
     }
 
@@ -176,11 +169,10 @@ TypeName[] parmDeclToTypeName(ref Cursor cursor) {
 
 /// Convert a vector of TypeName to string pairs.
 auto toStrings(const TypeName[] vars) pure @safe nothrow {
-    string[] params;
+    import std.algorithm : map;
+    import std.array : array;
 
-    foreach (tn; vars) {
-        params ~= cast(string) tn.type ~ " " ~ cast(string) tn.name;
-    }
+    string[] params = vars.map!(tn => cast(string) tn.type ~ " " ~ cast(string) tn.name).array;
 
     return params;
 }
