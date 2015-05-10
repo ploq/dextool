@@ -18,6 +18,6 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator;
 
-public import generator.analyzer : Context, log_diagnostic, visit_ast;
+public import generator.analyzer;
 
 public import generator.stub;

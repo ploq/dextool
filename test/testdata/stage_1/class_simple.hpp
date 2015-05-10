@@ -1,3 +1,5 @@
+typedef char* MadeUp;
+
 class Simple {
 public:
     Simple() {}

@@ -32,6 +32,11 @@ import argvalue; // from docopt
 import tested;
 import dsrcgen.cpp;
 
+enum ExitStatusType {
+    Ok,
+    Errors
+}
+
 static string doc = "
 usage:
   gen-test-double stub [options] FILE [--] [CFLAGS...]
@@ -98,7 +103,7 @@ auto try_open_file(string filename, string mode) @trusted nothrow {
     return rval;
 }
 
-int gen_stub(const string infile, const string outdir, const ref string[] cflags) {
+ExitStatusType gen_stub(const string infile, const string outdir, const ref string[] cflags) {
     import std.exception;
     import std.path : baseName, buildPath, stripExtension;
     import generator;
@@ -116,28 +121,32 @@ int gen_stub(const string infile, const string outdir, const ref string[] cflags
 
     if (!file.exists(infile)) {
         logger.errorf("File '%s' do not exist", infile);
-        return -1;
+        return ExitStatusType.Errors;
     }
 
     logger.infof("Generating stub from file '%s'", infile);
 
     auto file_ctx = new Context(infile, cflags);
-    file_ctx.log_diagnostic();
+    file_ctx.logDiagnostic;
+    if (file_ctx.hasParseErrors)
+        return ExitStatusType.Errors;
 
     auto ctx = new StubContext(prefix, HdrFilename(infile.baseName));
     ctx.translate(file_ctx.cursor);
 
     auto outfile_hdr = try_open_file(hdr_out_filename, "w");
     if (outfile_hdr.isEmpty) {
-        return -1;
+        return ExitStatusType.Errors;
     }
-    scope(exit) outfile_hdr.close();
+    scope (exit)
+        outfile_hdr.close();
 
     auto outfile_impl = try_open_file(impl_out_filename, "w");
     if (outfile_impl.isEmpty) {
-        return -1;
+        return ExitStatusType.Errors;
     }
-    scope(exit) outfile_impl.close();
+    scope (exit)
+        outfile_impl.close();
 
     try {
         outfile_hdr.write(ctx.output_header(stub_hdr_filename));
@@ -145,10 +154,10 @@ int gen_stub(const string infile, const string outdir, const ref string[] cflags
     }
     catch (ErrnoException ex) {
         logger.trace(text(ex));
-        return -1;
+        return ExitStatusType.Errors;
     }
 
-    return 0;
+    return ExitStatusType.Ok;
 }
 
 void prepare_env(ref ArgValue[string] parsed) {
@@ -170,8 +179,8 @@ void prepare_env(ref ArgValue[string] parsed) {
     }
 }
 
-int do_test_double(ref ArgValue[string] parsed) {
-    int exit_status = -1;
+ExitStatusType do_test_double(ref ArgValue[string] parsed) {
+    ExitStatusType exit_status = ExitStatusType.Errors;
 
     string[] cflags;
     if (parsed["--"].isTrue) {
@@ -196,7 +205,7 @@ int rmain(string[] args) nothrow {
     import std.array : join;
 
     string errmsg, tracemsg;
-    int exit_status = -1;
+    ExitStatusType exit_status = ExitStatusType.Errors;
     bool help = true;
     bool optionsFirst = false;
     auto version_ = "gen-test-double v0.1";
@@ -212,8 +221,8 @@ int rmain(string[] args) nothrow {
     }
     catch (Exception ex) {
         collectException(logger.trace(text(ex)));
-        exit_status = -1;
+        exit_status = ExitStatusType.Errors;
     }
 
-    return exit_status;
+    return cast(typeof(return)) exit_status;
 }

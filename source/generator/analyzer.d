@@ -18,13 +18,15 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.analyzer;
 
+private:
+
 import std.ascii;
 import std.array;
 import std.conv;
 import std.stdio;
 import std.string;
 import std.typecons;
-import std.experimental.logger;
+import logger = std.experimental.logger;
 
 import tested;
 
@@ -48,6 +50,8 @@ version (unittest) {
             "Unit tests failed.");
     }
 }
+
+public:
 
 /// Holds the context of the file.
 class Context {
@@ -108,26 +112,61 @@ bool isValid(Context context) {
 /** Query context for if diagnostic errors where detected during parsing.
  * Return: True if errors where found.
  */
-bool has_parse_errors(Context context) {
+bool hasParseErrors(Context context) {
+    if (!context.isValid)
+        return true;
+
+    bool has_error = false;
     auto dia = context.translation_unit.diagnostics;
-    return dia.length > 0;
+    if (dia.length == 0)
+        return false;
+
+    foreach (diag; dia) {
+        auto severity = diag.severity;
+
+        final switch (severity) with (CXDiagnosticSeverity) {
+        case CXDiagnostic_Ignored:
+        case CXDiagnostic_Note:
+        case CXDiagnostic_Warning:
+            break;
+        case CXDiagnostic_Error:
+        case CXDiagnostic_Fatal:
+            has_error = true;
+            break;
+        }
+    }
+
+    return has_error;
 }
 
 /// Log diagnostic error messages to std.logger.
-void log_diagnostic(Context context) {
-    if (!context.isValid())
+void logDiagnostic(Context context) {
+    if (!context.isValid)
         return;
 
     auto dia = context.translation_unit.diagnostics;
-    if (dia.length > 0) {
-        bool translate = true;
-        foreach (diag; dia) {
-            auto severity = diag.severity;
+    if (dia.length == 0)
+        return;
 
-            with (CXDiagnosticSeverity)
-                if (translate)
-                    translate = !(severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal);
-            warning(diag.format);
+    foreach (diag; dia) {
+        auto severity = diag.severity;
+
+        final switch (severity) with (CXDiagnosticSeverity) {
+        case CXDiagnostic_Ignored:
+            logger.info(diag.format);
+            break;
+        case CXDiagnostic_Note:
+            logger.info(diag.format);
+            break;
+        case CXDiagnostic_Warning:
+            logger.warning(diag.format);
+            break;
+        case CXDiagnostic_Error:
+            logger.error(diag.format);
+            break;
+        case CXDiagnostic_Fatal:
+            logger.error(diag.format);
+            break;
         }
     }
 }
@@ -171,10 +210,10 @@ void log_node(int line = __LINE__, string file = __FILE__,
     foreach (ref ch; indent_str)
         ch = ' ';
 
-    logf!(line, file, funcName, prettyFuncName, moduleName)(LogLevel.trace,
-        "%s|%s [d=%s %s %s line=%d, col=%d %s]", indent_str, c.spelling,
-        c.displayName, c.kind, c.type, c.location.spelling.line,
-        c.location.spelling.column, c.abilities);
+    logger.logf!(line, file, funcName, prettyFuncName, moduleName)(
+        logger.LogLevel.trace, "%s|%s [d=%s %s %s line=%d, col=%d %s]",
+        indent_str, c.spelling, c.displayName, c.kind, c.type,
+        c.location.spelling.line, c.location.spelling.column, c.abilities);
 }
 
 /// T is module type.
