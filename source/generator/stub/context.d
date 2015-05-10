@@ -18,10 +18,11 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.stub.context;
 
-import std.algorithm : among, map;
+private:
+
 import std.array : join;
 import std.conv : to;
-import std.typecons : TypedefType, NullableRef;
+import std.typecons : TypedefType;
 
 import logger = std.experimental.logger;
 
@@ -32,12 +33,10 @@ import dsrcgen.cpp;
 
 import generator.analyzer : visit_ast, IdStack, log_node, VisitNodeModule;
 import generator.stub.types;
-import generator.stub.stub;
-import generator.stub.containers;
-import generator.stub.misc;
-import generator.stub.translator;
+import generator.stub.stub : namespaceTranslator;
+import generator.stub.translator.classes;
 
-class StubContext {
+public class StubContext {
     /**
      * Params:
      *  prefix = prefix to use for the name of the stub class.
@@ -92,8 +91,6 @@ private:
     ImplStubContext ctx;
     HdrFilename filename;
 }
-
-package:
 
 /// Traverse the AST and generate a stub by filling the CppModules with data.
 struct ImplStubContext {

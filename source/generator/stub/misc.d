@@ -18,19 +18,19 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.stub.misc;
 
+private:
+
 import std.algorithm : canFind;
 import std.array : join;
 import std.conv : to;
 import std.string : replace, strip;
 import std.typecons : Nullable;
 
-import logger = std.experimental.logger;
-
 import clang.Cursor;
 
 import translator.Type;
 
-import generator.analyzer : log_node;
+//import generator.analyzer : log_node;
 import generator.stub.types;
 
 package:

@@ -18,6 +18,8 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.stub.stub;
 
+private:
+
 import std.algorithm : map, startsWith;
 import std.array : array;
 import std.conv : to;
