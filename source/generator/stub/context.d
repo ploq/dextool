@@ -35,6 +35,7 @@ import generator.stub.types;
 import generator.stub.stub;
 import generator.stub.containers;
 import generator.stub.misc;
+import generator.stub.translator;
 
 class StubContext {
     /**
