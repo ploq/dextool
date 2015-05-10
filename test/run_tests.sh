@@ -40,10 +40,11 @@ function test_compl_code() {
 function test_gen_code() {
     outdir=$1
     inhdr=$2
-    grepper=$3
+    pre_args=$3
+    post_args=$4
 
-    if [[ -n "$4" ]]; then
-        cflags="-- $4"
+    if [[ -n "$5" ]]; then
+        cflags="-- $5"
     fi
 
     inhdr_base=$(basename ${inhdr})
@@ -56,11 +57,7 @@ function test_gen_code() {
     echo -e "${C_YELLOW}=== $inhdr  ===${C_NONE}"
     echo -e "\t${expect_hdr} ${expect_impl}" "\t$PWD/${out_hdr}"
 
-    if [[ -n "$grepper" ]]; then
-        ../build/gen-test-double stub --debug -d $outdir $inhdr $cflags |& grep -i "$grepper"
-    else
-        ../build/gen-test-double stub --debug -d $outdir $inhdr $cflags
-    fi
+    ../build/gen-test-double stub $pre_args -d $outdir $inhdr $cflags $post_args
 
     diff -u "${expect_hdr}" "${out_hdr}"
     if [[ -e "${expect_impl}" ]]; then
@@ -80,7 +77,7 @@ for sourcef in testdata/stage_1/*.hpp; do
 
     case "$sourcef" in
         # *class_in_ns*)
-        #     test_gen_code "$outdir" "$sourcef" "109"
+        #     test_gen_code "$outdir" "$sourcef" "--debug" "|& grep -i $grepper"
         # ;;
         *)
             test_gen_code "$outdir" "$sourcef"
@@ -99,14 +96,19 @@ for sourcef in testdata/stage_1/*.hpp; do
 done
 
 echo "Stage 2"
-test_gen_code "$outdir" "testdata/stage_2/case1/ifs1.hpp"
+test_gen_code "$outdir" "testdata/stage_2/case1/ifs1.hpp" "--limit=all"
 test_compl_code "$outdir" "-Itestdata/stage_2/case1" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
-test_gen_code "$outdir" "testdata/stage_2/case2/ifs1.hpp" "" "-Itestdata/stage_2/case2/sub"
+# Test compilator parameter with extra include path result in a correct stub.
+test_gen_code "$outdir" "testdata/stage_2/case2/ifs1.hpp" "--limit=all" "" "-Itestdata/stage_2/case2/sub"
 test_compl_code "$outdir" "-Itestdata/stage_2/case2 -Itestdata/stage_2/case2/sub" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
+# Test limiting of stubbing to the supplied file.
+test_gen_code "$outdir" "testdata/stage_2/case3/ifs1.hpp" "" "" "-Itestdata/stage_2/case3/sub"
+test_compl_code "$outdir" "-Itestdata/stage_2/case3 -Itestdata/stage_2/case3/sub" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
+
 echo "Stage 3"
-test_gen_code "$outdir" "testdata/stage_3/ifs1.hpp"
+test_gen_code "$outdir" "testdata/stage_3/ifs1.hpp" "--limit=all"
 test_compl_code "$outdir" "-Itestdata/stage_3" "$outdir/stub_ifs1.cpp" "testdata/stage_3/main.cpp"
 
 rm -r "$outdir"

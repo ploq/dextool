@@ -51,6 +51,10 @@ public class StubContext {
         ctx = ImplStubContext(prefix, hdr, impl);
     }
 
+    void onlyTranslateFile(HdrFilename filename) {
+        ctx.onlyTranslateFile(filename);
+    }
+
     void translate(Cursor c) {
         visitAst!ImplStubContext(c, ctx);
     }
@@ -112,6 +116,11 @@ struct ImplStubContext {
         access_spec.push(0, CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier));
     }
 
+    void onlyTranslateFile(HdrFilename filename) {
+        only_infile = true;
+        this.filename = filename;
+    }
+
     void incr() {
         this.level++;
     }
@@ -126,6 +135,13 @@ struct ImplStubContext {
     bool apply(Cursor c) {
         logNode(c, this.level);
         bool decend = true;
+
+        auto file = c.location.file;
+        if (only_infile && file.isValid && !(file.name == cast(string) filename)) {
+            logger.info("Skipping " ~ file.name);
+            logger.trace(clang.SourceLocation.toString(c.location), "|", filename);
+            return false;
+        }
 
         with (CXCursorKind) {
             switch (c.kind) {
@@ -172,7 +188,11 @@ struct ImplStubContext {
     }
 
 private:
-    int level = 0;
+    int level;
+
+    bool only_infile;
+    HdrFilename filename;
+
     StubPrefix prefix;
     CppModule hdr;
     CppModule impl;

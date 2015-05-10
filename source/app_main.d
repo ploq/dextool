@@ -32,11 +32,6 @@ import argvalue; // from docopt
 import tested;
 import dsrcgen.cpp;
 
-enum ExitStatusType {
-    Ok,
-    Errors
-}
-
 static string doc = "
 usage:
   gen-test-double stub [options] FILE [--] [CFLAGS...]
@@ -50,7 +45,31 @@ options:
  -h, --help     show this
  -d=<dest>      destination of generated files [default: .]
  --debug        turn on debug output for tracing of generator flow
+ --limit=<l>    limit generation to input FILE or process everything [default: single]
+                Can be single or all.
 ";
+
+enum ExitStatusType {
+    Ok,
+    Errors
+}
+
+enum GeneratorLimitType {
+    Invalid,
+    All,
+    Single
+}
+
+auto stringToGeneratorLimitType(string s) {
+    switch (s) {
+    case "all":
+        return GeneratorLimitType.All;
+    case "single":
+        return GeneratorLimitType.Single;
+    default:
+        return GeneratorLimitType.Invalid;
+    }
+}
 
 class SimpleLogger : logger.Logger {
     int line = -1;
@@ -103,7 +122,8 @@ auto try_open_file(string filename, string mode) @trusted nothrow {
     return rval;
 }
 
-ExitStatusType gen_stub(const string infile, const string outdir, const ref string[] cflags) {
+ExitStatusType gen_stub(const string infile, const string outdir,
+    const ref string[] cflags, GeneratorLimitType limit) {
     import std.exception;
     import std.path : baseName, buildPath, stripExtension;
     import generator;
@@ -132,6 +152,8 @@ ExitStatusType gen_stub(const string infile, const string outdir, const ref stri
         return ExitStatusType.Errors;
 
     auto ctx = new StubContext(prefix, HdrFilename(infile.baseName));
+    if (limit == GeneratorLimitType.Single)
+        ctx.onlyTranslateFile(HdrFilename(infile));
     ctx.translate(file_ctx.cursor);
 
     auto outfile_hdr = try_open_file(hdr_out_filename, "w");
@@ -180,15 +202,23 @@ void prepare_env(ref ArgValue[string] parsed) {
 }
 
 ExitStatusType do_test_double(ref ArgValue[string] parsed) {
+    import std.algorithm : among;
+
     ExitStatusType exit_status = ExitStatusType.Errors;
+    GeneratorLimitType limit = stringToGeneratorLimitType(parsed["--limit"].toString);
 
     string[] cflags;
     if (parsed["--"].isTrue) {
         cflags = parsed["CFLAGS"].asList;
     }
 
-    if (parsed["stub"].isTrue) {
-        exit_status = gen_stub(parsed["FILE"].toString, parsed["-d"].toString, cflags);
+    if (limit == GeneratorLimitType.Invalid) {
+        logger.error("Usage error: --limit must be either all or single");
+        writeln(doc);
+    }
+    else if (parsed["stub"].isTrue) {
+        exit_status = gen_stub(parsed["FILE"].toString, parsed["-d"].toString, cflags,
+            limit);
     }
     else if (parsed["mock"].isTrue) {
         logger.error("Mock generation not implemented yet");
