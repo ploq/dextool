@@ -31,7 +31,7 @@ import clang.Cursor;
 
 import dsrcgen.cpp;
 
-import generator.analyzer : visit_ast, IdStack, log_node, VisitNodeModule;
+import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
 import generator.stub.types;
 import generator.stub.stub : namespaceTranslator;
 import generator.stub.translator.classes;
@@ -52,7 +52,7 @@ public class StubContext {
     }
 
     void translate(Cursor c) {
-        visit_ast!ImplStubContext(c, ctx);
+        visitAst!ImplStubContext(c, ctx);
     }
 
     /** Generate the C++ header file of the stub.
@@ -124,7 +124,7 @@ struct ImplStubContext {
     }
 
     bool apply(Cursor c) {
-        log_node(c, this.level);
+        logNode(c, this.level);
         bool decend = true;
 
         with (CXCursorKind) {

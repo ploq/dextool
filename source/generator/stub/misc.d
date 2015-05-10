@@ -30,7 +30,6 @@ import clang.Cursor;
 
 import translator.Type;
 
-//import generator.analyzer : log_node;
 import generator.stub.types;
 
 package:

@@ -25,7 +25,7 @@ import std.typecons : TypedefType, NullableRef, Nullable;
 import clang.c.index;
 import clang.Cursor;
 
-import generator.analyzer : visit_ast, IdStack, log_node, VisitNodeModule;
+import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
 import generator.stub.types;
 import generator.stub.containers : CallbackContainer, VariableContainer;
 import generator.stub.stub : consumeAccessSpecificer;
@@ -48,12 +48,12 @@ public struct MethodTranslateContext {
         this.callbacks.bind(&callbacks);
 
         push(hdr_impl);
-        visit_ast!MethodTranslateContext(cursor, this);
+        visitAst!MethodTranslateContext(cursor, this);
     }
 
     bool apply(Cursor c) {
         bool descend = true;
-        log_node(c, depth);
+        logNode(c, depth);
 
         switch (c.kind) with (CXCursorKind) {
         case CXCursor_CXXMethod:
@@ -95,16 +95,16 @@ void inheritMethodTranslator(ref Cursor cursor, const CppClassName name,
     Nullable!CppAccessSpecifier access_spec;
     access_spec = CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic);
 
-    log_node(cursor, 0);
+    logNode(cursor, 0);
     foreach (parent, child; cursor.all) {
-        log_node(parent, 0);
-        log_node(child, 0);
+        logNode(parent, 0);
+        logNode(child, 0);
 
         auto p = parent.definition;
 
         switch (parent.kind) with (CXCursorKind) {
         case CXCursor_TypeRef:
-            log_node(p, 1);
+            logNode(p, 1);
             MethodTranslateContext(name, access_spec).translate(p, vars, callbacks,
                 hdr_impl);
             break;

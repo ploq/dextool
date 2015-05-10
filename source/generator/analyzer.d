@@ -184,7 +184,7 @@ void logDiagnostic(Context context) {
  * visit_ast!TranslateContext(cursor, this);
  * ---
  */
-void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
+void visitAst(VisitorType)(ref Cursor cursor, ref VisitorType v) {
     import std.traits;
 
     static if (__traits(hasMember, VisitorType, "incr")) {
@@ -194,7 +194,7 @@ void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
 
     if (!cursor.isEmpty && decend) {
         foreach (child, parent; Visitor(cursor)) {
-            visit_ast(child, v);
+            visitAst(child, v);
         }
     }
 
@@ -203,7 +203,7 @@ void visit_ast(VisitorType)(ref Cursor cursor, ref VisitorType v) {
     }
 }
 
-void log_node(int line = __LINE__, string file = __FILE__,
+void logNode(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__)(ref Cursor c, int level) {
     auto indent_str = new char[level * 2];

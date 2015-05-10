@@ -27,7 +27,7 @@ import clang.Cursor;
 
 import dsrcgen.cpp;
 
-import generator.analyzer : visit_ast, IdStack, log_node, VisitNodeModule;
+import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
 import generator.stub.containers : VariableContainer, CallbackContainer;
 import generator.stub.misc;
 import generator.stub.stub : classTranslator, ctorTranslator, dtorTranslator,
@@ -84,7 +84,7 @@ public struct ClassTranslateContext {
         void doTraversal(ref ClassTranslateContext ctx, CppHdrImpl top) {
             ctx.push(top);
             auto c = Cursor(cursor);
-            visit_ast!ClassTranslateContext(c, this);
+            visitAst!ClassTranslateContext(c, this);
         }
 
         auto top = CppHdrImpl(hdr, impl);
@@ -112,7 +112,7 @@ public struct ClassTranslateContext {
      */
     bool apply(Cursor c) {
         bool descend = true;
-        log_node(c, depth);
+        logNode(c, depth);
 
         switch (c.kind) with (CXCursorKind) {
         case CXCursor_ClassDecl:
