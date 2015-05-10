@@ -20,122 +20,16 @@ module generator.stub.misc;
 
 private:
 
-import std.algorithm : canFind;
 import std.array : join;
-import std.conv : to;
-import std.string : replace, strip;
-import std.typecons : Nullable;
+import logger = std.experimental.logger;
 
 import clang.Cursor;
 
-import translator.Type;
+import translator.Type : toString, translateType;
 
 import generator.stub.types;
 
 package:
-
-/** Name mangling that occurs when translating to C++ code.
- */
-enum NameMangling {
-    Plain, // no mangling
-    Callback,
-    CallCounter,
-    ReturnType
-}
-
-auto cppOperatorToName(const ref CppMethodName name) pure nothrow @safe {
-    Nullable!CppMethodName r;
-
-    switch (cast(string) name) {
-    case "operator=":
-        r = CppMethodName("opAssign");
-        break;
-    default:
-        break;
-    }
-
-    return r;
-}
-
-/// Null if it was unable to convert.
-auto mangleToVariable(const CppMethodName method) pure nothrow @safe {
-    Nullable!CppVariable rval;
-
-    if (canFind(cast(string) method, "operator")) {
-        auto callback_method = cppOperatorToName(method);
-
-        if (!callback_method.isNull)
-            rval = cast(CppVariable) callback_method;
-    }
-    else {
-        rval = cast(CppVariable) method;
-    }
-
-    return rval;
-}
-
-/// Null if it was unable to convert.
-auto mangleToCallbackMethod(const CppMethodName method) pure nothrow @safe {
-    Nullable!CppMethodName rval;
-    // same mangle schema but different return types so resuing but in a safe
-    // manner not don't affect the rest of the program.
-    auto tmp = mangleToVariable(method);
-    if (!tmp.isNull) {
-        rval = cast(CppMethodName) tmp.get;
-    }
-
-    return rval;
-}
-
-auto mangleToCallbackStructVariable(const StubPrefix prefix, const CppClassName name) pure nothrow @safe {
-    return CppVariable(cast(string) prefix ~ cast(string) name ~ "_callback");
-}
-
-auto mangleToStaticStructVariable(const StubPrefix prefix, const CppClassName name) pure nothrow @safe {
-    return CppVariable(cast(string) prefix ~ cast(string) name ~ "_static");
-}
-
-auto mangleToCountStructVariable(const StubPrefix prefix, const CppClassName name) pure nothrow @safe {
-    return CppVariable(cast(string) prefix ~ cast(string) name ~ "_cnt");
-}
-
-/// Null if it was unable to convert.
-auto mangleToReturnVariable(const CppMethodName method) pure nothrow @safe {
-    Nullable!CppVariable rval;
-
-    if (canFind(cast(string) method, "operator")) {
-        auto callback_method = cppOperatorToName(method);
-
-        if (!callback_method.isNull)
-            rval = CppVariable(cast(string) callback_method ~ "_return");
-    }
-
-    return rval;
-}
-
-auto mangleTypeToCallbackStructType(const CppType type) pure @safe {
-    string r = (cast(string) type).replace("const", "");
-    if (canFind(r, "&")) {
-        r = r.replace("&", "") ~ "*";
-    }
-
-    return CppType(r.strip);
-}
-
-auto mangleToStubClassName(const StubPrefix prefix, const CppClassName name) pure nothrow @safe {
-    return CppClassName(prefix ~ name);
-}
-
-/** If the variable name is empty return a TypeName with a random name derived
- * from idx.
- */
-auto genRandomName(const TypeName tn, ulong idx) {
-    if ((cast(string) tn.name).strip.length == 0) {
-        return TypeName(tn.type, CppVariable("x" ~ to!string(idx)));
-    }
-
-    return tn;
-}
 
 /** Travers a node tree and gather all paramdecl to an array.
  * Params:
@@ -154,12 +48,11 @@ auto genRandomName(const TypeName tn, ulong idx) {
  * It is translated to the array [("char", "x"), ("char", "y")].
  */
 TypeName[] parmDeclToTypeName(Cursor cursor) {
-    alias toString3 = translator.Type.toString;
     TypeName[] params;
 
     foreach (param; cursor.func.parameters) {
         auto type = translateType(param.type);
-        params ~= TypeName(CppType(toString3(type)), CppVariable(param.spelling));
+        params ~= TypeName(CppType(toString(type)), CppVariable(param.spelling));
     }
 
     logger.trace(params);

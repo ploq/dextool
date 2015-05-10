@@ -29,6 +29,7 @@ import dsrcgen.cpp;
 
 import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
 import generator.stub.containers : VariableContainer, CallbackContainer;
+import generator.stub.mangling;
 import generator.stub.misc;
 import generator.stub.stub : classTranslator, ctorTranslator, dtorTranslator,
     accessSpecifierTranslator, consumeAccessSpecificer;

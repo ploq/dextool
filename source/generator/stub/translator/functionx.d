@@ -32,6 +32,7 @@ import translator.Type;
 
 import generator.stub.types;
 import generator.stub.containers;
+import generator.stub.mangling;
 import generator.stub.misc;
 
 import tested;

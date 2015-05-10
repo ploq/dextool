@@ -31,6 +31,7 @@ import dsrcgen.cpp;
 
 import generator.stub.types;
 import generator.stub.misc;
+import generator.stub.mangling;
 
 import tested;
 

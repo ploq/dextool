@@ -21,6 +21,8 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module translator.Type;
 
+private:
+
 import std.array;
 import std.conv;
 import std.string;
@@ -30,6 +32,8 @@ import clang.c.index;
 import clang.Cursor;
 import clang.Token;
 import clang.Type;
+
+public:
 
 struct TypeKind {
     string name;
