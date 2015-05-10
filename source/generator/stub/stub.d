@@ -96,7 +96,6 @@ void ctorTranslator(Cursor c, const StubPrefix prefix, ref CppModule hdr,
     void doHeader(CppClassName name, const ref TypeName[] params) {
         auto p = params.toString;
         auto node = hdr.ctor(cast(string) name, p);
-        node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
     }
 
     void doImpl(const CppClassName name, const TypeName[] params, ref CppModule[] ctor_code) {
@@ -117,7 +116,6 @@ void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer var
     ref CallbackContainer callbacks, ref CppModule hdr, ref CppModule impl) {
     void doHeader(CppClassName name, CppMethodName callback_name) {
         auto node = hdr.dtor(c.func.isVirtual, cast(string) name);
-        node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
         hdr.sep();
 
         callbacks.push(CppType("void"), callback_name, TypeName[].init);

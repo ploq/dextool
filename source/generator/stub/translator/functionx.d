@@ -50,9 +50,6 @@ version (unittest) {
 void functionTranslator(Cursor c, const CppClassName class_name,
     ref VariableContainer vars, ref CallbackContainer callbacks, ref CppModule hdr,
     ref CppModule impl) {
-    //TODO ugly... fix this aliases.
-    alias toString2 = translator.Type.toString;
-    alias toString = generator.stub.stub.toString;
 
     if (!c.func.isVirtual) {
         auto loc = c.location;
@@ -68,10 +65,12 @@ void functionTranslator(Cursor c, const CppClassName class_name,
     CppMethodName callback_method;
 
     analyzeCursor(c, params, return_type, method, callback_method);
-    pushVarsForCallback(params, callback_method, toString2(return_type), vars, callbacks);
+    string return_type_ = translator.Type.toString(return_type);
 
-    doHeader(c, params, toString2(return_type), method, hdr);
-    doImpl(c, params, toString2(return_type), class_name, method, callback_method,
+    pushVarsForCallback(params, callback_method, return_type_, vars, callbacks);
+
+    doHeader(c.func.isVirtual, c.func.isConst, params, return_type_, method, hdr);
+    doImpl(c.func.isConst, params, return_type_, class_name, method, callback_method,
         impl);
 }
 
@@ -115,16 +114,16 @@ void analyzeCursor(Cursor c, out TypeName[] params, out TypeKind return_type,
     callback_method_ = callback_method.get;
 }
 
-void doHeader(Cursor c, const TypeName[] params, const string return_type,
-    const CppMethodName method, ref CppModule hdr) {
+void doHeader(bool is_virtual, bool is_const, const TypeName[] params,
+    const string return_type, const CppMethodName method, ref CppModule hdr) {
     import std.algorithm.iteration : map;
 
-    auto node = hdr.method(c.func.isVirtual, return_type, cast(string) method,
-        c.func.isConst, params.toString);
-    node[$.begin = "", $.end = ";" ~ newline, $.noindent = true];
+    string method_ = cast(string) method;
+
+    auto node = hdr.method(is_virtual, return_type, method_, is_const, params.toString);
 }
 
-auto helper_params(TypeName a) @safe {
+auto castAndStoreValue(TypeName a) @safe {
     //TODO change TypeName to use TypeKind instead of CppType.
     import std.algorithm : canFind;
 
@@ -154,29 +153,29 @@ auto helper_params(TypeName a) @safe {
 
 @name("Test helper for parameter casting when storing parameters")
 unittest {
-    auto rval = helper_params(TypeName(CppType("int"), CppVariable("bar")));
+    auto rval = castAndStoreValue(TypeName(CppType("int"), CppVariable("bar")));
     assert(rval == "bar", rval);
 }
 
 @name("Test helper for parameter casting of ref and ptr")
 unittest {
-    auto rval = helper_params(TypeName(CppType("int*"), CppVariable("bar")));
+    auto rval = castAndStoreValue(TypeName(CppType("int*"), CppVariable("bar")));
     assert(rval == "bar", to!string(__LINE__) ~ rval);
 
-    rval = helper_params(TypeName(CppType("int&"), CppVariable("bar")));
+    rval = castAndStoreValue(TypeName(CppType("int&"), CppVariable("bar")));
     assert(rval == "&bar", to!string(__LINE__) ~ rval);
 }
 
 @name("Test helper for const parameter casting of ref and ptr")
 unittest {
-    auto rval = helper_params(TypeName(CppType("const int*"), CppVariable("bar")));
+    auto rval = castAndStoreValue(TypeName(CppType("const int*"), CppVariable("bar")));
     assert(rval == "const_cast<int*>(bar)", rval);
 
-    rval = helper_params(TypeName(CppType("const int&"), CppVariable("bar")));
+    rval = castAndStoreValue(TypeName(CppType("const int&"), CppVariable("bar")));
     assert(rval == "const_cast<int*>(&bar)", rval);
 }
 
-auto helper_return(string return_type, const CppClassName class_name,
+auto makeCppReturnFromStruct(string return_type, const CppClassName class_name,
     const CppMethodName callback_method) {
     import std.algorithm : findAmong;
 
@@ -189,46 +188,48 @@ auto helper_return(string return_type, const CppClassName class_name,
         cast(string) callback_method);
 }
 
-@name("Test helper for generating code returning a static value")
+@name("Test maker for generating code returning a static value")
 unittest {
-    auto rval = helper_return("int", CppClassName("Foo"), CppMethodName("Bar"));
+    auto rval = makeCppReturnFromStruct("int", CppClassName("Foo"), CppMethodName("Bar"));
     assert(rval == "return Foo_static.Bar_return", rval);
 
-    rval = helper_return("int&", CppClassName("Foo"), CppMethodName("Bar"));
+    rval = makeCppReturnFromStruct("int&", CppClassName("Foo"), CppMethodName("Bar"));
     assert(rval == "return *Foo_static.Bar_return", rval);
 }
 
-void doImpl(Cursor c, const TypeName[] params, const string return_type,
+void doImpl(bool is_const, const TypeName[] params, const string return_type,
     const CppClassName class_name, const CppMethodName method,
     const CppMethodName callback_method, ref CppModule impl) {
     import std.algorithm : findAmong, map;
 
-    auto func = impl.method_body(return_type, cast(string) class_name,
-        cast(string) method, c.func.isConst, params.toString);
+    string class_name_ = cast(string) class_name;
+    string callback_method_ = cast(string) callback_method;
+
+    auto func = impl.method_body(return_type, class_name_, cast(string) method,
+        is_const, params.toString);
     with (func) {
-        stmt("%s_cnt.%s++".format(cast(string) class_name, cast(string) callback_method));
+        stmt("%s_cnt.%s++".format(class_name_, callback_method_));
+        // store parameters for the function in the static storage to be used by the user in test cases.
         foreach (a; params) {
-            stmt("%s_static.%s_param_%s = %s".format(cast(string) class_name,
-                cast(string) callback_method, cast(string) a.name, helper_params(a)));
+            stmt("%s_static.%s_param_%s = %s".format(class_name_,
+                callback_method_, cast(string) a.name, a.castAndStoreValue));
         }
         sep(2);
 
         string sparams = params.map!(a => cast(string) a.name).join(", ");
         if (return_type == "void") {
-            with (if_("%s_callback.%s != 0".format(cast(string) class_name,
-                    cast(string) callback_method))) {
-                stmt("%s_callback.%s->%s(%s)".format(cast(string) class_name,
-                    cast(string) callback_method, cast(string) callback_method, sparams));
+            with (if_("%s_callback.%s != 0".format(class_name_, callback_method_))) {
+                stmt("%s_callback.%s->%s(%s)".format(class_name_,
+                    callback_method_, callback_method_, sparams));
             }
         }
         else {
-            with (if_("%s_callback.%s == 0".format(cast(string) class_name,
-                    cast(string) callback_method))) {
-                stmt(helper_return(return_type, class_name, callback_method));
+            with (if_("%s_callback.%s == 0".format(class_name_, callback_method_))) {
+                stmt(makeCppReturnFromStruct(return_type, class_name, callback_method));
             }
             with (else_()) {
-                stmt("return %s_callback.%s->%s(%s)".format(cast(string) class_name,
-                    cast(string) callback_method, cast(string) callback_method, sparams));
+                stmt("return %s_callback.%s->%s(%s)".format(class_name_,
+                    callback_method_, callback_method_, sparams));
             }
         }
 
