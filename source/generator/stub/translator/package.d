@@ -21,3 +21,5 @@ module generator.stub.translator;
 public import generator.stub.translator.functionx;
 
 public import generator.stub.translator.class_methods;
+
+public import generator.stub.translator.classes;
