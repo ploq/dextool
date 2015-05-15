@@ -2,12 +2,22 @@
 #define stub_class_impl_hpp
 #include "class_impl.hpp"
 
+class StubSimple;
+
 namespace StubCallbackSimple {
 struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSimple
 
 namespace StubInternalSimple {
-struct StubStubDtor {
+class StubStubDtor {
+public:
+    StubCallbackSimple::IStubDtor* GetCallback();
+    void SetCallback(StubCallbackSimple::IStubDtor* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+private:
+    friend StubSimple;
+
     StubCallbackSimple::IStubDtor* callback;
     unsigned call_counter;
 };

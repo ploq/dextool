@@ -166,6 +166,23 @@ CppVariable mangleToStubStructMember(const StubPrefix prefix,
     }
 }
 
+CppMethodName mangleToStubStructIncrCounterMethod() pure nothrow @safe {
+    return CppMethodName("IncrCallCounter");
+}
+
+CppMethodName mangleToStubStructGetMethod(const NameMangling m, const CppVariable var) pure nothrow @safe {
+    final switch (m) with (NameMangling) {
+    case Plain:
+        return CppMethodName("Get" ~ var.str);
+    case Callback:
+        return CppMethodName("GetCallback");
+    case CallCounter:
+        return CppMethodName("GetCallCounter");
+    case ReturnType:
+        return CppMethodName("_return");
+    }
+}
+
 /// Example:
 /// ---
 /// mangleToStubClassName("Stub", "Foo");
@@ -248,7 +265,7 @@ auto mangleToStubDataGetter(const CppMethodName method, const TypeKindVariable[]
 /// ---
 /// result is: param_foo
 auto mangleToParamVariable(const CppVariable var_name) pure nothrow @safe {
-    return CppVariable("param_" ~ var_name.str);
+    return CppVariable("Param_" ~ var_name.str);
 }
 
 /// Example:
@@ -257,7 +274,7 @@ auto mangleToParamVariable(const CppVariable var_name) pure nothrow @safe {
 /// ---
 /// result is: param_foo
 auto mangleToParamVariable(const TypeKindVariable tv) pure nothrow @safe {
-    return CppVariable("param_" ~ tv.name.str);
+    return CppVariable("Param_" ~ tv.name.str);
 }
 
 /** If the variable name is empty return a TypeName with a random name derived

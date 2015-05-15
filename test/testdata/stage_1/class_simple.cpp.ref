@@ -1,6 +1,22 @@
 #include "stub_class_simple.hpp"
 
 namespace StubInternalSimple {
+StubCallbackSimple::IStubDtor* StubStubDtor::GetCallback() {
+    return callback;
+}
+
+void StubStubDtor::SetCallback(StubCallbackSimple::IStubDtor* value) {
+    callback = value;
+}
+
+unsigned StubStubDtor::GetCallCounter() const {
+    return call_counter;
+}
+
+void StubStubDtor::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(StubStubDtor* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(StubStubDtor);

@@ -1,12 +1,52 @@
 #include "stub_class_interface.hpp"
 
 namespace StubInternalSimple {
+StubCallbackSimple::Ifunc1* Stubfunc1::GetCallback() {
+    return callback;
+}
+
+void Stubfunc1::SetCallback(StubCallbackSimple::Ifunc1* value) {
+    callback = value;
+}
+
+unsigned Stubfunc1::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc1::ResetCallCounter() {
+    call_counter = 0;
+}
+
+int& Stubfunc1::SetReturn() {
+    return stub_return;
+}
+
 void StubInit(Stubfunc1* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc1);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubCallbackSimple::Ifunc2_int* Stubfunc2_int::GetCallback() {
+    return callback;
+}
+
+void Stubfunc2_int::SetCallback(StubCallbackSimple::Ifunc2_int* value) {
+    callback = value;
+}
+
+unsigned Stubfunc2_int::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc2_int::ResetCallCounter() {
+    call_counter = 0;
+}
+
+int Stubfunc2_int::GetParam_x() {
+    return Param_x;
 }
 
 void StubInit(Stubfunc2_int* value) {
@@ -17,12 +57,52 @@ void StubInit(Stubfunc2_int* value) {
     }
 }
 
+StubCallbackSimple::Ifunc2_double* Stubfunc2_double::GetCallback() {
+    return callback;
+}
+
+void Stubfunc2_double::SetCallback(StubCallbackSimple::Ifunc2_double* value) {
+    callback = value;
+}
+
+unsigned Stubfunc2_double::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc2_double::ResetCallCounter() {
+    call_counter = 0;
+}
+
+double Stubfunc2_double::GetParam_x() {
+    return Param_x;
+}
+
 void StubInit(Stubfunc2_double* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc2_double);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubCallbackSimple::IopAssign_Simple* StubopAssign_Simple::GetCallback() {
+    return callback;
+}
+
+void StubopAssign_Simple::SetCallback(StubCallbackSimple::IopAssign_Simple* value) {
+    callback = value;
+}
+
+unsigned StubopAssign_Simple::GetCallCounter() const {
+    return call_counter;
+}
+
+void StubopAssign_Simple::ResetCallCounter() {
+    call_counter = 0;
+}
+
+Simple* StubopAssign_Simple::GetParam_other() {
+    return Param_other;
 }
 
 void StubInit(StubopAssign_Simple* value) {
@@ -33,12 +113,44 @@ void StubInit(StubopAssign_Simple* value) {
     }
 }
 
+StubCallbackSimple::Ifunc3* Stubfunc3::GetCallback() {
+    return callback;
+}
+
+void Stubfunc3::SetCallback(StubCallbackSimple::Ifunc3* value) {
+    callback = value;
+}
+
+unsigned Stubfunc3::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc3::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(Stubfunc3* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc3);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubCallbackSimple::IStubDtor* StubStubDtor::GetCallback() {
+    return callback;
+}
+
+void StubStubDtor::SetCallback(StubCallbackSimple::IStubDtor* value) {
+    callback = value;
+}
+
+unsigned StubStubDtor::GetCallCounter() const {
+    return call_counter;
+}
+
+void StubStubDtor::ResetCallCounter() {
+    call_counter = 0;
 }
 
 void StubInit(StubStubDtor* value) {
@@ -100,7 +212,7 @@ int StubSimple::func1() {
 
 void StubSimple::func2(int x) {
     Stub_data.func2_int().call_counter++;
-    Stub_data.func2_int().param_x = x;
+    Stub_data.func2_int().Param_x = x;
 
     if (Stub_data.func2_int().callback != 0) {
         Stub_data.func2_int().callback->func2_int(x);
@@ -109,7 +221,7 @@ void StubSimple::func2(int x) {
 
 void StubSimple::func2(double x) {
     Stub_data.func2_double().call_counter++;
-    Stub_data.func2_double().param_x = x;
+    Stub_data.func2_double().Param_x = x;
 
     if (Stub_data.func2_double().callback != 0) {
         Stub_data.func2_double().callback->func2_double(x);
@@ -118,7 +230,7 @@ void StubSimple::func2(double x) {
 
 void StubSimple::operator=(const Simple & other) {
     Stub_data.opAssign_Simple().call_counter++;
-    Stub_data.opAssign_Simple().param_other = const_cast<Simple*>(&other);
+    Stub_data.opAssign_Simple().Param_other = const_cast<Simple*>(&other);
 
     if (Stub_data.opAssign_Simple().callback != 0) {
         Stub_data.opAssign_Simple().callback->opAssign_Simple(other);

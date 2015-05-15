@@ -29,3 +29,6 @@
    function should NOT take a cursor but rather an interface with all node
    types of interest. Descend variable is a bandaid and should thus be able to
    remove.
+ - Split cpp.d method to a virtual\_method. It is confusing that the first
+   parameter (boolean) determines if it is virtual. Better if the function name
+   says it.

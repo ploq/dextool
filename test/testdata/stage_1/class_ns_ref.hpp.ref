@@ -3,12 +3,16 @@
 #include "class_ns_ref.hpp"
 
 namespace Foo {
+class StubBar;
+
 class StubBar : public Foo::Bar {
 public:
     StubBar();
 };
 
 } //NS:Foo
+
+class StubGlass;
 
 namespace StubCallbackGlass {
 struct Ifunc1 { virtual Foo::Bar func1() = 0; };
@@ -20,42 +24,95 @@ struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackGlass
 
 namespace StubInternalGlass {
-struct Stubfunc1 {
+class Stubfunc1 {
+public:
+    StubCallbackGlass::Ifunc1* GetCallback();
+    void SetCallback(StubCallbackGlass::Ifunc1* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    Foo::Bar& SetReturn();
+private:
+    friend StubGlass;
+
     StubCallbackGlass::Ifunc1* callback;
     unsigned call_counter;
     Foo::Bar stub_return;
 };
 void StubInit(Stubfunc1* value);
 
-struct Stubfunc2 {
+class Stubfunc2 {
+public:
+    StubCallbackGlass::Ifunc2* GetCallback();
+    void SetCallback(StubCallbackGlass::Ifunc2* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    Foo::Bar *& SetReturn();
+private:
+    friend StubGlass;
+
     StubCallbackGlass::Ifunc2* callback;
     unsigned call_counter;
     Foo::Bar * stub_return;
 };
 void StubInit(Stubfunc2* value);
 
-struct Stubfunc3 {
+class Stubfunc3 {
+public:
+    StubCallbackGlass::Ifunc3* GetCallback();
+    void SetCallback(StubCallbackGlass::Ifunc3* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    Foo::Bar *& SetReturn();
+private:
+    friend StubGlass;
+
     StubCallbackGlass::Ifunc3* callback;
     unsigned call_counter;
     Foo::Bar * stub_return;
 };
 void StubInit(Stubfunc3* value);
 
-struct Stubfunc4 {
+class Stubfunc4 {
+public:
+    StubCallbackGlass::Ifunc4* GetCallback();
+    void SetCallback(StubCallbackGlass::Ifunc4* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    ::Foo::Bar& SetReturn();
+private:
+    friend StubGlass;
+
     StubCallbackGlass::Ifunc4* callback;
     unsigned call_counter;
     ::Foo::Bar stub_return;
 };
 void StubInit(Stubfunc4* value);
 
-struct Stubfunc5 {
+class Stubfunc5 {
+public:
+    StubCallbackGlass::Ifunc5* GetCallback();
+    void SetCallback(StubCallbackGlass::Ifunc5* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    ::Foo::Bar *& SetReturn();
+private:
+    friend StubGlass;
+
     StubCallbackGlass::Ifunc5* callback;
     unsigned call_counter;
     ::Foo::Bar * stub_return;
 };
 void StubInit(Stubfunc5* value);
 
-struct StubStubDtor {
+class StubStubDtor {
+public:
+    StubCallbackGlass::IStubDtor* GetCallback();
+    void SetCallback(StubCallbackGlass::IStubDtor* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+private:
+    friend StubGlass;
+
     StubCallbackGlass::IStubDtor* callback;
     unsigned call_counter;
 };

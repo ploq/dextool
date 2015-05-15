@@ -40,27 +40,31 @@ void test_init_counters() {
     start_test();
     StubIfs1 stub;
 
-    stub.GetStub().run().call_counter = 42;
+    msg("Increment call counter");
+    stub.run();
+    assert(stub.GetStub().run().GetCallCounter() > 0);
+
+    msg("Expect call counter is reset to zero");
     StubInternalIfs1::StubInit(&stub.GetStub().run());
-    assert(stub.GetStub().run().call_counter == 0);
+    assert(stub.GetStub().run().GetCallCounter() == 0);
 }
 
 void test_init_static() {
     start_test();
     StubIfs1 stub;
 
-    stub.GetStub().ifs2_func1_int_char().stub_return = 42;
+    stub.GetStub().ifs2_func1_int_char().SetReturn() = 42;
     StubInternalIfs1::StubInit(&stub.GetStub().ifs2_func1_int_char());
-    assert(stub.GetStub().ifs2_func1_int_char().stub_return == 0);
+    assert(stub.GetStub().ifs2_func1_int_char().SetReturn() == 0);
 }
 
 void test_init_callback() {
     start_test();
     StubIfs1 stub;
 
-    stub.GetStub().run().callback = reinterpret_cast<StubCallbackIfs1::Irun*>(42);
+    stub.GetStub().run().SetCallback(reinterpret_cast<StubCallbackIfs1::Irun*>(42));
     StubInternalIfs1::StubInit(&stub.GetStub().run());
-    assert(stub.GetStub().run().callback == 0);
+    assert(stub.GetStub().run().GetCallback() == 0);
 }
 // --- End testing of init functions ---
 
@@ -70,16 +74,30 @@ void test_call_counter() {
     Ifs1* obj = &stub;
 
     msg("Counter is initialized to zero");
-    assert(stub.GetStub().run().call_counter == 0);
-    assert(stub.GetStub().ifs2_func1_int_char().call_counter == 0);
+    assert(stub.GetStub().run().GetCallCounter() == 0);
+    assert(stub.GetStub().ifs2_func1_int_char().GetCallCounter() == 0);
 
     msg("Calling func with no params via the interface ptr");
     obj->run();
-    assert(stub.GetStub().run().call_counter > 0);
+    assert(stub.GetStub().run().GetCallCounter() > 0);
 
     msg("Calling func with parameters via the interface ptr");
     obj->ifs2_func1(42, 'x');
-    assert(stub.GetStub().ifs2_func1_int_char().call_counter > 0);
+    assert(stub.GetStub().ifs2_func1_int_char().GetCallCounter() > 0);
+}
+
+void test_call_counter_reset() {
+    start_test();
+    StubIfs1 stub;
+    Ifs1* obj = &stub;
+
+    msg("Calling func with no params via the interface ptr");
+    obj->run();
+    assert(stub.GetStub().run().GetCallCounter() > 0);
+
+    msg("Reset counter");
+    stub.GetStub().run().ResetCallCounter();
+    assert(stub.GetStub().run().GetCallCounter() == 0);
 }
 
 void test_static_return() {
@@ -87,7 +105,7 @@ void test_static_return() {
     StubIfs1 stub;
     Ifs1* obj = &stub;
 
-    stub.GetStub().ifs2_func1_int_char().stub_return = 42;
+    stub.GetStub().ifs2_func1_int_char().SetReturn() = 42;
     assert(obj->ifs2_func1(42, 'x') == 42);
 }
 
@@ -97,8 +115,8 @@ void test_static_param_stored() {
     Ifs1* obj = &stub;
 
     obj->ifs2_func1(42, 'x');
-    assert(stub.GetStub().ifs2_func1_int_char().param_x0 == 42);
-    assert(stub.GetStub().ifs2_func1_int_char().param_x1 == 'x');
+    assert(stub.GetStub().ifs2_func1_int_char().GetParam_x0() == 42);
+    assert(stub.GetStub().ifs2_func1_int_char().GetParam_x1() == 'x');
 }
 
 class TestCallback : public StubCallbackIfs1::Irun,
@@ -134,7 +152,7 @@ void test_callback_simple() {
     Ifs1* obj = &stub;
 
     // Configure stub with callback
-    stub.GetStub().run().callback = &cb;
+    stub.GetStub().run().SetCallback(&cb);
     assert(cb.called == false);
 
     msg("Expecting a callback and thus changing callback objects variable called to true");
@@ -142,7 +160,7 @@ void test_callback_simple() {
     assert(cb.called == true);
 
     msg("Expect call counter to increment even though a callback was used");
-    assert(stub.GetStub().run().call_counter > 0);
+    assert(stub.GetStub().run().GetCallCounter() > 0);
 }
 
 void test_callback_params() {
@@ -152,7 +170,7 @@ void test_callback_params() {
     Ifs1* obj = &stub;
 
     // Configure stub with callback
-    stub.GetStub().ifs2_func1_int_char().callback = &cb;
+    stub.GetStub().ifs2_func1_int_char().SetCallback(&cb);
 
     msg("Callback func with params");
     assert(obj->ifs2_func1(8, 'a') == 42);
@@ -160,7 +178,7 @@ void test_callback_params() {
     assert(cb.x1 == 'a');
 
     msg("Expect call counter to increment even though a callback was used");
-    assert(stub.GetStub().ifs2_func1_int_char().call_counter > 0);
+    assert(stub.GetStub().ifs2_func1_int_char().GetCallCounter() > 0);
 }
 
 void test_callback_return_obj() {
@@ -170,17 +188,17 @@ void test_callback_return_obj() {
     Ifs1* obj = &stub;
 
     // Configure stub with callback
-    stub.GetStub().get_ifc3().callback = &cb;
+    stub.GetStub().get_ifc3().SetCallback(&cb);
 
     msg("Callback returning obj via ref");
     Ifs3& i3 = obj->get_ifc3();
     i3.dostuff();
 
     msg("Expect call counter to increment even though a callback was used");
-    assert(stub.GetStub().get_ifc3().call_counter > 0);
+    assert(stub.GetStub().get_ifc3().GetCallCounter() > 0);
 
     msg("Expect call counter in returned objects to increment");
-    assert(cb.ifs3_inst.GetStub().dostuff().call_counter > 0);
+    assert(cb.ifs3_inst.GetStub().dostuff().GetCallCounter() > 0);
 }
 
 int main(int argc, char** argv) {
@@ -192,6 +210,7 @@ int main(int argc, char** argv) {
     test_init_static();
     test_init_callback();
     test_call_counter();
+    test_call_counter_reset();
     test_static_return();
     test_static_param_stored();
     test_callback_simple();

@@ -2,12 +2,22 @@
 #define stub_class_nested_hpp
 #include "class_nested.hpp"
 
+class StubOuterClass;
+
 namespace StubCallbackOuterClass {
 struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackOuterClass
 
 namespace StubInternalOuterClass {
-struct StubStubDtor {
+class StubStubDtor {
+public:
+    StubCallbackOuterClass::IStubDtor* GetCallback();
+    void SetCallback(StubCallbackOuterClass::IStubDtor* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+private:
+    friend StubOuterClass;
+
     StubCallbackOuterClass::IStubDtor* callback;
     unsigned call_counter;
 };
@@ -37,12 +47,22 @@ private:
     StubInternalOuterClass::StubStubData Stub_data;
 };
 
+class StubInnerClass;
+
 namespace StubCallbackInnerClass {
 struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackInnerClass
 
 namespace StubInternalInnerClass {
-struct StubStubDtor {
+class StubStubDtor {
+public:
+    StubCallbackInnerClass::IStubDtor* GetCallback();
+    void SetCallback(StubCallbackInnerClass::IStubDtor* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+private:
+    friend StubInnerClass;
+
     StubCallbackInnerClass::IStubDtor* callback;
     unsigned call_counter;
 };

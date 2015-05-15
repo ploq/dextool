@@ -1,12 +1,44 @@
 #include "stub_class_inherit.hpp"
 
 namespace StubInternalFoo {
+StubCallbackFoo::Ifunc2* Stubfunc2::GetCallback() {
+    return callback;
+}
+
+void Stubfunc2::SetCallback(StubCallbackFoo::Ifunc2* value) {
+    callback = value;
+}
+
+unsigned Stubfunc2::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc2::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(Stubfunc2* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc2);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubCallbackFoo::Ifunc3* Stubfunc3::GetCallback() {
+    return callback;
+}
+
+void Stubfunc3::SetCallback(StubCallbackFoo::Ifunc3* value) {
+    callback = value;
+}
+
+unsigned Stubfunc3::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc3::ResetCallCounter() {
+    call_counter = 0;
 }
 
 void StubInit(Stubfunc3* value) {
@@ -57,6 +89,22 @@ StubInternalFoo::StubStubData& StubFoo::GetStub() {
 
 namespace BarSpace {
 namespace StubInternalBar {
+StubCallbackBar::Ifunc5* Stubfunc5::GetCallback() {
+    return callback;
+}
+
+void Stubfunc5::SetCallback(StubCallbackBar::Ifunc5* value) {
+    callback = value;
+}
+
+unsigned Stubfunc5::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc5::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(Stubfunc5* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc5);
@@ -93,6 +141,22 @@ StubInternalBar::StubStubData& StubBar::GetStub() {
 } //NS:BarSpace
 
 namespace StubInternalWarp {
+StubCallbackWarp::Ifunc2* Stubfunc2::GetCallback() {
+    return callback;
+}
+
+void Stubfunc2::SetCallback(StubCallbackWarp::Ifunc2* value) {
+    callback = value;
+}
+
+unsigned Stubfunc2::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc2::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(Stubfunc2* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc2);
@@ -101,12 +165,44 @@ void StubInit(Stubfunc2* value) {
     }
 }
 
+StubCallbackWarp::Ifunc3* Stubfunc3::GetCallback() {
+    return callback;
+}
+
+void Stubfunc3::SetCallback(StubCallbackWarp::Ifunc3* value) {
+    callback = value;
+}
+
+unsigned Stubfunc3::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc3::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(Stubfunc3* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc3);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubCallbackWarp::Ifunc4* Stubfunc4::GetCallback() {
+    return callback;
+}
+
+void Stubfunc4::SetCallback(StubCallbackWarp::Ifunc4* value) {
+    callback = value;
+}
+
+unsigned Stubfunc4::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc4::ResetCallCounter() {
+    call_counter = 0;
 }
 
 void StubInit(Stubfunc4* value) {
@@ -169,12 +265,44 @@ StubInternalWarp::StubStubData& StubWarp::GetStub() {
 }
 
 namespace StubInternalSmurf {
+StubCallbackSmurf::Ifunc2* Stubfunc2::GetCallback() {
+    return callback;
+}
+
+void Stubfunc2::SetCallback(StubCallbackSmurf::Ifunc2* value) {
+    callback = value;
+}
+
+unsigned Stubfunc2::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc2::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(Stubfunc2* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc2);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubCallbackSmurf::Ifunc3* Stubfunc3::GetCallback() {
+    return callback;
+}
+
+void Stubfunc3::SetCallback(StubCallbackSmurf::Ifunc3* value) {
+    callback = value;
+}
+
+unsigned Stubfunc3::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc3::ResetCallCounter() {
+    call_counter = 0;
 }
 
 void StubInit(Stubfunc3* value) {
@@ -185,6 +313,22 @@ void StubInit(Stubfunc3* value) {
     }
 }
 
+StubCallbackSmurf::Ifunc5* Stubfunc5::GetCallback() {
+    return callback;
+}
+
+void Stubfunc5::SetCallback(StubCallbackSmurf::Ifunc5* value) {
+    callback = value;
+}
+
+unsigned Stubfunc5::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc5::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(Stubfunc5* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc5);
@@ -193,12 +337,44 @@ void StubInit(Stubfunc5* value) {
     }
 }
 
+StubCallbackSmurf::Ifunc4* Stubfunc4::GetCallback() {
+    return callback;
+}
+
+void Stubfunc4::SetCallback(StubCallbackSmurf::Ifunc4* value) {
+    callback = value;
+}
+
+unsigned Stubfunc4::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc4::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(Stubfunc4* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc4);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubCallbackSmurf::IStubDtor* StubStubDtor::GetCallback() {
+    return callback;
+}
+
+void StubStubDtor::SetCallback(StubCallbackSmurf::IStubDtor* value) {
+    callback = value;
+}
+
+unsigned StubStubDtor::GetCallCounter() const {
+    return call_counter;
+}
+
+void StubStubDtor::ResetCallCounter() {
+    call_counter = 0;
 }
 
 void StubInit(StubStubDtor* value) {
@@ -290,12 +466,44 @@ StubInternalSmurf::StubStubData& StubSmurf::GetStub() {
 }
 
 namespace StubInternalDaddySmurf {
+StubCallbackDaddySmurf::Ifunc2* Stubfunc2::GetCallback() {
+    return callback;
+}
+
+void Stubfunc2::SetCallback(StubCallbackDaddySmurf::Ifunc2* value) {
+    callback = value;
+}
+
+unsigned Stubfunc2::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc2::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(Stubfunc2* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc2);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubCallbackDaddySmurf::Ifunc3* Stubfunc3::GetCallback() {
+    return callback;
+}
+
+void Stubfunc3::SetCallback(StubCallbackDaddySmurf::Ifunc3* value) {
+    callback = value;
+}
+
+unsigned Stubfunc3::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc3::ResetCallCounter() {
+    call_counter = 0;
 }
 
 void StubInit(Stubfunc3* value) {
@@ -306,12 +514,44 @@ void StubInit(Stubfunc3* value) {
     }
 }
 
+StubCallbackDaddySmurf::Ifunc4* Stubfunc4::GetCallback() {
+    return callback;
+}
+
+void Stubfunc4::SetCallback(StubCallbackDaddySmurf::Ifunc4* value) {
+    callback = value;
+}
+
+unsigned Stubfunc4::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc4::ResetCallCounter() {
+    call_counter = 0;
+}
+
 void StubInit(Stubfunc4* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(Stubfunc4);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubCallbackDaddySmurf::IStubDtor* StubStubDtor::GetCallback() {
+    return callback;
+}
+
+void StubStubDtor::SetCallback(StubCallbackDaddySmurf::IStubDtor* value) {
+    callback = value;
+}
+
+unsigned StubStubDtor::GetCallCounter() const {
+    return call_counter;
+}
+
+void StubStubDtor::ResetCallCounter() {
+    call_counter = 0;
 }
 
 void StubInit(StubStubDtor* value) {

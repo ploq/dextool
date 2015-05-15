@@ -89,6 +89,10 @@ public struct ClassTranslateContext {
 
         doTraversal(this, stub);
 
+        // forward declaration of stubbed class.
+        internal.hdr.stmt(E("class") ~ mangleToStubClassName(prefix, name).str);
+        internal.hdr.sep(2);
+
         callbacks.renderInterfaces(internal.hdr);
         doDataStruct(internal.hdr, internal.impl);
         doDataStructInit(prefix, CppClassName(prefix ~ name), vars,
@@ -154,7 +158,7 @@ private:
         auto ns_impl = impl.namespace(cast(string) data_ns);
         ns_impl.suppress_indent(1);
 
-        vars.render(ns_hdr, ns_impl);
+        vars.render(this.nesting, ns_hdr, ns_impl);
         hdr.sep;
         impl.sep;
     }

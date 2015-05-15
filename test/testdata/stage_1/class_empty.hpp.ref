@@ -2,6 +2,8 @@
 #define stub_class_empty_hpp
 #include "class_empty.hpp"
 
+class StubSimple;
+
 class StubSimple : public Simple {
 };
 

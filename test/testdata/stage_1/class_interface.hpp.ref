@@ -2,6 +2,8 @@
 #define stub_class_interface_hpp
 #include "class_interface.hpp"
 
+class StubSimple;
+
 namespace StubCallbackSimple {
 struct Ifunc1 { virtual int func1() = 0; };
 struct Ifunc2_int { virtual void func2_int(int x) = 0; };
@@ -12,41 +14,93 @@ struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSimple
 
 namespace StubInternalSimple {
-struct Stubfunc1 {
+class Stubfunc1 {
+public:
+    StubCallbackSimple::Ifunc1* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc1* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    int& SetReturn();
+private:
+    friend StubSimple;
+
     StubCallbackSimple::Ifunc1* callback;
     unsigned call_counter;
     int stub_return;
 };
 void StubInit(Stubfunc1* value);
 
-struct Stubfunc2_int {
+class Stubfunc2_int {
+public:
+    StubCallbackSimple::Ifunc2_int* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc2_int* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    int GetParam_x();
+private:
+    friend StubSimple;
+
     StubCallbackSimple::Ifunc2_int* callback;
     unsigned call_counter;
-    int param_x;
+    int Param_x;
 };
 void StubInit(Stubfunc2_int* value);
 
-struct Stubfunc2_double {
+class Stubfunc2_double {
+public:
+    StubCallbackSimple::Ifunc2_double* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc2_double* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    double GetParam_x();
+private:
+    friend StubSimple;
+
     StubCallbackSimple::Ifunc2_double* callback;
     unsigned call_counter;
-    double param_x;
+    double Param_x;
 };
 void StubInit(Stubfunc2_double* value);
 
-struct StubopAssign_Simple {
+class StubopAssign_Simple {
+public:
+    StubCallbackSimple::IopAssign_Simple* GetCallback();
+    void SetCallback(StubCallbackSimple::IopAssign_Simple* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    Simple* GetParam_other();
+private:
+    friend StubSimple;
+
     StubCallbackSimple::IopAssign_Simple* callback;
     unsigned call_counter;
-    Simple* param_other;
+    Simple* Param_other;
 };
 void StubInit(StubopAssign_Simple* value);
 
-struct Stubfunc3 {
+class Stubfunc3 {
+public:
+    StubCallbackSimple::Ifunc3* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc3* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+private:
+    friend StubSimple;
+
     StubCallbackSimple::Ifunc3* callback;
     unsigned call_counter;
 };
 void StubInit(Stubfunc3* value);
 
-struct StubStubDtor {
+class StubStubDtor {
+public:
+    StubCallbackSimple::IStubDtor* GetCallback();
+    void SetCallback(StubCallbackSimple::IStubDtor* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+private:
+    friend StubSimple;
+
     StubCallbackSimple::IStubDtor* callback;
     unsigned call_counter;
 };

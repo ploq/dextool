@@ -103,7 +103,7 @@ struct VariableContainer {
         return vars.length;
     }
 
-    void render(T0, T1)(ref T0 hdr, ref T1 impl) {
+    void render(T0, T1)(CppClassNesting nesting, ref T0 hdr, ref T1 impl) {
         auto hdr_structs = hdr.base;
         auto impl_structs = impl.base;
         hdr_structs.suppress_indent(1);
@@ -137,25 +137,110 @@ struct VariableContainer {
 
         // fill with data
         foreach (g; groups) {
-            renderGroup(g, hdr_structs, impl_structs, ctor_init);
+            renderGroup(g, nesting, hdr_structs, impl_structs, ctor_init);
             renderDataFunc(g, hdr_data_pub, hdr_data_priv, impl_data);
         }
     }
 
-    private void renderGroup(T0, T1)(CppMethodName group, ref T0 hdr,
-        ref T1 impl, ref T1 ctor_init_impl) {
+    private void renderGroup(T0, T1)(CppMethodName group,
+        CppClassNesting nesting, ref T0 hdr, ref T1 impl, ref T1 ctor_init_impl) {
         import std.string : toLower;
 
-        CppType st_type = stub_prefix ~ group;
-        auto st = hdr.struct_(st_type.str);
+        string stub_data_name = stub_prefix ~ group;
+
+        auto group_class = hdr.class_(stub_data_name);
+        auto group_pub = group_class.public_;
+        group_pub.suppress_indent(1);
+        auto group_priv = group_class.private_;
+        with (group_priv) {
+            suppress_indent(1);
+            friend(mangleToStubClassName(stub_prefix, class_name).str);
+            sep(2);
+        }
+
         foreach (item; vars) {
             if (item.group == group) {
-                TypeName tn = InternalToTypeName(item);
-                st.stmt(format("%s %s", tn.type.str, tn.name.str));
+                CppMethodName get_method = "Get" ~ item.typename.name.str;
+                CppMethodName set_method = "Set" ~ item.typename.name.str;
+
+                renderGetSetHdr(item, get_method, set_method, group_pub, group_priv);
+                renderGetSetImpl(item, CppClassName(stub_data_name), get_method, set_method,
+                    impl);
             }
         }
-        renderInit(TypeName(st_type, CppVariable("value")), group, hdr, impl, ctor_init_impl);
+        renderInit(TypeName(CppType(stub_data_name), CppVariable("value")),
+            group, hdr, impl, ctor_init_impl);
         hdr.sep;
+    }
+
+    private void renderGetSetHdr(T0, T1)(InternalType it,
+        const CppMethodName get_method, const CppMethodName set_method, ref T0 hdr_pub,
+        T1 hdr_priv) {
+        TypeName tn = InternalToTypeName(it);
+
+        switch (it.mangling) with (NameMangling) {
+        case Callback:
+            hdr_pub.method(false, tn.type.str, "GetCallback", false);
+            hdr_pub.method(false, "void", "SetCallback", false, tn.type.str ~ " value");
+            break;
+        case CallCounter:
+            hdr_pub.method(false, tn.type.str, "GetCallCounter", true);
+            hdr_pub.method(false, "void", "ResetCallCounter", false);
+            break;
+        case ReturnType:
+            hdr_pub.method(false, tn.type.str ~ "&", "SetReturn", false);
+            break;
+        default:
+            hdr_pub.method(false, tn.type.str, get_method.str, false);
+        }
+
+        hdr_priv.stmt(format("%s %s", tn.type.str, tn.name.str));
+    }
+
+    private void renderGetSetImpl(T0)(InternalType it,
+        const CppClassName stub_data_name, const CppMethodName get_method,
+        const CppMethodName set_method, ref T0 impl) {
+        TypeName tn = InternalToTypeName(it);
+
+        switch (it.mangling) with (NameMangling) {
+        case Callback:
+            with (impl.method_body(tn.type.str, stub_data_name.str, "GetCallback",
+                    false)) {
+                return_(tn.name.str);
+            }
+            impl.sep;
+            with (impl.method_body("void", stub_data_name.str, "SetCallback",
+                    false, tn.type.str ~ " value")) {
+                stmt(E(tn.name.str) = E("value"));
+            }
+            impl.sep;
+            break;
+        case CallCounter:
+            with (impl.method_body(tn.type.str, stub_data_name.str, "GetCallCounter",
+                    true)) {
+                return_(tn.name.str);
+            }
+            impl.sep;
+            with (impl.method_body("void", stub_data_name.str, "ResetCallCounter",
+                    false)) {
+                stmt(E(tn.name.str) = E("0"));
+            }
+            impl.sep;
+            break;
+        case ReturnType:
+            with (impl.method_body(tn.type.str ~ "&", stub_data_name.str, "SetReturn",
+                    false)) {
+                return_(tn.name.str);
+            }
+            impl.sep;
+            break;
+        default:
+            with (impl.method_body(tn.type.str, stub_data_name.str, get_method.str,
+                    false)) {
+                return_(tn.name.str);
+            }
+            impl.sep;
+        }
     }
 
     private void renderDataFunc(T0, T1, T2)(CppMethodName group, ref T0 hdr_pub,

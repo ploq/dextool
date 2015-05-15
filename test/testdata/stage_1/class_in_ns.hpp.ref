@@ -4,21 +4,41 @@
 
 namespace foo {
 namespace bar {
+class StubSmurf;
+
 namespace StubCallbackSmurf {
 struct IopAssign_Smurf { virtual foo::bar::Smurf & opAssign_Smurf(const foo::bar::Smurf & other) = 0; };
 struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSmurf
 
 namespace StubInternalSmurf {
-struct StubopAssign_Smurf {
+class StubopAssign_Smurf {
+public:
+    StubCallbackSmurf::IopAssign_Smurf* GetCallback();
+    void SetCallback(StubCallbackSmurf::IopAssign_Smurf* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    Smurf* GetParam_other();
+    foo::bar::Smurf *& SetReturn();
+private:
+    friend StubSmurf;
+
     StubCallbackSmurf::IopAssign_Smurf* callback;
     unsigned call_counter;
-    Smurf* param_other;
+    Smurf* Param_other;
     foo::bar::Smurf * stub_return;
 };
 void StubInit(StubopAssign_Smurf* value);
 
-struct StubStubDtor {
+class StubStubDtor {
+public:
+    StubCallbackSmurf::IStubDtor* GetCallback();
+    void SetCallback(StubCallbackSmurf::IStubDtor* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+private:
+    friend StubSmurf;
+
     StubCallbackSmurf::IStubDtor* callback;
     unsigned call_counter;
 };

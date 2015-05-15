@@ -3,12 +3,52 @@
 namespace foo {
 namespace bar {
 namespace StubInternalSmurf {
+StubCallbackSmurf::IopAssign_Smurf* StubopAssign_Smurf::GetCallback() {
+    return callback;
+}
+
+void StubopAssign_Smurf::SetCallback(StubCallbackSmurf::IopAssign_Smurf* value) {
+    callback = value;
+}
+
+unsigned StubopAssign_Smurf::GetCallCounter() const {
+    return call_counter;
+}
+
+void StubopAssign_Smurf::ResetCallCounter() {
+    call_counter = 0;
+}
+
+Smurf* StubopAssign_Smurf::GetParam_other() {
+    return Param_other;
+}
+
+foo::bar::Smurf *& StubopAssign_Smurf::SetReturn() {
+    return stub_return;
+}
+
 void StubInit(StubopAssign_Smurf* value) {
     char* d = reinterpret_cast<char*>(value);
     char* end = d + sizeof(StubopAssign_Smurf);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubCallbackSmurf::IStubDtor* StubStubDtor::GetCallback() {
+    return callback;
+}
+
+void StubStubDtor::SetCallback(StubCallbackSmurf::IStubDtor* value) {
+    callback = value;
+}
+
+unsigned StubStubDtor::GetCallCounter() const {
+    return call_counter;
+}
+
+void StubStubDtor::ResetCallCounter() {
+    call_counter = 0;
 }
 
 void StubInit(StubStubDtor* value) {
@@ -39,7 +79,7 @@ StubInternalSmurf::StubStubDtor& StubStubData::StubDtor() {
 
 foo::bar::Smurf & StubSmurf::operator=(const foo::bar::Smurf & other) {
     Stub_data.opAssign_Smurf().call_counter++;
-    Stub_data.opAssign_Smurf().param_other = const_cast<Smurf*>(&other);
+    Stub_data.opAssign_Smurf().Param_other = const_cast<Smurf*>(&other);
 
     if (Stub_data.opAssign_Smurf().callback != 0) {
         return Stub_data.opAssign_Smurf().callback->opAssign_Smurf(other);
