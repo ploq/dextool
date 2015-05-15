@@ -25,7 +25,7 @@ import logger = std.experimental.logger;
 
 import clang.Cursor;
 
-import translator.Type : toString, translateType;
+import translator.Type : TypeKind, translateType;
 
 import generator.stub.types;
 
@@ -47,12 +47,40 @@ package:
  * ---
  * It is translated to the array [("char", "x"), ("char", "y")].
  */
-TypeName[] parmDeclToTypeName(Cursor cursor) {
+auto parmDeclToTypeName(Cursor cursor) {
     TypeName[] params;
 
     foreach (param; cursor.func.parameters) {
         auto type = translateType(param.type);
-        params ~= TypeName(CppType(toString(type)), CppVariable(param.spelling));
+        params ~= TypeName(CppType(type.toString), CppVariable(param.spelling));
+    }
+
+    logger.trace(params);
+    return params;
+}
+
+/** Travers a node tree and gather all paramdecl to an array.
+ * Params:
+ * cursor = A node containing ParmDecl nodes as children.
+ * Example:
+ * -----
+ * class Simple{ Simple(char x, char y); }
+ * -----
+ * The AST for the above is kind of the following:
+ * Example:
+ * ---
+ * Simple [CXCursor_Constructor Type(CXType(CXType_FunctionProto))
+ *   x [CXCursor_ParmDecl Type(CXType(CXType_Char_S))
+ *   y [CXCursor_ParmDecl Type(CXType(CXType_Char_S))
+ * ---
+ * It is translated to the array [("char", "x"), ("char", "y")].
+ */
+auto paramDeclToTypeKindVariable(Cursor cursor) {
+    TypeKindVariable[] params;
+
+    foreach (param; cursor.func.parameters) {
+        auto type = translateType(param.type);
+        params ~= TypeKindVariable(type, CppVariable(param.spelling));
     }
 
     logger.trace(params);
@@ -73,4 +101,28 @@ auto toStrings(const TypeName[] vars) pure @safe nothrow {
 auto toString(const TypeName[] vars) pure @safe nothrow {
     auto params = vars.toStrings;
     return join(params, ", ");
+}
+
+/// Convert a vector of TypeKindVariable to an underscore separated string of types.
+auto toStringOfType(const TypeKindVariable[] vars) {
+    import std.algorithm : map;
+    import std.array : join;
+
+    return vars.map!(a => "_" ~ cast(string) a.type.name).join("");
+}
+
+/// Convert a vector of TypeKindVariable to a comma separated string of parameters.
+auto toStringOfName(const TypeKindVariable[] vars) {
+    import std.algorithm : map;
+    import std.array : join;
+
+    return vars.map!(a => cast(string) a.name).join(", ");
+}
+
+/// Convert a vector of TypeKindVariable to a comma separated string of types, aka a parameter list.
+auto toParamString(const TypeKindVariable[] vars) {
+    import std.algorithm : map;
+    import std.array : join;
+
+    return vars.map!(a => a.type.toString ~ " " ~ a.name.str).join(", ");
 }

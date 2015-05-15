@@ -57,7 +57,7 @@ function test_gen_code() {
     echo -e "${C_YELLOW}=== $inhdr  ===${C_NONE}"
     echo -e "\t${expect_hdr} ${expect_impl}" "\t$PWD/${out_hdr}"
 
-    ../build/gen-test-double stub $pre_args -d $outdir $inhdr $cflags $post_args
+    eval "../build/gen-test-double stub $pre_args -d $outdir $inhdr $cflags $post_args"
 
     diff -u "${expect_hdr}" "${out_hdr}"
     if [[ -e "${expect_impl}" ]]; then
@@ -76,7 +76,9 @@ for sourcef in testdata/stage_1/*.hpp; do
     out_impl="$outdir/stub_"${inhdr_base%.hpp}".cpp"
 
     case "$sourcef" in
-        # *class_in_ns*)
+        # **)
+        #     test_gen_code "$outdir" "$sourcef" "--debug" ;;
+        # **)
         #     test_gen_code "$outdir" "$sourcef" "--debug" "|& grep -i $grepper"
         # ;;
         *)
@@ -85,14 +87,14 @@ for sourcef in testdata/stage_1/*.hpp; do
     esac
 
     case "$sourcef" in
-        *class_funcs*) ;;
-        *class_simple*) ;;
         *)
             test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp
         ;;
     esac
 
+    set +e
     rm "$outdir"/*
+    set -e
 done
 
 echo "Stage 2"

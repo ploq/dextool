@@ -58,6 +58,7 @@ class Context {
     /** Initialize context from file
      * Params:
      *  input_file_ = filename of code to parse
+     *  args = extra arguments to pass to libclang
      */
     this(string input_file_, const string[] args = null) {
         input_file = input_file_;

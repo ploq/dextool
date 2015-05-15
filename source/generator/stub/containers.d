@@ -53,6 +53,9 @@ package:
  * NameMangling affects how the types and variables are translated to C++ code.
  * See translate() for details.
  *
+ * Chose to not use the built-in associative array because it doesn't preserve
+ * the order.
+ *
  * Example:
  * ---
  * VariableContainer foo;
@@ -67,161 +70,184 @@ struct VariableContainer {
     @disable this();
 
     this(StubPrefix stub_prefix, CallbackNs cb_ns, CallbackPrefix cb_prefix,
-        StubNs data_ns, CallbackStruct cb_st, CountStruct cnt_st, StaticStruct st_st) {
+        StubNs data_ns, CppClassName class_name) {
+        import std.string : toLower;
+
         this.stub_prefix = stub_prefix;
+        this.stub_prefix_lower = StubPrefix((cast(string) stub_prefix).toLower);
         this.cb_ns = cb_ns;
         this.cb_prefix = cb_prefix;
         this.data_ns = data_ns;
-        this.cb_st = cb_st;
-        this.cnt_st = cnt_st;
-        this.st_st = st_st;
+        this.class_name = class_name;
     }
 
-    void push(const NameMangling mangling, const TypeName tn) pure @safe nothrow {
-        final switch (mangling) with (NameMangling) {
-        case Callback:
-            callback_vars ~= InternalType(mangling, tn);
-            break;
-        case CallCounter:
-            cnt_vars ~= InternalType(mangling, tn);
-            break;
+    void push(const NameMangling mangling, const TypeName tn, const CppMethodName grouping) pure @safe nothrow {
+        import std.algorithm : canFind;
 
-        case Plain:
-        case ReturnType:
-            static_vars ~= InternalType(mangling, tn);
-            break;
+        if (!groups.canFind(grouping))
+            groups ~= grouping;
+        vars ~= InternalType(mangling, tn, grouping);
+    }
+
+    void push(const NameMangling mangling, const CppType type,
+        const CppVariable name, const CppMethodName grouping) pure @safe nothrow {
+        push(mangling, TypeName(type, name), grouping);
+    }
+
+    void push(const NameMangling mangling, const ref TypeName[] tn, const CppMethodName grouping) pure @safe nothrow {
+        tn.each!(a => push(mangling, a, grouping));
+    }
+
+    /// Number of variables stored.
+    @property auto length() {
+        return vars.length;
+    }
+
+    void render(T0, T1)(ref T0 hdr, ref T1 impl) {
+        auto hdr_structs = hdr.base;
+        auto impl_structs = impl.base;
+        hdr_structs.suppress_indent(1);
+        impl_structs.suppress_indent(1);
+
+        auto impl_data = impl.base;
+        impl_data.suppress_indent(1);
+
+        // create data class containing the stub interface
+        auto data_class = mangleToStubDataClass(stub_prefix);
+        auto hdr_data = hdr.class_(data_class.str);
+        auto hdr_data_pub = hdr_data.public_;
+        hdr_data.sep;
+        auto hdr_data_priv = hdr_data.private_;
+        hdr_data_pub.suppress_indent(1);
+        hdr_data_priv.suppress_indent(1);
+
+        with (hdr_data_pub) {
+            ctor(data_class.str);
+            dtor(data_class.str);
+            sep;
+        }
+
+        CppModule ctor_init;
+        with (impl_data) {
+            ctor_init = ctor_body(data_class.str);
+            sep;
+            dtor_body(data_class.str);
+            sep;
+        }
+
+        // fill with data
+        foreach (g; groups) {
+            renderGroup(g, hdr_structs, impl_structs, ctor_init);
+            renderDataFunc(g, hdr_data_pub, hdr_data_priv, impl_data);
         }
     }
 
-    void push(const NameMangling mangling, const CppType type, const CppVariable name) pure @safe nothrow {
-        push(mangling, TypeName(type, name));
-    }
+    private void renderGroup(T0, T1)(CppMethodName group, ref T0 hdr,
+        ref T1 impl, ref T1 ctor_init_impl) {
+        import std.string : toLower;
 
-    void push(const NameMangling mangling, const ref TypeName[] tn) pure @safe nothrow {
-        tn.each!(a => push(mangling, a));
-    }
-
-    /** Number of variables stored.
-     */
-    @property auto length() {
-        return static_vars.length + callback_vars.length + cnt_vars.length;
-    }
-
-    @property auto callbackLength() {
-        return callback_vars.length;
-    }
-
-    @property auto countLength() {
-        return cnt_vars.length;
-    }
-
-    @property auto staticLength() {
-        return static_vars.length;
-    }
-
-    void renderCallback(T0, T1)(ref T0 hdr, ref T1 impl) {
-        if (callback_vars.length == 0)
-            return;
-
-        auto st = hdr.struct_(cast(string) cb_st);
-        foreach (item; callback_vars)
-            with (st) {
+        CppType st_type = stub_prefix ~ group;
+        auto st = hdr.struct_(st_type.str);
+        foreach (item; vars) {
+            if (item.group == group) {
                 TypeName tn = InternalToTypeName(item);
-                stmt(format("%s %s", cast(string) tn.type, cast(string) tn.name));
+                st.stmt(format("%s %s", tn.type.str, tn.name.str));
             }
-        renderInit(TypeName(cast(CppType) cb_st, CppVariable("value")), hdr, impl);
+        }
+        renderInit(TypeName(st_type, CppVariable("value")), group, hdr, impl, ctor_init_impl);
         hdr.sep;
     }
 
-    void renderCount(T0, T1)(ref T0 hdr, ref T1 impl) {
-        if (cnt_vars.length == 0)
+    private void renderDataFunc(T0, T1, T2)(CppMethodName group, ref T0 hdr_pub,
+        ref T1 hdr_priv, ref T2 impl) {
+        import std.algorithm : find;
+
+        auto internal = vars.find!(a => a.mangling == NameMangling.Callback && a.group == group);
+        if (internal.length == 0) {
+            logger.errorf("No callback variable for group '%s'", group.str);
             return;
+        }
+        auto tn = internal[0].typename;
 
-        auto st = hdr.struct_(cast(string) cnt_st);
-        foreach (item; cnt_vars)
-            with (st) {
-                TypeName tn = InternalToTypeName(item);
-                stmt(format("%s %s", cast(string) tn.type, cast(string) tn.name));
-            }
-        renderInit(TypeName(cast(CppType) cnt_st, CppVariable("value")), hdr, impl);
-        hdr.sep;
-    }
+        auto struct_type = mangleToStubStructType(stub_prefix, group, class_name);
+        auto variable = mangleToStubDataClassInternalVariable(stub_prefix,
+            CppMethodName(tn.name.str));
 
-    void renderStatic(T0, T1)(ref T0 hdr, ref T1 impl) {
-        if (static_vars.length == 0)
-            return;
+        hdr_pub.method(false, E(struct_type.str) ~ E("&"), tn.name.str, false);
+        hdr_priv.stmt(E(struct_type.str) ~ "" ~ E(variable.str));
 
-        auto st = hdr.struct_(cast(string) st_st);
-        foreach (item; static_vars)
-            with (st) {
-                TypeName tn = InternalToTypeName(item);
-                stmt(format("%s %s", cast(string) tn.type, cast(string) tn.name));
-            }
-        renderInit(TypeName(cast(CppType) st_st, CppVariable("value")), hdr, impl);
-        hdr.sep;
+        auto data_name = mangleToStubDataClass(stub_prefix);
+        with (impl.method_body(struct_type.str ~ "&", data_name.str, tn.name.str, false)) {
+            return_(E(variable.str));
+        }
+        impl.sep;
     }
 
 private:
     TypeName InternalToTypeName(InternalType it) pure @safe nothrow const {
         TypeName tn;
 
+        tn.name = mangleToStubStructMember(stub_prefix_lower, it.mangling, tn.name);
+
         final switch (it.mangling) with (NameMangling) {
         case Plain:
             return it.typename;
         case Callback:
             tn.type = cb_ns ~ "::" ~ cb_prefix ~ it.typename.type ~ "*";
-            tn.name = it.typename.name;
             return tn;
         case CallCounter:
             tn.type = it.typename.type;
-            tn.name = it.typename.name;
             return tn;
         case ReturnType:
             tn.type = it.typename.type;
-            tn.name = it.typename.name ~ "_return";
             return tn;
         }
     }
 
     /// Init function for a struct of data.
-    void renderInit(T0, T1)(TypeName tn, ref T0 hdr, ref T1 impl) {
+    void renderInit(T0, T1)(TypeName tn, CppMethodName method, ref T0 hdr,
+        ref T1 impl, ref T1 ctor_init_impl) {
         void doHeader(TypeName tn, ref T0 hdr) {
-            hdr.func("void", "StubInit", format("%s* %s",
-                cast(string) tn.type, cast(string) tn.name))[$.begin = ";",
+            hdr.func("void", "StubInit", format("%s* %s", tn.type.str, tn.name.str))[$.begin = ";",
                 $.end = newline, $.noindent = true];
         }
 
-        void doImpl(TypeName tn, ref T1 impl) {
-            auto f = impl.func("void", cast(string) stub_prefix ~ "Init", tn.type ~ "* " ~ tn.name);
+        void doImpl(TypeName tn, ref T1 impl, ref T1 ctor_init_impl) {
+            auto init_func = stub_prefix.str ~ "Init";
+
+            auto f = impl.func("void", init_func, tn.type ~ "* " ~ tn.name);
             with (f) {
-                stmt(E("char* d") = E("reinterpret_cast<char*>")(cast(string) tn.name));
-                stmt(E("char* end") = E("d") + E("sizeof")(cast(string) tn.type));
+                stmt(E("char* d") = E("reinterpret_cast<char*>")(tn.name.str));
+                stmt(E("char* end") = E("d") + E("sizeof")(tn.type.str));
                 with (for_("", "d != end", "++d")) {
                     stmt(E("*d") = 0);
                 }
             }
             impl.sep;
+
+            ctor_init_impl.stmt(
+                E(init_func)("&" ~ mangleToStubDataClassInternalVariable(stub_prefix,
+                method).str));
         }
 
         doHeader(tn, hdr);
-        doImpl(tn, impl);
+        doImpl(tn, impl, ctor_init_impl);
     }
 
-    alias InternalType = Tuple!(NameMangling, "mangling", TypeName, "typename");
-    InternalType[] static_vars;
-    InternalType[] callback_vars;
-    InternalType[] cnt_vars;
+    alias InternalType = Tuple!(NameMangling, "mangling", TypeName, "typename",
+        CppMethodName, "group");
+    InternalType[] vars;
+    CppMethodName[] groups;
 
     immutable StubPrefix stub_prefix;
+    immutable StubPrefix stub_prefix_lower;
     immutable CallbackNs cb_ns;
     immutable CallbackPrefix cb_prefix;
     immutable StubNs data_ns;
-    immutable CallbackStruct cb_st;
-    immutable CountStruct cnt_st;
-    immutable StaticStruct st_st;
+    immutable CppClassName class_name;
 }
 
-/// Public functions to generate callbacks for.
+/// Container of functions to generate callbacks for.
 struct CallbackContainer {
     @disable this();
 
@@ -245,10 +271,29 @@ struct CallbackContainer {
         items ~= CallbackType(return_type, method, params.dup);
     }
 
-    bool exists(CppMethodName method) {
+    /** Add a callback to the container.
+     * Params:
+     *  return_type = return type of the method.
+     *  method = method name of the callback.
+     *  params = parameters the method callback shall accept.
+     */
+    void push(CppType return_type, CppMethodName method, const TypeKindVariable[] params) {
+        import std.algorithm : map;
+        import std.array : array;
+
+        TypeName[] tmp = params.map!(a => TypeName(CppType(a.type.toString), a.name)).array();
+
+        items ~= CallbackType(return_type, method, tmp);
+    }
+
+    ///TODO change to using an ID for the method.
+    /// One proposal is to traverse the function inherit hierarchy to find the root.
+    bool exists(CppMethodName method, const TypeName[] params) {
         import std.algorithm : any;
 
-        return items.any!(a => a.name == method);
+        string p = params.toString;
+
+        return items.any!(a => a.name == method && a.params.toString == p);
     }
 
     @property auto length() {
@@ -299,7 +344,7 @@ unittest {
     CallbackContainer cb = CallbackContainer(CallbackNs("foo"), CallbackPrefix("Stub"));
     cb.push(CppType("void"), CppMethodName("smurf"), TypeName[].init);
 
-    assert(cb.exists(CppMethodName("smurf")), "expected true");
+    assert(cb.exists(CppMethodName("smurf"), TypeName[].init), "expected true");
 }
 
 @name("Test CallbackContainer rendering")

@@ -3,20 +3,26 @@
 #include "class_funcs.hpp"
 
 namespace StubCallbackSimple {
-struct IdtorSimple { virtual void dtorSimple() = 0; };
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSimple
 
 namespace StubInternalSimple {
-struct StubCallback {
-    StubCallbackSimple::IdtorSimple* dtorSimple;
+struct StubStubDtor {
+    StubCallbackSimple::IStubDtor* callback;
+    unsigned call_counter;
 };
-void StubInit(StubCallback* value);
+void StubInit(StubStubDtor* value);
 
-struct StubCounter {
-    unsigned dtorSimple;
+class StubStubData {
+public:
+    StubStubData();
+    ~StubStubData();
+
+    StubInternalSimple::StubStubDtor& StubDtor();
+
+private:
+    StubInternalSimple::StubStubDtor stub_StubDtor;
 };
-void StubInit(StubCounter* value);
-
 } //NS:StubInternalSimple
 
 class StubSimple : public Simple {
@@ -26,12 +32,10 @@ public:
     ~StubSimple();
 
 public:
-    StubInternalSimple::StubCallback& StubGetCallback();
-    StubInternalSimple::StubCounter& StubGetCounter();
+    StubInternalSimple::StubStubData& StubGet();
 
 private:
-    StubInternalSimple::StubCallback StubSimple_callback;
-    StubInternalSimple::StubCounter StubSimple_cnt;
+    StubInternalSimple::StubStubData Stub_data;
 };
 
 #endif // stub_class_funcs_hpp

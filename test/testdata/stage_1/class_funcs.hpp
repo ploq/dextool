@@ -5,9 +5,9 @@ typedef double MadeUp;
 
 class Simple {
 public:
-  Simple();
-  Simple(char foo);
-  ~Simple();
+  Simple() {}
+  Simple(char foo) {}
+  ~Simple() {}
 
   void func1();
   int func2();

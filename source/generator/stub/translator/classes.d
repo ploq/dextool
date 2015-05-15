@@ -64,18 +64,8 @@ public struct ClassTranslateContext {
         CountStruct cnt_st = prefix ~ "Counter";
         StaticStruct st_st = prefix ~ "Static";
 
-        this.vars = VariableContainer(prefix, cb_ns, cp, data_ns, cb_st, cnt_st, st_st);
+        this.vars = VariableContainer(prefix, cb_ns, cp, data_ns, name);
         this.callbacks = CallbackContainer(cb_ns, cp);
-        ///TODO refactore to using the mangle functions for _callback, _cnt and _static.
-        this.cb_var_name = CallbackContVariable(
-            TypeName(CppType(cast(string) data_ns ~ "::" ~ cast(string) cb_st),
-            CppVariable(cast(string) prefix ~ cast(string) name ~ "_callback")));
-        this.cnt_var_name = CountContVariable(
-            TypeName(CppType(cast(string) data_ns ~ "::" ~ cast(string) cnt_st),
-            CppVariable(cast(string) prefix ~ cast(string) name ~ "_cnt")));
-        this.st_var_name = StaticContVariable(
-            TypeName(CppType(cast(string) data_ns ~ "::" ~ cast(string) st_st),
-            CppVariable(cast(string) prefix ~ cast(string) name ~ "_static")));
     }
 
     void translate(ref Cursor cursor, const ref CppNesting nesting,
@@ -101,9 +91,8 @@ public struct ClassTranslateContext {
 
         callbacks.renderInterfaces(internal.hdr);
         doDataStruct(internal.hdr, internal.impl);
-        doDataStructInit(prefix, CppClassName(prefix ~ name), cb_var_name,
-            cnt_var_name, st_var_name, vars, this.class_code.hdr, stub.impl);
-        doCtorBody(data_ns, prefix, name, ctor_code);
+        doDataStructInit(prefix, CppClassName(prefix ~ name), vars,
+            this.class_code.hdr, stub.impl);
     }
 
     /** Traverse cursor and translate a subset of kinds.
@@ -131,14 +120,14 @@ public struct ClassTranslateContext {
                 auto stubname = CppClassName(cast(string) prefix ~ name);
                 push(classTranslator(prefix, nesting, name, current.get));
                 class_code = current.get;
-                MethodTranslateContext(stubname, access_spec).translate(c,
+                MethodTranslateContext(prefix, stubname, access_spec).translate(c,
                     vars, callbacks, current.get);
                 break;
             }
             break;
         case CXCursor_Constructor:
             push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr), current.impl));
-            ctorTranslator(c, prefix, current.hdr, current.impl, ctor_code);
+            ctorTranslator(c, prefix, current.hdr, current.impl);
             descend = false;
             break;
         case CXCursor_Destructor:
@@ -165,13 +154,7 @@ private:
         auto ns_impl = impl.namespace(cast(string) data_ns);
         ns_impl.suppress_indent(1);
 
-        vars.renderCallback(ns_hdr, ns_impl);
-        hdr.sep;
-        impl.sep;
-        vars.renderCount(ns_hdr, ns_impl);
-        hdr.sep;
-        impl.sep;
-        vars.renderStatic(ns_hdr, ns_impl);
+        vars.render(ns_hdr, ns_impl);
         hdr.sep;
         impl.sep;
     }
@@ -188,69 +171,41 @@ private:
         pub_hdr.func(return_type, method_)[$.begin = ";", $.end = newline, $.noindent = true];
         priv_hdr.stmt(var_name);
 
-        with (impl.method_body(return_type, cast(string) class_name, method_, false)) {
+        with (impl.method_body(return_type, class_name.str, method_, false)) {
             return_("this->" ~ name);
         }
         impl.sep;
     }
 
     void doDataStructInit(const StubPrefix prefix, const CppClassName class_name,
-        const CallbackContVariable cb_var_name,
-        const CountContVariable cnt_var_name,
-        const StaticContVariable st_var_name, VariableContainer vars,
-        ref CppModule hdr, ref CppModule impl) {
+        VariableContainer vars, ref CppModule hdr, ref CppModule impl) {
         if (vars.length == 0)
             return;
 
-        auto vars_getters_hdr = accessSpecifierTranslator(
-            CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic), hdr);
-        hdr.sep;
-        auto vars_hdr = accessSpecifierTranslator(
-            CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPrivate), hdr);
-        if (vars.callbackLength > 0) {
-            doDataStructInitHelper(class_name, cast(TypeName) cb_var_name,
-                CppMethodName(cast(string) prefix ~ "GetCallback"),
-                vars_getters_hdr, vars_hdr, impl);
-        }
-        if (vars.countLength > 0) {
-            doDataStructInitHelper(class_name, cast(TypeName) cnt_var_name,
-                CppMethodName(cast(string) prefix ~ "GetCounter"), vars_getters_hdr,
-                vars_hdr, impl);
-        }
-        if (vars.staticLength > 0) {
-            doDataStructInitHelper(class_name, cast(TypeName) st_var_name,
-                CppMethodName(cast(string) prefix ~ "GetStatic"), vars_getters_hdr,
-                vars_hdr, impl);
-        }
-    }
+        CppClassName getter_cls = mangleToStubDataClass(data_ns, prefix);
+        CppMethodName getter_func = CppMethodName(prefix ~ "Get");
+        CppVariable getter_var = CppVariable(prefix ~ "_data");
 
-    void doCtorBody(const StubNs stub_ns, const StubPrefix prefix,
-        const CppClassName name, CppModule[] ctor_code) {
-        if (vars.length == 0)
-            return;
-        // c'tors must all call the init functions for the data structures.
-
-        string init_ = cast(string) stub_ns ~ "::StubInit";
-        foreach (impl; ctor_code) {
-            if (vars.callbackLength > 0) {
-                impl.stmt(E(init_)("&" ~ cast(string) mangleToCallbackStructVariable(prefix,
-                    name)));
-            }
-            if (vars.countLength > 0) {
-                impl.stmt(E(init_)("&" ~ cast(string) mangleToCountStructVariable(prefix,
-                    name)));
-            }
-            if (vars.staticLength > 0) {
-                impl.stmt(E(init_)("&" ~ cast(string) mangleToStaticStructVariable(prefix,
-                    name)));
-            }
+        with (hdr.public_) {
+            suppress_indent(1);
+            method(false, getter_cls ~ "&", getter_func.str, false);
+            sep;
         }
+        with (hdr.private_) {
+            suppress_indent(1);
+            stmt(E(cast(string) getter_cls) ~ "" ~ E(getter_var.str));
+        }
+
+        with (impl.method_body(getter_cls.str ~ "&", class_name.str, getter_func.str,
+                false)) {
+            return_(getter_var.str);
+        }
+        impl.sep;
     }
 
 private:
     bool classdecl_used;
     CppHdrImpl class_code; // top of the new class created.
-    CppModule[] ctor_code; // delayed content creation for c'tors to after analyze.
     immutable StubPrefix prefix;
     immutable CppClassName name;
     CppClassNesting nesting;
@@ -260,7 +215,4 @@ private:
     CppAccessSpecifier access_spec;
 
     immutable StubNs data_ns;
-    immutable CallbackContVariable cb_var_name;
-    immutable CountContVariable cnt_var_name;
-    immutable StaticContVariable st_var_name;
 }

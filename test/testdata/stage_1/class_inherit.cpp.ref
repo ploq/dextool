@@ -1,270 +1,391 @@
 #include "stub_class_inherit.hpp"
 
 namespace StubInternalFoo {
-void StubInit(StubCallback* value) {
+void StubInit(Stubfunc2* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCallback);
+    char* end = d + sizeof(Stubfunc2);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-void StubInit(StubCounter* value) {
+void StubInit(Stubfunc3* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCounter);
+    char* end = d + sizeof(Stubfunc3);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+StubStubData::StubStubData() {
+    StubInit(&stub_func2);
+    StubInit(&stub_func3);
+}
+
+StubStubData::~StubStubData() {
+}
+
+StubInternalFoo::Stubfunc2& StubStubData::func2() {
+    return stub_func2;
+}
+
+StubInternalFoo::Stubfunc3& StubStubData::func3() {
+    return stub_func3;
 }
 
 } //NS:StubInternalFoo
 
 void StubFoo::func2() {
-    StubFoo_cnt.func2++;
+    Stub_data.func2().call_counter++;
 
-    if (StubFoo_callback.func2 != 0) {
-        StubFoo_callback.func2->func2();
+    if (Stub_data.func2().callback != 0) {
+        Stub_data.func2().callback->func2();
     }
 }
 
 void StubFoo::func3() {
-    StubFoo_cnt.func3++;
+    Stub_data.func3().call_counter++;
 
-    if (StubFoo_callback.func3 != 0) {
-        StubFoo_callback.func3->func3();
+    if (Stub_data.func3().callback != 0) {
+        Stub_data.func3().callback->func3();
     }
 }
 
-StubInternalFoo::StubCallback& StubFoo::StubGetCallback() {
-    return this->StubFoo_callback;
-}
-
-StubInternalFoo::StubCounter& StubFoo::StubGetCounter() {
-    return this->StubFoo_cnt;
+StubInternalFoo::StubStubData& StubFoo::StubGet() {
+    return Stub_data;
 }
 
 namespace BarSpace {
 namespace StubInternalBar {
-void StubInit(StubCallback* value) {
+void StubInit(Stubfunc5* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCallback);
+    char* end = d + sizeof(Stubfunc5);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-void StubInit(StubCounter* value) {
-    char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCounter);
-    for (; d != end; ++d) {
-        *d = 0;
-    }
+StubStubData::StubStubData() {
+    StubInit(&stub_func5);
+}
+
+StubStubData::~StubStubData() {
+}
+
+StubInternalBar::Stubfunc5& StubStubData::func5() {
+    return stub_func5;
 }
 
 } //NS:StubInternalBar
 
 void StubBar::func5() {
-    StubBar_cnt.func5++;
+    Stub_data.func5().call_counter++;
 
-    if (StubBar_callback.func5 != 0) {
-        StubBar_callback.func5->func5();
+    if (Stub_data.func5().callback != 0) {
+        Stub_data.func5().callback->func5();
     }
 }
 
-StubInternalBar::StubCallback& StubBar::StubGetCallback() {
-    return this->StubBar_callback;
-}
-
-StubInternalBar::StubCounter& StubBar::StubGetCounter() {
-    return this->StubBar_cnt;
+StubInternalBar::StubStubData& StubBar::StubGet() {
+    return Stub_data;
 }
 
 } //NS:BarSpace
 
 namespace StubInternalWarp {
-void StubInit(StubCallback* value) {
+void StubInit(Stubfunc2* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCallback);
+    char* end = d + sizeof(Stubfunc2);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-void StubInit(StubCounter* value) {
+void StubInit(Stubfunc3* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCounter);
+    char* end = d + sizeof(Stubfunc3);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+void StubInit(Stubfunc4* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(Stubfunc4);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+StubStubData::StubStubData() {
+    StubInit(&stub_func2);
+    StubInit(&stub_func3);
+    StubInit(&stub_func4);
+}
+
+StubStubData::~StubStubData() {
+}
+
+StubInternalWarp::Stubfunc2& StubStubData::func2() {
+    return stub_func2;
+}
+
+StubInternalWarp::Stubfunc3& StubStubData::func3() {
+    return stub_func3;
+}
+
+StubInternalWarp::Stubfunc4& StubStubData::func4() {
+    return stub_func4;
 }
 
 } //NS:StubInternalWarp
 
 void StubWarp::func2() {
-    StubWarp_cnt.func2++;
+    Stub_data.func2().call_counter++;
 
-    if (StubWarp_callback.func2 != 0) {
-        StubWarp_callback.func2->func2();
+    if (Stub_data.func2().callback != 0) {
+        Stub_data.func2().callback->func2();
     }
 }
 
 void StubWarp::func3() {
-    StubWarp_cnt.func3++;
+    Stub_data.func3().call_counter++;
 
-    if (StubWarp_callback.func3 != 0) {
-        StubWarp_callback.func3->func3();
+    if (Stub_data.func3().callback != 0) {
+        Stub_data.func3().callback->func3();
     }
 }
 
 void StubWarp::func4() {
-    StubWarp_cnt.func4++;
+    Stub_data.func4().call_counter++;
 
-    if (StubWarp_callback.func4 != 0) {
-        StubWarp_callback.func4->func4();
+    if (Stub_data.func4().callback != 0) {
+        Stub_data.func4().callback->func4();
     }
 }
 
-StubInternalWarp::StubCallback& StubWarp::StubGetCallback() {
-    return this->StubWarp_callback;
-}
-
-StubInternalWarp::StubCounter& StubWarp::StubGetCounter() {
-    return this->StubWarp_cnt;
+StubInternalWarp::StubStubData& StubWarp::StubGet() {
+    return Stub_data;
 }
 
 namespace StubInternalSmurf {
-void StubInit(StubCallback* value) {
+void StubInit(Stubfunc2* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCallback);
+    char* end = d + sizeof(Stubfunc2);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-void StubInit(StubCounter* value) {
+void StubInit(Stubfunc3* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCounter);
+    char* end = d + sizeof(Stubfunc3);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+void StubInit(Stubfunc5* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(Stubfunc5);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(Stubfunc4* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(Stubfunc4);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubStubDtor* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubStubDtor);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+StubStubData::StubStubData() {
+    StubInit(&stub_func2);
+    StubInit(&stub_func3);
+    StubInit(&stub_func5);
+    StubInit(&stub_func4);
+    StubInit(&stub_StubDtor);
+}
+
+StubStubData::~StubStubData() {
+}
+
+StubInternalSmurf::Stubfunc2& StubStubData::func2() {
+    return stub_func2;
+}
+
+StubInternalSmurf::Stubfunc3& StubStubData::func3() {
+    return stub_func3;
+}
+
+StubInternalSmurf::Stubfunc5& StubStubData::func5() {
+    return stub_func5;
+}
+
+StubInternalSmurf::Stubfunc4& StubStubData::func4() {
+    return stub_func4;
+}
+
+StubInternalSmurf::StubStubDtor& StubStubData::StubDtor() {
+    return stub_StubDtor;
 }
 
 } //NS:StubInternalSmurf
 
 void StubSmurf::func2() {
-    StubSmurf_cnt.func2++;
+    Stub_data.func2().call_counter++;
 
-    if (StubSmurf_callback.func2 != 0) {
-        StubSmurf_callback.func2->func2();
+    if (Stub_data.func2().callback != 0) {
+        Stub_data.func2().callback->func2();
     }
 }
 
 void StubSmurf::func3() {
-    StubSmurf_cnt.func3++;
+    Stub_data.func3().call_counter++;
 
-    if (StubSmurf_callback.func3 != 0) {
-        StubSmurf_callback.func3->func3();
+    if (Stub_data.func3().callback != 0) {
+        Stub_data.func3().callback->func3();
     }
 }
 
 void StubSmurf::func5() {
-    StubSmurf_cnt.func5++;
+    Stub_data.func5().call_counter++;
 
-    if (StubSmurf_callback.func5 != 0) {
-        StubSmurf_callback.func5->func5();
+    if (Stub_data.func5().callback != 0) {
+        Stub_data.func5().callback->func5();
     }
 }
 
 void StubSmurf::func4() {
-    StubSmurf_cnt.func4++;
+    Stub_data.func4().call_counter++;
 
-    if (StubSmurf_callback.func4 != 0) {
-        StubSmurf_callback.func4->func4();
+    if (Stub_data.func4().callback != 0) {
+        Stub_data.func4().callback->func4();
     }
 }
 
 StubSmurf::StubSmurf() {
-    StubInternalSmurf::StubInit(&StubSmurf_callback);
-    StubInternalSmurf::StubInit(&StubSmurf_cnt);
 }
 
 StubSmurf::~StubSmurf() {
-    StubSmurf_cnt.dtorSmurf++;
+    Stub_data.StubDtor().call_counter++;
 
-    if (StubSmurf_callback.dtorSmurf != 0) {
-        StubSmurf_callback.dtorSmurf->dtorSmurf();
+    if (Stub_data.StubDtor().callback != 0) {
+        Stub_data.StubDtor().callback->StubDtor();
     }
 }
 
-StubInternalSmurf::StubCallback& StubSmurf::StubGetCallback() {
-    return this->StubSmurf_callback;
-}
-
-StubInternalSmurf::StubCounter& StubSmurf::StubGetCounter() {
-    return this->StubSmurf_cnt;
+StubInternalSmurf::StubStubData& StubSmurf::StubGet() {
+    return Stub_data;
 }
 
 namespace StubInternalDaddySmurf {
-void StubInit(StubCallback* value) {
+void StubInit(Stubfunc2* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCallback);
+    char* end = d + sizeof(Stubfunc2);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-void StubInit(StubCounter* value) {
+void StubInit(Stubfunc3* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCounter);
+    char* end = d + sizeof(Stubfunc3);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+void StubInit(Stubfunc4* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(Stubfunc4);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubStubDtor* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubStubDtor);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+StubStubData::StubStubData() {
+    StubInit(&stub_func2);
+    StubInit(&stub_func3);
+    StubInit(&stub_func4);
+    StubInit(&stub_StubDtor);
+}
+
+StubStubData::~StubStubData() {
+}
+
+StubInternalDaddySmurf::Stubfunc2& StubStubData::func2() {
+    return stub_func2;
+}
+
+StubInternalDaddySmurf::Stubfunc3& StubStubData::func3() {
+    return stub_func3;
+}
+
+StubInternalDaddySmurf::Stubfunc4& StubStubData::func4() {
+    return stub_func4;
+}
+
+StubInternalDaddySmurf::StubStubDtor& StubStubData::StubDtor() {
+    return stub_StubDtor;
 }
 
 } //NS:StubInternalDaddySmurf
 
 void StubDaddySmurf::func2() {
-    StubDaddySmurf_cnt.func2++;
+    Stub_data.func2().call_counter++;
 
-    if (StubDaddySmurf_callback.func2 != 0) {
-        StubDaddySmurf_callback.func2->func2();
+    if (Stub_data.func2().callback != 0) {
+        Stub_data.func2().callback->func2();
     }
 }
 
 void StubDaddySmurf::func3() {
-    StubDaddySmurf_cnt.func3++;
+    Stub_data.func3().call_counter++;
 
-    if (StubDaddySmurf_callback.func3 != 0) {
-        StubDaddySmurf_callback.func3->func3();
+    if (Stub_data.func3().callback != 0) {
+        Stub_data.func3().callback->func3();
     }
 }
 
 void StubDaddySmurf::func4() {
-    StubDaddySmurf_cnt.func4++;
+    Stub_data.func4().call_counter++;
 
-    if (StubDaddySmurf_callback.func4 != 0) {
-        StubDaddySmurf_callback.func4->func4();
+    if (Stub_data.func4().callback != 0) {
+        Stub_data.func4().callback->func4();
     }
 }
 
 StubDaddySmurf::StubDaddySmurf() {
-    StubInternalDaddySmurf::StubInit(&StubDaddySmurf_callback);
-    StubInternalDaddySmurf::StubInit(&StubDaddySmurf_cnt);
 }
 
 StubDaddySmurf::~StubDaddySmurf() {
-    StubDaddySmurf_cnt.dtorDaddySmurf++;
+    Stub_data.StubDtor().call_counter++;
 
-    if (StubDaddySmurf_callback.dtorDaddySmurf != 0) {
-        StubDaddySmurf_callback.dtorDaddySmurf->dtorDaddySmurf();
+    if (Stub_data.StubDtor().callback != 0) {
+        Stub_data.StubDtor().callback->StubDtor();
     }
 }
 
-StubInternalDaddySmurf::StubCallback& StubDaddySmurf::StubGetCallback() {
-    return this->StubDaddySmurf_callback;
-}
-
-StubInternalDaddySmurf::StubCounter& StubDaddySmurf::StubGetCounter() {
-    return this->StubDaddySmurf_cnt;
+StubInternalDaddySmurf::StubStubData& StubDaddySmurf::StubGet() {
+    return Stub_data;
 }
 

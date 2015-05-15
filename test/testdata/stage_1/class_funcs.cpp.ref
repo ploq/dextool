@@ -1,47 +1,42 @@
 #include "stub_class_funcs.hpp"
 
 namespace StubInternalSimple {
-void StubInit(StubCallback* value) {
+void StubInit(StubStubDtor* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCallback);
+    char* end = d + sizeof(StubStubDtor);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-void StubInit(StubCounter* value) {
-    char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCounter);
-    for (; d != end; ++d) {
-        *d = 0;
-    }
+StubStubData::StubStubData() {
+    StubInit(&stub_StubDtor);
+}
+
+StubStubData::~StubStubData() {
+}
+
+StubInternalSimple::StubStubDtor& StubStubData::StubDtor() {
+    return stub_StubDtor;
 }
 
 } //NS:StubInternalSimple
 
 StubSimple::StubSimple() {
-    StubInternalSimple::StubInit(&StubSimple_callback);
-    StubInternalSimple::StubInit(&StubSimple_cnt);
 }
 
 StubSimple::StubSimple(char foo) {
-    StubInternalSimple::StubInit(&StubSimple_callback);
-    StubInternalSimple::StubInit(&StubSimple_cnt);
 }
 
 StubSimple::~StubSimple() {
-    StubSimple_cnt.dtorSimple++;
+    Stub_data.StubDtor().call_counter++;
 
-    if (StubSimple_callback.dtorSimple != 0) {
-        StubSimple_callback.dtorSimple->dtorSimple();
+    if (Stub_data.StubDtor().callback != 0) {
+        Stub_data.StubDtor().callback->StubDtor();
     }
 }
 
-StubInternalSimple::StubCallback& StubSimple::StubGetCallback() {
-    return this->StubSimple_callback;
-}
-
-StubInternalSimple::StubCounter& StubSimple::StubGetCounter() {
-    return this->StubSimple_cnt;
+StubInternalSimple::StubStubData& StubSimple::StubGet() {
+    return Stub_data;
 }
 

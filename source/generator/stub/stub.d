@@ -94,51 +94,53 @@ CppHdrImpl classTranslator(StubPrefix prefix, CppClassNesting nesting,
     return CppHdrImpl(doHeader(hdr_impl.hdr), hdr_impl.impl);
 }
 
-void ctorTranslator(Cursor c, const StubPrefix prefix, ref CppModule hdr,
-    ref CppModule impl, ref CppModule[] ctor_code) {
+void ctorTranslator(Cursor c, const StubPrefix prefix, ref CppModule hdr, ref CppModule impl) {
     void doHeader(CppClassName name, const ref TypeName[] params) {
         auto p = params.toString;
         auto node = hdr.ctor(cast(string) name, p);
     }
 
-    void doImpl(const CppClassName name, const TypeName[] params, ref CppModule[] ctor_code) {
+    void doImpl(const CppClassName name, const TypeName[] params) {
         auto s_name = cast(string) name;
         auto p = params.toString;
         auto node = impl.ctor_body(s_name, p);
-        ctor_code ~= node;
         impl.sep;
     }
 
     CppClassName name = prefix ~ c.spelling;
     auto params = parmDeclToTypeName(c);
     doHeader(name, params);
-    doImpl(name, params, ctor_code);
+    doImpl(name, params);
 }
 
 void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer vars,
     ref CallbackContainer callbacks, ref CppModule hdr, ref CppModule impl) {
-    void doHeader(CppClassName name, CppMethodName callback_name) {
-        auto node = hdr.dtor(c.func.isVirtual, cast(string) name);
+    void doHeader(CppClassName name, CppMethodName callback_name, ref CppModule hdr) {
+        auto node = hdr.dtor(c.func.isVirtual, name.str);
         hdr.sep();
 
         callbacks.push(CppType("void"), callback_name, TypeName[].init);
         vars.push(NameMangling.Callback, cast(CppType) callback_name,
-            cast(CppVariable) callback_name);
-        vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(CppVariable) callback_name);
+            cast(CppVariable) callback_name, callback_name);
+        vars.push(NameMangling.CallCounter, CppType("unsigned"),
+            cast(CppVariable) callback_name, callback_name);
     }
 
     void doImpl(const CppClassName name, const CppClassName stub_name,
-        const CppMethodName callback_name) {
-        auto s_name = cast(string) stub_name;
-        auto node = impl.dtor_body(s_name);
+        const CppMethodName callback_name, ref CppModule impl) {
+        auto data = mangleToStubDataClassVariable(prefix);
+        auto getter = mangleToStubDataGetter(callback_name, TypeKindVariable[].init);
+        auto counter = mangleToStubStructMember(prefix,
+            NameMangling.CallCounter, CppVariable(callback_name.str));
+        auto callback = mangleToStubStructMember(prefix, NameMangling.Callback,
+            CppVariable(callback_name.str));
 
-        string name_ = cast(string) name;
-        ///TODO refactore to using mangle functions.
-        with (node) {
-            stmt(E(s_name ~ "_cnt").e("dtor" ~ name_) ~ E("++"));
+        with (impl.dtor_body(stub_name.str)) {
+            stmt("%s.%s().%s++".format(data.str, getter.str, counter.str));
             sep(2);
-            with (if_(E(s_name ~ "_callback").e("dtor" ~ name_) ~ E(" != 0"))) {
-                stmt(E(s_name ~ "_callback").e("dtor" ~ name_) ~ E("->") ~ E("dtor" ~ name_)(""));
+            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ E(" != 0"))) {
+                stmt(E(data.str).e(getter.str)("").e(callback.str) ~ E("->") ~ E(callback_name.str)(
+                    ""));
             }
         }
         impl.sep;
@@ -146,10 +148,10 @@ void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer var
 
     CppClassName name = c.spelling.removechars("~");
     CppClassName stub_name = prefix ~ name;
-    CppMethodName callback_name = "dtor" ~ name;
+    CppMethodName callback_name = prefix ~ "Dtor";
 
-    doHeader(stub_name, callback_name);
-    doImpl(name, stub_name, callback_name);
+    doHeader(stub_name, callback_name, hdr);
+    doImpl(name, stub_name, callback_name, impl);
 }
 
 CppHdrImpl namespaceTranslator(CppClassStructNsName nest, ref CppHdrImpl hdr_impl) {

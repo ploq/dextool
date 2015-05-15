@@ -28,7 +28,7 @@ import clang.Cursor;
 
 import dsrcgen.cpp;
 
-import translator.Type;
+import translator.Type : TypeKind;
 
 import generator.stub.types;
 import generator.stub.containers;
@@ -48,9 +48,9 @@ version (unittest) {
     }
 }
 
-void functionTranslator(Cursor c, const CppClassName class_name,
-    ref VariableContainer vars, ref CallbackContainer callbacks, ref CppModule hdr,
-    ref CppModule impl) {
+void functionTranslator(Cursor c, const StubPrefix prefix,
+    const CppClassName class_name, ref VariableContainer vars,
+    ref CallbackContainer callbacks, ref CppModule hdr, ref CppModule impl) {
 
     if (!c.func.isVirtual) {
         auto loc = c.location;
@@ -60,177 +60,162 @@ void functionTranslator(Cursor c, const CppClassName class_name,
         return;
     }
 
-    TypeName[] params;
+    TypeKindVariable[] params;
     TypeKind return_type;
     CppMethodName method;
     CppMethodName callback_method;
 
     analyzeCursor(c, params, return_type, method, callback_method);
-    string return_type_ = translator.Type.toString(return_type);
+    string return_type_ = return_type.toString;
 
     pushVarsForCallback(params, callback_method, return_type_, vars, callbacks);
 
     doHeader(c.func.isVirtual, c.func.isConst, params, return_type_, method, hdr);
-    doImpl(c.func.isConst, params, return_type_, class_name, method, callback_method,
-        impl);
+    doImpl(c.func.isConst, prefix, params, CppType(return_type_), class_name,
+        method, callback_method, impl);
 }
 
 private:
 
-void pushVarsForCallback(const TypeName[] params,
+void pushVarsForCallback(const TypeKindVariable[] params,
     const CppMethodName callback_method, const string return_type,
     ref VariableContainer vars, ref CallbackContainer callbacks) {
     vars.push(NameMangling.Callback, cast(CppType) callback_method,
-        cast(CppVariable) callback_method);
-    vars.push(NameMangling.CallCounter, CppType("unsigned"), cast(CppVariable) callback_method);
+        cast(CppVariable) callback_method, callback_method);
+    vars.push(NameMangling.CallCounter, CppType("unsigned"),
+        cast(CppVariable) callback_method, callback_method);
 
-    TypeName[] p = params.map!(
-        a => TypeName(mangleTypeToCallbackStructType(CppType(a.type)),
-        CppVariable(callback_method ~ "_param_" ~ a.name))).array();
-    vars.push(NameMangling.Plain, p);
+    TypeName[] p = params.map!(a => TypeName(mangleToStubStructMemberType(a.type),
+        CppVariable(mangleToParamVariable(a).str))).array();
+    vars.push(NameMangling.Plain, p, callback_method);
 
     if (return_type.strip != "void") {
         vars.push(NameMangling.ReturnType,
-            mangleTypeToCallbackStructType(CppType(return_type)), cast(CppVariable) callback_method);
+            mangleTypeToCallbackStructType(CppType(return_type)),
+            cast(CppVariable) callback_method, callback_method);
     }
 
     callbacks.push(CppType(return_type), callback_method, params);
 }
 
 /// Extract data needed for code generation.
-void analyzeCursor(Cursor c, out TypeName[] params, out TypeKind return_type,
-    out CppMethodName method, out CppMethodName callback_method_) {
-    params = parmDeclToTypeName(c);
-    foreach (idx, tn; params) {
-        params[idx] = genRandomName(tn, idx);
+void analyzeCursor(Cursor c, out TypeKindVariable[] params,
+    out TypeKind return_type, out CppMethodName method, out CppMethodName callback_method_) {
+    auto params2 = paramDeclToTypeKindVariable(c);
+
+    foreach (idx, tn; params2) {
+        params ~= genRandomName(tn, idx);
     }
     return_type = translateType(c.func.resultType);
     method = CppMethodName(c.spelling);
 
-    auto callback_method = mangleToCallbackMethod(CppMethodName(c.spelling));
+    // if null results in a crash with the error message below
+    auto callback_method = mangleToCallbackMethod(CppMethodName(c.spelling), params2);
     if (callback_method.isNull) {
         logger.errorf("Generating callback function for '%s' not supported", c.spelling);
-        callback_method = CppMethodName("<not supported " ~ c.spelling ~ ">");
+        callback_method = CppMethodName("/* not supported '" ~ c.spelling ~ "' */");
     }
     callback_method_ = callback_method.get;
 }
 
-void doHeader(bool is_virtual, bool is_const, const TypeName[] params,
+void doHeader(bool is_virtual, bool is_const, const TypeKindVariable[] params,
     const string return_type, const CppMethodName method, ref CppModule hdr) {
     import std.algorithm.iteration : map;
 
-    string method_ = cast(string) method;
-
-    auto node = hdr.method(is_virtual, return_type, method_, is_const, params.toString);
+    hdr.method(is_virtual, return_type, method.str, is_const, params.toParamString);
 }
 
-auto castAndStoreValue(TypeName a) @safe {
+auto castAndStoreValue(const TypeKindVariable v) @safe {
     //TODO change TypeName to use TypeKind instead of CppType.
     import std.algorithm : canFind;
 
-    string type_ = cast(string) a.type;
-    string get_ptr;
     bool do_const_cast;
 
-    if (type_.canFind('&')) {
-        get_ptr = "&";
-        if (type_.startsWith("const")) {
-            type_ = type_[5 .. $ - 1].strip;
-            do_const_cast = true;
-        }
-    }
-    else if (type_.canFind('*')) {
-        if (type_.startsWith("const")) {
-            type_ = type_[5 .. $ - 1].strip;
-            do_const_cast = true;
-        }
-    }
+    string get_ptr = v.type.isRef ? "&" : "";
+
+    do_const_cast = v.type.isConst && (v.type.isRef || v.type.isPointer);
 
     if (do_const_cast) {
-        return E("const_cast<" ~ type_ ~ "*>")(get_ptr ~ cast(string) a.name);
+        return E("const_cast<" ~ v.type.name ~ "*>")(get_ptr ~ v.name);
     }
-    return get_ptr ~ cast(string) a.name;
+    return get_ptr ~ v.name.str;
 }
 
 @name("Test helper for parameter casting when storing parameters")
 unittest {
-    auto rval = castAndStoreValue(TypeName(CppType("int"), CppVariable("bar")));
+    auto kind = TypeKind("int", false, false, false, "int");
+    auto rval = castAndStoreValue(TypeKindVariable(kind, CppVariable("bar")));
     assert(rval == "bar", rval);
 }
 
 @name("Test helper for parameter casting of ref and ptr")
 unittest {
-    auto rval = castAndStoreValue(TypeName(CppType("int*"), CppVariable("bar")));
+    auto kind = TypeKind("int", false, false, true, "int*");
+
+    auto rval = castAndStoreValue(TypeKindVariable(kind, CppVariable("bar")));
     assert(rval == "bar", to!string(__LINE__) ~ rval);
 
-    rval = castAndStoreValue(TypeName(CppType("int&"), CppVariable("bar")));
+    kind = TypeKind("int", false, true, false, "int&");
+    rval = castAndStoreValue(TypeKindVariable(kind, CppVariable("bar")));
     assert(rval == "&bar", to!string(__LINE__) ~ rval);
 }
 
-@name("Test helper for const parameter casting of ref and ptr")
+@name("Test helper for const parameter casting of ref")
 unittest {
-    auto rval = castAndStoreValue(TypeName(CppType("const int*"), CppVariable("bar")));
+    auto kind = TypeKind("int", true, false, true, "const int*");
+    auto rval = castAndStoreValue(TypeKindVariable(kind, CppVariable("bar")));
     assert(rval == "const_cast<int*>(bar)", rval);
+}
 
-    rval = castAndStoreValue(TypeName(CppType("const int&"), CppVariable("bar")));
+@name("Test helper for const parameter casting of ptr")
+unittest {
+    auto kind = TypeKind("int", true, true, false, "const int&");
+    auto rval = castAndStoreValue(TypeKindVariable(kind, CppVariable("bar")));
     assert(rval == "const_cast<int*>(&bar)", rval);
 }
 
-auto makeCppReturnFromStruct(string return_type, const CppClassName class_name,
-    const CppMethodName callback_method) {
-    import std.algorithm : findAmong;
-
-    string star;
-    if (findAmong(return_type, ['&']).length != 0) {
-        star = "*";
-    }
-
-    return "return %s%s_static.%s_return".format(star, cast(string) class_name,
-        cast(string) callback_method);
-}
-
-@name("Test maker for generating code returning a static value")
-unittest {
-    auto rval = makeCppReturnFromStruct("int", CppClassName("Foo"), CppMethodName("Bar"));
-    assert(rval == "return Foo_static.Bar_return", rval);
-
-    rval = makeCppReturnFromStruct("int&", CppClassName("Foo"), CppMethodName("Bar"));
-    assert(rval == "return *Foo_static.Bar_return", rval);
-}
-
-void doImpl(bool is_const, const TypeName[] params, const string return_type,
-    const CppClassName class_name, const CppMethodName method,
-    const CppMethodName callback_method, ref CppModule impl) {
+void doImpl(bool is_const, const StubPrefix prefix, const TypeKindVariable[] params,
+    const CppType return_type, const CppClassName class_name,
+    const CppMethodName method_, const CppMethodName callback_method, ref CppModule impl) {
     import std.algorithm : findAmong, map;
 
-    string class_name_ = cast(string) class_name;
-    string callback_method_ = cast(string) callback_method;
+    auto data = mangleToStubDataClassVariable(prefix);
+    auto getter = mangleToStubDataGetter(method_, params);
+    auto counter = mangleToStubStructMember(prefix, NameMangling.CallCounter,
+        CppVariable(method_.str));
+    auto callback = mangleToStubStructMember(prefix, NameMangling.Callback,
+        CppVariable(method_.str));
 
-    auto func = impl.method_body(return_type, class_name_, cast(string) method,
-        is_const, params.toString);
+    auto func = impl.method_body(return_type.str, class_name.str, method_.str,
+        is_const, params.toParamString);
     with (func) {
-        stmt("%s_cnt.%s++".format(class_name_, callback_method_));
+        stmt("%s.%s().%s++".format(mangleToStubDataClassVariable(prefix).str,
+            getter.str, counter.str));
         // store parameters for the function in the static storage to be used by the user in test cases.
         foreach (a; params) {
-            stmt("%s_static.%s_param_%s = %s".format(class_name_,
-                callback_method_, cast(string) a.name, a.castAndStoreValue));
+            auto var = mangleToParamVariable(a.name).str;
+            stmt(E(data.str).e(getter.str)("").e(var) = E(a.castAndStoreValue));
         }
         sep(2);
 
-        string sparams = params.map!(a => cast(string) a.name).join(", ");
-        if (return_type == "void") {
-            with (if_("%s_callback.%s != 0".format(class_name_, callback_method_))) {
-                stmt("%s_callback.%s->%s(%s)".format(class_name_,
-                    callback_method_, callback_method_, sparams));
+        if (return_type == CppType("void")) {
+            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ "!= 0")) {
+                stmt(E(data.str).e(getter.str)("").e(callback.str) ~ E("->") ~ E(
+                    callback_method.str)(params.toStringOfName));
             }
         }
         else {
-            with (if_("%s_callback.%s == 0".format(class_name_, callback_method_))) {
-                stmt(makeCppReturnFromStruct(return_type, class_name, callback_method));
+            string star;
+            if (findAmong(return_type.str, ['&']).length != 0) {
+                star = "*";
+            }
+            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ "!= 0")) {
+                return_(E(data.str).e(getter.str)("").e(callback.str) ~ E("->") ~ E(
+                    callback_method.str)(params.toStringOfName));
             }
             with (else_()) {
-                stmt("return %s_callback.%s->%s(%s)".format(class_name_,
-                    callback_method_, callback_method_, sparams));
+                return_(
+                    E(star) ~ E(data.str).e(getter.str)("").e(mangleToReturnVariable(prefix).str));
             }
         }
 

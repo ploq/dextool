@@ -26,6 +26,8 @@ import clang.c.index;
 
 import dsrcgen.cpp;
 
+import translator.Type : TypeKind;
+
 public:
 
 /// Prefix used for prepending generated code with a unique string to avoid name collisions.
@@ -55,7 +57,8 @@ alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
 alias CppType = Typedef!(string, string.init, "CppType");
 alias CppVariable = Typedef!(string, string.init, "CppVariable");
 
-alias TypeName = Tuple!(CppType, "type", CppVariable, "name");
+alias TypeName = Tuple!(CppType, "type", CppVariable, "name"); //TODO change TypeName to TypeVariable
+alias TypeKindVariable = Tuple!(TypeKind, "type", CppVariable, "name");
 
 alias CallbackNs = Typedef!(string, string.init, "CallbackNs");
 alias CallbackPrefix = Typedef!(string, string.init, "CallbackPrefix");
@@ -67,3 +70,8 @@ alias CountStruct = Typedef!(string, string.init, "CountStructInNs");
 alias CountContVariable = Typedef!(TypeName, TypeName.init, "CountContVariable");
 alias StaticStruct = Typedef!(string, string.init, "StaticStructInNs");
 alias StaticContVariable = Typedef!(TypeName, TypeName.init, "StaticContVariable");
+
+// convenient function for converting Typedef's to string representation.
+string str(T)(T value) @property @safe pure nothrow if (is(T : T!TL, TL : string)) {
+    return cast(string) value;
+}

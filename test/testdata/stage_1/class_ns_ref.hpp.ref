@@ -12,65 +12,93 @@ public:
 
 namespace StubCallbackGlass {
 struct Ifunc1 { virtual Foo::Bar func1() = 0; };
-struct Ifunc2 { virtual Foo::Bar& func2() = 0; };
-struct Ifunc3 { virtual Foo::Bar* func3() = 0; };
-struct Ifunc4 { virtual Foo::Bar func4() = 0; };
-struct Ifunc5 { virtual Foo::Bar& func5() = 0; };
-struct IdtorGlass { virtual void dtorGlass() = 0; };
+struct Ifunc2 { virtual Foo::Bar & func2() = 0; };
+struct Ifunc3 { virtual Foo::Bar * func3() = 0; };
+struct Ifunc4 { virtual ::Foo::Bar func4() = 0; };
+struct Ifunc5 { virtual ::Foo::Bar & func5() = 0; };
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackGlass
 
 namespace StubInternalGlass {
-struct StubCallback {
-    StubCallbackGlass::Ifunc1* func1;
-    StubCallbackGlass::Ifunc2* func2;
-    StubCallbackGlass::Ifunc3* func3;
-    StubCallbackGlass::Ifunc4* func4;
-    StubCallbackGlass::Ifunc5* func5;
-    StubCallbackGlass::IdtorGlass* dtorGlass;
+struct Stubfunc1 {
+    StubCallbackGlass::Ifunc1* callback;
+    unsigned call_counter;
+    Foo::Bar stub_return;
 };
-void StubInit(StubCallback* value);
+void StubInit(Stubfunc1* value);
 
-struct StubCounter {
-    unsigned func1;
-    unsigned func2;
-    unsigned func3;
-    unsigned func4;
-    unsigned func5;
-    unsigned dtorGlass;
+struct Stubfunc2 {
+    StubCallbackGlass::Ifunc2* callback;
+    unsigned call_counter;
+    Foo::Bar * stub_return;
 };
-void StubInit(StubCounter* value);
+void StubInit(Stubfunc2* value);
 
-struct StubStatic {
-    Foo::Bar func1_return;
-    Foo::Bar* func2_return;
-    Foo::Bar* func3_return;
-    Foo::Bar func4_return;
-    Foo::Bar* func5_return;
+struct Stubfunc3 {
+    StubCallbackGlass::Ifunc3* callback;
+    unsigned call_counter;
+    Foo::Bar * stub_return;
 };
-void StubInit(StubStatic* value);
+void StubInit(Stubfunc3* value);
 
+struct Stubfunc4 {
+    StubCallbackGlass::Ifunc4* callback;
+    unsigned call_counter;
+    ::Foo::Bar stub_return;
+};
+void StubInit(Stubfunc4* value);
+
+struct Stubfunc5 {
+    StubCallbackGlass::Ifunc5* callback;
+    unsigned call_counter;
+    ::Foo::Bar * stub_return;
+};
+void StubInit(Stubfunc5* value);
+
+struct StubStubDtor {
+    StubCallbackGlass::IStubDtor* callback;
+    unsigned call_counter;
+};
+void StubInit(StubStubDtor* value);
+
+class StubStubData {
+public:
+    StubStubData();
+    ~StubStubData();
+
+    StubInternalGlass::Stubfunc1& func1();
+    StubInternalGlass::Stubfunc2& func2();
+    StubInternalGlass::Stubfunc3& func3();
+    StubInternalGlass::Stubfunc4& func4();
+    StubInternalGlass::Stubfunc5& func5();
+    StubInternalGlass::StubStubDtor& StubDtor();
+
+private:
+    StubInternalGlass::Stubfunc1 stub_func1;
+    StubInternalGlass::Stubfunc2 stub_func2;
+    StubInternalGlass::Stubfunc3 stub_func3;
+    StubInternalGlass::Stubfunc4 stub_func4;
+    StubInternalGlass::Stubfunc5 stub_func5;
+    StubInternalGlass::StubStubDtor stub_StubDtor;
+};
 } //NS:StubInternalGlass
 
 class StubGlass : public Glass {
 public:
     virtual Foo::Bar func1();
-    virtual Foo::Bar& func2();
-    virtual Foo::Bar* func3();
-    virtual Foo::Bar func4();
-    virtual Foo::Bar& func5();
+    virtual Foo::Bar & func2();
+    virtual Foo::Bar * func3();
+    virtual ::Foo::Bar func4();
+    virtual ::Foo::Bar & func5();
 public:
     StubGlass();
     virtual ~StubGlass();
 
 public:
-    StubInternalGlass::StubCallback& StubGetCallback();
-    StubInternalGlass::StubCounter& StubGetCounter();
-    StubInternalGlass::StubStatic& StubGetStatic();
+    StubInternalGlass::StubStubData& StubGet();
 
 private:
-    StubInternalGlass::StubCallback StubGlass_callback;
-    StubInternalGlass::StubCounter StubGlass_cnt;
-    StubInternalGlass::StubStatic StubGlass_static;
+    StubInternalGlass::StubStubData Stub_data;
 };
 
 #endif // stub_class_ns_ref_hpp

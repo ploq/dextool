@@ -45,7 +45,7 @@ struct SourceLocation {
         uint offset;
     }
 
-    // ugly hack. Must fix to somethhing thhat works for both File and string.
+    // ugly hack. Must fix to something that works for both File and string.
     struct Location2 {
         string file;
         uint line;

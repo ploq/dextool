@@ -3,74 +3,68 @@
 namespace foo {
 namespace bar {
 namespace StubInternalSmurf {
-void StubInit(StubCallback* value) {
+void StubInit(StubopAssign_Smurf* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCallback);
+    char* end = d + sizeof(StubopAssign_Smurf);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-void StubInit(StubCounter* value) {
+void StubInit(StubStubDtor* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCounter);
+    char* end = d + sizeof(StubStubDtor);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-void StubInit(StubStatic* value) {
-    char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubStatic);
-    for (; d != end; ++d) {
-        *d = 0;
-    }
+StubStubData::StubStubData() {
+    StubInit(&stub_opAssign_Smurf);
+    StubInit(&stub_StubDtor);
+}
+
+StubStubData::~StubStubData() {
+}
+
+StubInternalSmurf::StubopAssign_Smurf& StubStubData::opAssign_Smurf() {
+    return stub_opAssign_Smurf;
+}
+
+StubInternalSmurf::StubStubDtor& StubStubData::StubDtor() {
+    return stub_StubDtor;
 }
 
 } //NS:StubInternalSmurf
 
-foo::bar::Smurf& StubSmurf::operator=(const foo::bar::Smurf& other) {
-    StubSmurf_cnt.opAssign++;
-    StubSmurf_static.opAssign_param_other = const_cast<foo::bar::Smurf*>(&other);
+foo::bar::Smurf & StubSmurf::operator=(const foo::bar::Smurf & other) {
+    Stub_data.opAssign_Smurf().call_counter++;
+    Stub_data.opAssign_Smurf().param_other = const_cast<Smurf*>(&other);
 
-    if (StubSmurf_callback.opAssign == 0) {
-        return *StubSmurf_static.opAssign_return;
+    if (Stub_data.opAssign_Smurf().callback != 0) {
+        return Stub_data.opAssign_Smurf().callback->opAssign_Smurf(other);
     }
     else {
-        return StubSmurf_callback.opAssign->opAssign(other);
+        return *Stub_data.opAssign_Smurf().stub_return;
     }
 }
 
 StubSmurf::StubSmurf() {
-    StubInternalSmurf::StubInit(&StubSmurf_callback);
-    StubInternalSmurf::StubInit(&StubSmurf_cnt);
-    StubInternalSmurf::StubInit(&StubSmurf_static);
 }
 
-StubSmurf::StubSmurf(const foo::bar::Smurf& other) {
-    StubInternalSmurf::StubInit(&StubSmurf_callback);
-    StubInternalSmurf::StubInit(&StubSmurf_cnt);
-    StubInternalSmurf::StubInit(&StubSmurf_static);
+StubSmurf::StubSmurf(const foo::bar::Smurf & other) {
 }
 
 StubSmurf::~StubSmurf() {
-    StubSmurf_cnt.dtorSmurf++;
+    Stub_data.StubDtor().call_counter++;
 
-    if (StubSmurf_callback.dtorSmurf != 0) {
-        StubSmurf_callback.dtorSmurf->dtorSmurf();
+    if (Stub_data.StubDtor().callback != 0) {
+        Stub_data.StubDtor().callback->StubDtor();
     }
 }
 
-StubInternalSmurf::StubCallback& StubSmurf::StubGetCallback() {
-    return this->StubSmurf_callback;
-}
-
-StubInternalSmurf::StubCounter& StubSmurf::StubGetCounter() {
-    return this->StubSmurf_cnt;
-}
-
-StubInternalSmurf::StubStatic& StubSmurf::StubGetStatic() {
-    return this->StubSmurf_static;
+StubInternalSmurf::StubStubData& StubSmurf::StubGet() {
+    return Stub_data;
 }
 
 } //NS:bar

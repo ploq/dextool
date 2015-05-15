@@ -35,15 +35,29 @@ import clang.Type;
 
 public:
 
-struct TypeKind {
+/** Type information for a cursor.
+ *
+ * name is without any storage classes or operators. Example int.
+ */
+pure @safe nothrow struct TypeKind {
     string name;
     bool isConst;
     bool isRef;
     bool isPointer;
-}
 
-string toString(const TypeKind type) {
-    return type.name;
+    /** The full type with storage classes and operators.
+     * Example
+     * ---
+     * const int&
+     * ---
+     */
+    @property string toString() const {
+        return full_name;
+    }
+
+private:
+    string full_name;
+    Type t;
 }
 
 /** Translate a cursors type to a struct representation.
@@ -60,6 +74,8 @@ body {
     import std.array;
 
     TypeKind result;
+    result.t = type;
+    result.full_name = type.spelling;
 
     auto tmp_c = type.declaration;
     auto tmp_t = tmp_c.typedefUnderlyingType;
@@ -96,10 +112,6 @@ body {
             case CXType_LValueReference:
                 result = translateReference(type);
                 break;
-            case CXType_FunctionProto:
-                result.name = type.spelling.filter!(a => !a.among('(', ')')).cache.map!(
-                    a => cast(char) a).array.strip(' ');
-                break;
 
             default:
                 logger.trace(format("%s|%s|%s|%s", type.kind, type.declaration,
@@ -113,19 +125,7 @@ body {
     return result;
 }
 
-TypeKind analyzeType(Type type) {
-    import std.algorithm;
-    import std.array;
-
-    TypeKind result = toProperty(type);
-
-    string t = type.spelling;
-    auto name = t.filter!(a => !a.among('&', '*')).cache().map!(a => cast(char) a).array().splitter(
-        ' ').filter!(a => !a.among("const")).cache().array().join;
-
-    result.name = cast(string) name;
-    return result;
-}
+private:
 
 /** Extract properties from a Cursor for a Type like const, pointer, reference.
  * Params:
@@ -157,141 +157,6 @@ TypeKind toProperty(Type type) {
     return result;
 }
 
-/** Translate a cursor for a type to a TypeKind.
- *
- * Useful when a diagnostic error is detected. Then the translation must be
- * done on the tokens. At least for the undefined types. Otherwise they will be
- * assuemed to be int's.
- *
- * Assumtion made:
- * The cursor's spelling returns the token denoting "the variable name".
- * Everything up to "the variable name" is "the type".
- *
- * Params:
- *  cursor = Cursor to translate.
- */
-TypeKind translateTypeCursor(ref Cursor cursor) {
-    import std.algorithm : among;
-    import clang.Token : toString;
-    import clang.SourceRange : toString;
-
-    logger.trace(clang.SourceRange.toString(cursor.extent));
-
-    enum State {
-        Prefix,
-        Suffix,
-        Done
-    }
-
-    TypeKind r = cursor.toProperty();
-    auto tokens = cursor.tokens();
-    // name of the cursors identifier but NOT the type.
-    auto cursor_identifier = cursor.spelling;
-    logger.trace(tokens.length, "|", tokens.toString, "|",
-        cursor.type.spelling, "|", cursor_identifier);
-
-    State st;
-    foreach (t; tokens) {
-        logger.trace(clang.Token.toString(t), " ", text(st));
-
-        final switch (st) {
-        case State.Prefix:
-            switch (t.kind) {
-            case CXTokenKind.CXToken_Identifier:
-                if (t.spelling == cursor_identifier) {
-                    st = State.Done;
-                }
-                else {
-                    r.name ~= (r.name.length == 0 ? "" : " ") ~ t.spelling;
-                    st = State.Suffix;
-                }
-                break;
-            case CXTokenKind.CXToken_Punctuation:
-                if (t.spelling.among("(", ")", ","))
-                    break;
-                r.name ~= t.spelling;
-                if (t.spelling == "*")
-                    r.isPointer = true;
-                else if (t.spelling == "&")
-                    r.isRef = true;
-                break;
-            case CXTokenKind.CXToken_Keyword:
-                if (t.spelling == "const")
-                    r.isConst = true;
-                if (t.spelling.among("operator"))
-                    st = State.Done;
-                else if (!t.spelling.among("virtual"))
-                    r.name ~= (r.name.length == 0 ? "" : " ") ~ t.spelling;
-                break;
-            default:
-            }
-            break;
-        case State.Suffix:
-            switch (t.kind) {
-            case CXTokenKind.CXToken_Punctuation:
-                if (t.spelling.among("&", "*")) {
-                    r.name ~= t.spelling;
-                    // TODO ugly... must be a better way.
-                    if (t.spelling == "*")
-                        r.isPointer = true;
-                    else if (t.spelling == "&")
-                        r.isRef = true;
-                }
-                else
-                    st = State.Done;
-                break;
-            case CXTokenKind.CXToken_Keyword:
-                if (t.spelling.among("operator"))
-                    st = State.Done;
-                else
-                    r.name ~= " " ~ t.spelling;
-                break;
-            default:
-            }
-            break;
-        case State.Done: // do nothing
-            break;
-        }
-    }
-
-    logger.trace(r);
-    return r;
-}
-
-private:
-
-enum keywords = ["operator", "virtual", "const"];
-enum operators = ["(", ")", "*", "&"];
-
-/** The name of the type is retrieved from the token it is derived from.
- *
- * Needed in those cases a Diagnostic error occur complaining about unknown type name.
- */
-string nameFromToken(Cursor type) {
-    import clang.Token : toString;
-
-    auto tokens = type.tokens();
-    string name;
-
-    logger.trace(tokens.length, " ", tokens.toString, " ", type.spelling);
-
-    foreach (t; tokens) {
-        logger.trace(clang.Token.toString(t));
-        switch (t.spelling) {
-        case "":
-            break;
-        case "const":
-            break;
-        default:
-            if (name.length == 0) {
-                name = t.spelling;
-            }
-        }
-    }
-
-    return name;
-}
-
 TypeKind translateTypedef(Type type)
 in {
     assert(type.kind == CXTypeKind.CXType_Typedef);
@@ -299,11 +164,10 @@ in {
 body {
     TypeKind result;
 
-    if (type.isConst) {
-        result.isConst = true;
-    }
-
+    result.isConst = type.isConst;
+    result.t = type;
     result.name = type.spelling;
+    result.full_name = type.spelling;
 
     return result;
 }
@@ -338,6 +202,7 @@ in {
     assert(type.kind == CXTypeKind.CXType_Pointer);
 }
 body {
+    logger.trace("translatePointer");
     static bool valueTypeIsConst(Type type) {
         auto pointee = type.pointeeType;
 
@@ -354,7 +219,10 @@ body {
         result.isConst = true;
     }
 
-    result.name = translateType(type.pointeeType).name ~ "*";
+    auto tmp = translateType(type.pointeeType);
+    result.name = tmp.name;
+    result.t = type;
+    result.full_name = type.spelling;
 
     return result;
 }
@@ -364,6 +232,7 @@ in {
     assert(type.kind == CXTypeKind.CXType_LValueReference);
 }
 body {
+    logger.trace("translateReference");
     static bool valueTypeIsConst(Type type) {
         auto pointee = type.pointeeType;
 
@@ -380,8 +249,10 @@ body {
         result.isConst = true;
     }
 
-    result.name = translateType(type.pointeeType).name ~ "&";
-    //result.name = type.spelling;
+    auto tmp = translateType(type.pointeeType);
+    result.name = tmp.t.declaration.spelling;
+    result.t = type;
+    result.full_name = type.spelling;
 
     return result;
 }

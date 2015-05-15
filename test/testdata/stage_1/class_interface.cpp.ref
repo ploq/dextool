@@ -1,94 +1,150 @@
 #include "stub_class_interface.hpp"
 
 namespace StubInternalSimple {
-void StubInit(StubCallback* value) {
+void StubInit(Stubfunc1* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCallback);
+    char* end = d + sizeof(Stubfunc1);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-void StubInit(StubCounter* value) {
+void StubInit(Stubfunc2_int* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubCounter);
+    char* end = d + sizeof(Stubfunc2_int);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-void StubInit(StubStatic* value) {
+void StubInit(Stubfunc2_double* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubStatic);
+    char* end = d + sizeof(Stubfunc2_double);
     for (; d != end; ++d) {
         *d = 0;
     }
+}
+
+void StubInit(StubopAssign_Simple* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubopAssign_Simple);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(Stubfunc3* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(Stubfunc3);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+void StubInit(StubStubDtor* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(StubStubDtor);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+StubStubData::StubStubData() {
+    StubInit(&stub_func1);
+    StubInit(&stub_func2_int);
+    StubInit(&stub_func2_double);
+    StubInit(&stub_opAssign_Simple);
+    StubInit(&stub_func3);
+    StubInit(&stub_StubDtor);
+}
+
+StubStubData::~StubStubData() {
+}
+
+StubInternalSimple::Stubfunc1& StubStubData::func1() {
+    return stub_func1;
+}
+
+StubInternalSimple::Stubfunc2_int& StubStubData::func2_int() {
+    return stub_func2_int;
+}
+
+StubInternalSimple::Stubfunc2_double& StubStubData::func2_double() {
+    return stub_func2_double;
+}
+
+StubInternalSimple::StubopAssign_Simple& StubStubData::opAssign_Simple() {
+    return stub_opAssign_Simple;
+}
+
+StubInternalSimple::Stubfunc3& StubStubData::func3() {
+    return stub_func3;
+}
+
+StubInternalSimple::StubStubDtor& StubStubData::StubDtor() {
+    return stub_StubDtor;
 }
 
 } //NS:StubInternalSimple
 
-void StubSimple::func1() {
-    StubSimple_cnt.func1++;
+int StubSimple::func1() {
+    Stub_data.func1().call_counter++;
 
-    if (StubSimple_callback.func1 != 0) {
-        StubSimple_callback.func1->func1();
-    }
-}
-
-void StubSimple::operator=(const Simple& other) {
-    StubSimple_cnt.opAssign++;
-    StubSimple_static.opAssign_param_other = const_cast<Simple*>(&other);
-
-    if (StubSimple_callback.opAssign != 0) {
-        StubSimple_callback.opAssign->opAssign(other);
-    }
-}
-
-char* StubSimple::func3() {
-    StubSimple_cnt.func3++;
-
-    if (StubSimple_callback.func3 == 0) {
-        return StubSimple_static.func3_return;
+    if (Stub_data.func1().callback != 0) {
+        return Stub_data.func1().callback->func1();
     }
     else {
-        return StubSimple_callback.func3->func3();
+        return Stub_data.func1().stub_return;
     }
 }
 
-int StubSimple::func4() {
-    StubSimple_cnt.func4++;
+void StubSimple::func2(int x) {
+    Stub_data.func2_int().call_counter++;
+    Stub_data.func2_int().param_x = x;
 
-    if (StubSimple_callback.func4 == 0) {
-        return StubSimple_static.func4_return;
+    if (Stub_data.func2_int().callback != 0) {
+        Stub_data.func2_int().callback->func2_int(x);
     }
-    else {
-        return StubSimple_callback.func4->func4();
+}
+
+void StubSimple::func2(double x) {
+    Stub_data.func2_double().call_counter++;
+    Stub_data.func2_double().param_x = x;
+
+    if (Stub_data.func2_double().callback != 0) {
+        Stub_data.func2_double().callback->func2_double(x);
+    }
+}
+
+void StubSimple::operator=(const Simple & other) {
+    Stub_data.opAssign_Simple().call_counter++;
+    Stub_data.opAssign_Simple().param_other = const_cast<Simple*>(&other);
+
+    if (Stub_data.opAssign_Simple().callback != 0) {
+        Stub_data.opAssign_Simple().callback->opAssign_Simple(other);
+    }
+}
+
+void StubSimple::func3() {
+    Stub_data.func3().call_counter++;
+
+    if (Stub_data.func3().callback != 0) {
+        Stub_data.func3().callback->func3();
     }
 }
 
 StubSimple::StubSimple() {
-    StubInternalSimple::StubInit(&StubSimple_callback);
-    StubInternalSimple::StubInit(&StubSimple_cnt);
-    StubInternalSimple::StubInit(&StubSimple_static);
 }
 
 StubSimple::~StubSimple() {
-    StubSimple_cnt.dtorSimple++;
+    Stub_data.StubDtor().call_counter++;
 
-    if (StubSimple_callback.dtorSimple != 0) {
-        StubSimple_callback.dtorSimple->dtorSimple();
+    if (Stub_data.StubDtor().callback != 0) {
+        Stub_data.StubDtor().callback->StubDtor();
     }
 }
 
-StubInternalSimple::StubCallback& StubSimple::StubGetCallback() {
-    return this->StubSimple_callback;
-}
-
-StubInternalSimple::StubCounter& StubSimple::StubGetCounter() {
-    return this->StubSimple_cnt;
-}
-
-StubInternalSimple::StubStatic& StubSimple::StubGetStatic() {
-    return this->StubSimple_static;
+StubInternalSimple::StubStubData& StubSimple::StubGet() {
+    return Stub_data;
 }
 

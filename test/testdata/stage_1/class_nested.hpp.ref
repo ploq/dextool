@@ -3,20 +3,26 @@
 #include "class_nested.hpp"
 
 namespace StubCallbackOuterClass {
-struct IdtorOuterClass { virtual void dtorOuterClass() = 0; };
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackOuterClass
 
 namespace StubInternalOuterClass {
-struct StubCallback {
-    StubCallbackOuterClass::IdtorOuterClass* dtorOuterClass;
+struct StubStubDtor {
+    StubCallbackOuterClass::IStubDtor* callback;
+    unsigned call_counter;
 };
-void StubInit(StubCallback* value);
+void StubInit(StubStubDtor* value);
 
-struct StubCounter {
-    unsigned dtorOuterClass;
+class StubStubData {
+public:
+    StubStubData();
+    ~StubStubData();
+
+    StubInternalOuterClass::StubStubDtor& StubDtor();
+
+private:
+    StubInternalOuterClass::StubStubDtor stub_StubDtor;
 };
-void StubInit(StubCounter* value);
-
 } //NS:StubInternalOuterClass
 
 class StubOuterClass : public OuterClass {
@@ -25,29 +31,33 @@ public:
     ~StubOuterClass();
 
 public:
-    StubInternalOuterClass::StubCallback& StubGetCallback();
-    StubInternalOuterClass::StubCounter& StubGetCounter();
+    StubInternalOuterClass::StubStubData& StubGet();
 
 private:
-    StubInternalOuterClass::StubCallback StubOuterClass_callback;
-    StubInternalOuterClass::StubCounter StubOuterClass_cnt;
+    StubInternalOuterClass::StubStubData Stub_data;
 };
 
 namespace StubCallbackInnerClass {
-struct IdtorInnerClass { virtual void dtorInnerClass() = 0; };
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackInnerClass
 
 namespace StubInternalInnerClass {
-struct StubCallback {
-    StubCallbackInnerClass::IdtorInnerClass* dtorInnerClass;
+struct StubStubDtor {
+    StubCallbackInnerClass::IStubDtor* callback;
+    unsigned call_counter;
 };
-void StubInit(StubCallback* value);
+void StubInit(StubStubDtor* value);
 
-struct StubCounter {
-    unsigned dtorInnerClass;
+class StubStubData {
+public:
+    StubStubData();
+    ~StubStubData();
+
+    StubInternalInnerClass::StubStubDtor& StubDtor();
+
+private:
+    StubInternalInnerClass::StubStubDtor stub_StubDtor;
 };
-void StubInit(StubCounter* value);
-
 } //NS:StubInternalInnerClass
 
 class StubInnerClass : public OuterClass::InnerClass {
@@ -56,12 +66,10 @@ public:
     ~StubInnerClass();
 
 public:
-    StubInternalInnerClass::StubCallback& StubGetCallback();
-    StubInternalInnerClass::StubCounter& StubGetCounter();
+    StubInternalInnerClass::StubStubData& StubGet();
 
 private:
-    StubInternalInnerClass::StubCallback StubInnerClass_callback;
-    StubInternalInnerClass::StubCounter StubInnerClass_cnt;
+    StubInternalInnerClass::StubStubData Stub_data;
 };
 
 #endif // stub_class_nested_hpp

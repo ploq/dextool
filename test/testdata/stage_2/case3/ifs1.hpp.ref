@@ -3,41 +3,67 @@
 #include "ifs1.hpp"
 
 namespace StubCallbackIfs1 {
-struct Iifs2_func1 { virtual int ifs2_func1(int x0, char x1) = 0; };
+struct Iifs2_func1_int_char { virtual int ifs2_func1_int_char(int x0, char x1) = 0; };
 struct Irun { virtual void run() = 0; };
-struct Iget_ifc2 { virtual Ifs2& get_ifc2() = 0; };
-struct Iget_ifc3 { virtual Ifs3& get_ifc3() = 0; };
-struct IdtorIfs1 { virtual void dtorIfs1() = 0; };
+struct Iget_ifc2 { virtual Ifs2 & get_ifc2() = 0; };
+struct Iget_ifc3 { virtual Ifs3 & get_ifc3() = 0; };
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackIfs1
 
 namespace StubInternalIfs1 {
-struct StubCallback {
-    StubCallbackIfs1::Iifs2_func1* ifs2_func1;
-    StubCallbackIfs1::Irun* run;
-    StubCallbackIfs1::Iget_ifc2* get_ifc2;
-    StubCallbackIfs1::Iget_ifc3* get_ifc3;
-    StubCallbackIfs1::IdtorIfs1* dtorIfs1;
+struct Stubifs2_func1_int_char {
+    StubCallbackIfs1::Iifs2_func1_int_char* callback;
+    unsigned call_counter;
+    int param_x0;
+    char param_x1;
+    int stub_return;
 };
-void StubInit(StubCallback* value);
+void StubInit(Stubifs2_func1_int_char* value);
 
-struct StubCounter {
-    unsigned ifs2_func1;
-    unsigned run;
-    unsigned get_ifc2;
-    unsigned get_ifc3;
-    unsigned dtorIfs1;
+struct Stubrun {
+    StubCallbackIfs1::Irun* callback;
+    unsigned call_counter;
 };
-void StubInit(StubCounter* value);
+void StubInit(Stubrun* value);
 
-struct StubStatic {
-    int ifs2_func1_param_x0;
-    char ifs2_func1_param_x1;
-    int ifs2_func1_return;
-    Ifs2* get_ifc2_return;
-    Ifs3* get_ifc3_return;
+struct Stubget_ifc2 {
+    StubCallbackIfs1::Iget_ifc2* callback;
+    unsigned call_counter;
+    Ifs2 * stub_return;
 };
-void StubInit(StubStatic* value);
+void StubInit(Stubget_ifc2* value);
 
+struct Stubget_ifc3 {
+    StubCallbackIfs1::Iget_ifc3* callback;
+    unsigned call_counter;
+    Ifs3 * stub_return;
+};
+void StubInit(Stubget_ifc3* value);
+
+struct StubStubDtor {
+    StubCallbackIfs1::IStubDtor* callback;
+    unsigned call_counter;
+};
+void StubInit(StubStubDtor* value);
+
+class StubStubData {
+public:
+    StubStubData();
+    ~StubStubData();
+
+    StubInternalIfs1::Stubifs2_func1_int_char& ifs2_func1_int_char();
+    StubInternalIfs1::Stubrun& run();
+    StubInternalIfs1::Stubget_ifc2& get_ifc2();
+    StubInternalIfs1::Stubget_ifc3& get_ifc3();
+    StubInternalIfs1::StubStubDtor& StubDtor();
+
+private:
+    StubInternalIfs1::Stubifs2_func1_int_char stub_ifs2_func1_int_char;
+    StubInternalIfs1::Stubrun stub_run;
+    StubInternalIfs1::Stubget_ifc2 stub_get_ifc2;
+    StubInternalIfs1::Stubget_ifc3 stub_get_ifc3;
+    StubInternalIfs1::StubStubDtor stub_StubDtor;
+};
 } //NS:StubInternalIfs1
 
 class StubIfs1 : public Ifs1 {
@@ -45,21 +71,17 @@ public:
     virtual int ifs2_func1(int x0, char x1);
 public:
     virtual void run();
-    virtual Ifs2& get_ifc2();
-    virtual Ifs3& get_ifc3();
+    virtual Ifs2 & get_ifc2();
+    virtual Ifs3 & get_ifc3();
 public:
     StubIfs1();
     virtual ~StubIfs1();
 
 public:
-    StubInternalIfs1::StubCallback& StubGetCallback();
-    StubInternalIfs1::StubCounter& StubGetCounter();
-    StubInternalIfs1::StubStatic& StubGetStatic();
+    StubInternalIfs1::StubStubData& StubGet();
 
 private:
-    StubInternalIfs1::StubCallback StubIfs1_callback;
-    StubInternalIfs1::StubCounter StubIfs1_cnt;
-    StubInternalIfs1::StubStatic StubIfs1_static;
+    StubInternalIfs1::StubStubData Stub_data;
 };
 
 #endif // stub_ifs1_hpp

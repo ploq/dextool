@@ -30,6 +30,7 @@ import generator.stub.types;
 import generator.stub.containers : CallbackContainer, VariableContainer;
 import generator.stub.stub : consumeAccessSpecificer;
 import generator.stub.translator.functionx;
+import generator.stub.misc : parmDeclToTypeName;
 
 /** Translate class methods to stub implementation.
  */
@@ -37,7 +38,8 @@ public struct MethodTranslateContext {
     VisitNodeModule!CppHdrImpl visitor_stack;
     alias visitor_stack this;
 
-    this(CppClassName class_name, CppAccessSpecifier access_spec) {
+    this(StubPrefix prefix, CppClassName class_name, CppAccessSpecifier access_spec) {
+        this.prefix = prefix;
         this.name = class_name;
         this.access_spec = access_spec;
     }
@@ -57,21 +59,21 @@ public struct MethodTranslateContext {
 
         switch (c.kind) with (CXCursorKind) {
         case CXCursor_CXXMethod:
-            if (callbacks.exists(CppMethodName(c.spelling)))
+            if (callbacks.exists(CppMethodName(c.spelling), c.parmDeclToTypeName))
                 break;
             //TODO ugly move check to inside function Translator or something...
             if (c.func.isVirtual) {
                 push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr),
                     current.impl));
             }
-            functionTranslator(c, name, vars, callbacks, current.hdr, current.impl);
+            functionTranslator(c, prefix, name, vars, callbacks, current.hdr, current.impl);
             descend = false;
             break;
         case CXCursor_CXXAccessSpecifier:
             access_spec = CppAccessSpecifier(c.access.accessSpecifier);
             break;
         case CXCursor_CXXBaseSpecifier:
-            inheritMethodTranslator(c, name, vars, callbacks, current.get);
+            inheritMethodTranslator(c, prefix, name, vars, callbacks, current.get);
             descend = false;
             break;
         default:
@@ -83,14 +85,16 @@ public struct MethodTranslateContext {
 
 private:
     CppClassName name;
+    StubPrefix prefix;
 
     NullableRef!VariableContainer vars;
     NullableRef!CallbackContainer callbacks;
     CppAccessSpecifier access_spec;
 }
 
-void inheritMethodTranslator(ref Cursor cursor, const CppClassName name,
-    ref VariableContainer vars, ref CallbackContainer callbacks, ref CppHdrImpl hdr_impl) {
+void inheritMethodTranslator(ref Cursor cursor, const StubPrefix prefix,
+    const CppClassName name, ref VariableContainer vars,
+    ref CallbackContainer callbacks, ref CppHdrImpl hdr_impl) {
     //TODO ugly hack. dunno what it should be so for now forcing to public.
     Nullable!CppAccessSpecifier access_spec;
     access_spec = CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic);
@@ -105,8 +109,8 @@ void inheritMethodTranslator(ref Cursor cursor, const CppClassName name,
         switch (parent.kind) with (CXCursorKind) {
         case CXCursor_TypeRef:
             logNode(p, 1);
-            MethodTranslateContext(name, access_spec).translate(p, vars, callbacks,
-                hdr_impl);
+            MethodTranslateContext(prefix, name, access_spec).translate(p,
+                vars, callbacks, hdr_impl);
             break;
         default:
         }

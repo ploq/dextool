@@ -144,7 +144,7 @@ ExitStatusType gen_stub(const string infile, const string outdir,
         return ExitStatusType.Errors;
     }
 
-    logger.infof("Generating stub from file '%s'", infile);
+    logger.infof("Generating stub from '%s'", infile);
 
     auto file_ctx = new Context(infile, cflags);
     file_ctx.logDiagnostic;
