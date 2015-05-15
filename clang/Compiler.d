@@ -18,7 +18,7 @@ struct Compiler {
             enum root = `C:\`;
 
         else
-                    enum root = "/";
+            enum root = "/";
 
         string virtualPath_;
 
