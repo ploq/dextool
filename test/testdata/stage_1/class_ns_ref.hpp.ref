@@ -95,7 +95,7 @@ public:
     virtual ~StubGlass();
 
 public:
-    StubInternalGlass::StubStubData& StubGet();
+    StubInternalGlass::StubStubData& GetStub();
 
 private:
     StubInternalGlass::StubStubData Stub_data;

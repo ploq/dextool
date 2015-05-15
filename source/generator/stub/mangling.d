@@ -210,9 +210,9 @@ auto mangleToStubDataClassInternalVariable(const StubPrefix prefix, const CppMet
 
 /// Example:
 /// ---
-/// mangleToStubDataGetter("Foo");
+/// mangleToStubDataGetter("Foo", [("int", "x")]);
 /// ---
-/// result is: Foo
+/// result is: Foo_int
 auto mangleToStubDataGetter(const CppMethodName method, const TypeKindVariable[] params) nothrow @safe {
     import std.algorithm : map;
     import std.array : join;

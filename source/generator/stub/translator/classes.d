@@ -183,7 +183,7 @@ private:
             return;
 
         CppClassName getter_cls = mangleToStubDataClass(data_ns, prefix);
-        CppMethodName getter_func = CppMethodName(prefix ~ "Get");
+        CppMethodName getter_func = CppMethodName("Get" ~ prefix.str);
         CppVariable getter_var = CppVariable(prefix ~ "_data");
 
         with (hdr.public_) {

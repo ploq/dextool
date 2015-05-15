@@ -39,7 +39,7 @@ public:
     virtual void func2();
     virtual void func3();
 public:
-    StubInternalFoo::StubStubData& StubGet();
+    StubInternalFoo::StubStubData& GetStub();
 
 private:
     StubInternalFoo::StubStubData Stub_data;
@@ -73,7 +73,7 @@ class StubBar : public BarSpace::Bar {
 public:
     virtual void func5();
 public:
-    StubInternalBar::StubStubData& StubGet();
+    StubInternalBar::StubStubData& GetStub();
 
 private:
     StubInternalBar::StubStubData Stub_data;
@@ -129,7 +129,7 @@ public:
 private:
     virtual void func4();
 public:
-    StubInternalWarp::StubStubData& StubGet();
+    StubInternalWarp::StubStubData& GetStub();
 
 private:
     StubInternalWarp::StubStubData Stub_data;
@@ -207,7 +207,7 @@ public:
     virtual ~StubSmurf();
 
 public:
-    StubInternalSmurf::StubStubData& StubGet();
+    StubInternalSmurf::StubStubData& GetStub();
 
 private:
     StubInternalSmurf::StubStubData Stub_data;
@@ -274,7 +274,7 @@ public:
     virtual ~StubDaddySmurf();
 
 public:
-    StubInternalDaddySmurf::StubStubData& StubGet();
+    StubInternalDaddySmurf::StubStubData& GetStub();
 
 private:
     StubInternalDaddySmurf::StubStubData Stub_data;

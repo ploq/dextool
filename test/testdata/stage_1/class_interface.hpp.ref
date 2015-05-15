@@ -87,7 +87,7 @@ public:
     virtual ~StubSimple();
 
 public:
-    StubInternalSimple::StubStubData& StubGet();
+    StubInternalSimple::StubStubData& GetStub();
 
 private:
     StubInternalSimple::StubStubData Stub_data;

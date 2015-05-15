@@ -10,11 +10,11 @@ int main(int argc, char** argv) {
     stub.get_ifc3();
     stub.ifs2_func1(42, 'x');
 
-    stub.StubGet().ifs2_func1_int_char();
-    stub.StubGet().run();
-    stub.StubGet().get_ifc2();
-    stub.StubGet().get_ifc3();
-    stub.StubGet().StubDtor();
+    stub.GetStub().ifs2_func1_int_char();
+    stub.GetStub().run();
+    stub.GetStub().get_ifc2();
+    stub.GetStub().get_ifc3();
+    stub.GetStub().StubDtor();
 
     return 0;
 }

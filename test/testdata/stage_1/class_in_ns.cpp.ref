@@ -63,7 +63,7 @@ StubSmurf::~StubSmurf() {
     }
 }
 
-StubInternalSmurf::StubStubData& StubSmurf::StubGet() {
+StubInternalSmurf::StubStubData& StubSmurf::GetStub() {
     return Stub_data;
 }
 

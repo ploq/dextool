@@ -78,7 +78,7 @@ public:
     virtual ~StubIfs1();
 
 public:
-    StubInternalIfs1::StubStubData& StubGet();
+    StubInternalIfs1::StubStubData& GetStub();
 
 private:
     StubInternalIfs1::StubStubData Stub_data;

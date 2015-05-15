@@ -47,7 +47,7 @@ public:
     virtual ~StubSmurf();
 
 public:
-    StubInternalSmurf::StubStubData& StubGet();
+    StubInternalSmurf::StubStubData& GetStub();
 
 private:
     StubInternalSmurf::StubStubData Stub_data;

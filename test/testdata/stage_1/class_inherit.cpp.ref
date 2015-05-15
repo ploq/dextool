@@ -51,7 +51,7 @@ void StubFoo::func3() {
     }
 }
 
-StubInternalFoo::StubStubData& StubFoo::StubGet() {
+StubInternalFoo::StubStubData& StubFoo::GetStub() {
     return Stub_data;
 }
 
@@ -86,7 +86,7 @@ void StubBar::func5() {
     }
 }
 
-StubInternalBar::StubStubData& StubBar::StubGet() {
+StubInternalBar::StubStubData& StubBar::GetStub() {
     return Stub_data;
 }
 
@@ -164,7 +164,7 @@ void StubWarp::func4() {
     }
 }
 
-StubInternalWarp::StubStubData& StubWarp::StubGet() {
+StubInternalWarp::StubStubData& StubWarp::GetStub() {
     return Stub_data;
 }
 
@@ -285,7 +285,7 @@ StubSmurf::~StubSmurf() {
     }
 }
 
-StubInternalSmurf::StubStubData& StubSmurf::StubGet() {
+StubInternalSmurf::StubStubData& StubSmurf::GetStub() {
     return Stub_data;
 }
 
@@ -385,7 +385,7 @@ StubDaddySmurf::~StubDaddySmurf() {
     }
 }
 
-StubInternalDaddySmurf::StubStubData& StubDaddySmurf::StubGet() {
+StubInternalDaddySmurf::StubStubData& StubDaddySmurf::GetStub() {
     return Stub_data;
 }
 

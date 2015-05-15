@@ -33,7 +33,7 @@ StubOuterClass::~StubOuterClass() {
     }
 }
 
-StubInternalOuterClass::StubStubData& StubOuterClass::StubGet() {
+StubInternalOuterClass::StubStubData& StubOuterClass::GetStub() {
     return Stub_data;
 }
 
@@ -70,7 +70,7 @@ StubInnerClass::~StubInnerClass() {
     }
 }
 
-StubInternalInnerClass::StubStubData& StubInnerClass::StubGet() {
+StubInternalInnerClass::StubStubData& StubInnerClass::GetStub() {
     return Stub_data;
 }
 

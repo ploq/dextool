@@ -144,7 +144,7 @@ StubSimple::~StubSimple() {
     }
 }
 
-StubInternalSimple::StubStubData& StubSimple::StubGet() {
+StubInternalSimple::StubStubData& StubSimple::GetStub() {
     return Stub_data;
 }
 
