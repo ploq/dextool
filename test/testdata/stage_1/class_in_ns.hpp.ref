@@ -23,7 +23,7 @@ public:
     Smurf* GetParam_other();
     foo::bar::Smurf *& SetReturn();
 private:
-    friend StubSmurf;
+    friend class ::foo::bar::StubSmurf;
 
     StubCallbackSmurf::IopAssign_Smurf* callback;
     unsigned call_counter;
@@ -39,7 +39,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubSmurf;
+    friend class ::foo::bar::StubSmurf;
 
     StubCallbackSmurf::IStubDtor* callback;
     unsigned call_counter;

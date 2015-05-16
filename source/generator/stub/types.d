@@ -33,9 +33,13 @@ public:
 /// Prefix used for prepending generated code with a unique string to avoid name collisions.
 alias StubPrefix = Typedef!(string, string.init, "StubPrefix");
 /// Name of a C++ class/struct/namespace.
-alias CppClassStructNsName = Typedef!(string, string.init, "CppNestingNs");
+alias CppClassStructNsName = Typedef!(string, string.init, "CppClassStructNsName");
 /// Nesting of C++ class/struct/namespace.
 alias CppNesting = CppClassStructNsName[];
+/// Name of a C++ namespace.
+alias CppNs = Typedef!(string, string.init, "CppNs");
+/// Stack of nested C++ namespaces.
+alias CppNsStack = CppNs[];
 
 alias HdrFilename = Typedef!(string, string.init, "HeaderFilename");
 
@@ -54,6 +58,7 @@ alias CppAccessSpecifier = Typedef!(CX_CXXAccessSpecifier, CX_CXXAccessSpecifier
 alias CppClassName = Typedef!(string, string.init, "CppClassName");
 alias CppClassNesting = Typedef!(string, string.init, "CppNesting");
 alias CppMethodName = Typedef!(string, string.init, "CppMethodName");
+alias CppNsNesting = Typedef!(string, string.init, "CppNsNesting");
 alias CppType = Typedef!(string, string.init, "CppType");
 alias CppVariable = Typedef!(string, string.init, "CppVariable");
 

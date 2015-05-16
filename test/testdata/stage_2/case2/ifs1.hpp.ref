@@ -22,7 +22,7 @@ public:
     char GetParam_x1();
     int& SetReturn();
 private:
-    friend StubIfs2;
+    friend class ::StubIfs2;
 
     StubCallbackIfs2::Iifs2_func1_int_char* callback;
     unsigned call_counter;
@@ -39,7 +39,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubIfs2;
+    friend class ::StubIfs2;
 
     StubCallbackIfs2::IStubDtor* callback;
     unsigned call_counter;
@@ -91,7 +91,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubIfs3;
+    friend class ::StubIfs3;
 
     StubCallbackIfs3::Idostuff* callback;
     unsigned call_counter;
@@ -105,7 +105,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubIfs3;
+    friend class ::StubIfs3;
 
     StubCallbackIfs3::IStubDtor* callback;
     unsigned call_counter;
@@ -166,7 +166,7 @@ public:
     char GetParam_x1();
     int& SetReturn();
 private:
-    friend StubIfs1;
+    friend class ::StubIfs1;
 
     StubCallbackIfs1::Iifs2_func1_int_char* callback;
     unsigned call_counter;
@@ -183,7 +183,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubIfs1;
+    friend class ::StubIfs1;
 
     StubCallbackIfs1::Irun* callback;
     unsigned call_counter;
@@ -198,7 +198,7 @@ public:
     void ResetCallCounter();
     Ifs2 *& SetReturn();
 private:
-    friend StubIfs1;
+    friend class ::StubIfs1;
 
     StubCallbackIfs1::Iget_ifc2* callback;
     unsigned call_counter;
@@ -214,7 +214,7 @@ public:
     void ResetCallCounter();
     Ifs3 *& SetReturn();
 private:
-    friend StubIfs1;
+    friend class ::StubIfs1;
 
     StubCallbackIfs1::Iget_ifc3* callback;
     unsigned call_counter;
@@ -229,7 +229,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubIfs1;
+    friend class ::StubIfs1;
 
     StubCallbackIfs1::IStubDtor* callback;
     unsigned call_counter;

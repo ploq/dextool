@@ -44,9 +44,7 @@ public class StubContext {
     this(StubPrefix prefix, HdrFilename filename) {
         this.filename = filename;
         this.hdr = new CppModule;
-        //hdr.suppressIndent(1);
         this.impl = new CppModule;
-        //impl.suppressIndent(1);
 
         ctx = ImplStubContext(prefix, hdr, impl);
     }
@@ -125,7 +123,8 @@ struct ImplStubContext {
     }
 
     void decr() {
-        nesting.pop(level);
+        class_nesting.pop(level);
+        ns_nesting.pop(level);
         hdr_impl.pop(level);
         access_spec.pop(level);
         this.level--;
@@ -158,9 +157,9 @@ struct ImplStubContext {
                     // therefor pushing current ns/class/struct to the stack
                     // for cases it is needed after processing current cursor.
                     auto name = CppClassName(c.spelling);
-                    (ClassTranslateContext(prefix, name)).translate(c,
-                        nesting.values, hdr_impl.top.hdr, hdr_impl.top.impl);
-                    nesting.push(level, CppClassStructNsName(c.spelling));
+                    (ClassTranslateContext(prefix, name, class_nesting.values, ns_nesting.values)).translate(c,
+                        hdr_impl.top.hdr, hdr_impl.top.impl);
+                    class_nesting.push(level, CppClassStructNsName(c.spelling));
                 }
                 break;
 
@@ -169,7 +168,8 @@ struct ImplStubContext {
             case CXCursor_Namespace:
                 hdr_impl.push(level,
                     namespaceTranslator(CppClassStructNsName(c.spelling), hdr_impl.top.get));
-                nesting.push(level, CppClassStructNsName(c.spelling));
+                class_nesting.push(level, CppClassStructNsName(c.spelling));
+                ns_nesting.push(level, CppNs(c.spelling));
                 break;
             case CXCursor_CXXBaseSpecifier:
                 decend = false;
@@ -196,6 +196,7 @@ private:
     CppModule hdr;
     CppModule impl;
     IdStack!(int, CppHdrImpl) hdr_impl;
-    IdStack!(int, CppClassStructNsName) nesting;
+    IdStack!(int, CppClassStructNsName) class_nesting;
+    IdStack!(int, CppNs) ns_nesting;
     IdStack!(int, CppAccessSpecifier) access_spec;
 }

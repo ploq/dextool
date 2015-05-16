@@ -30,10 +30,11 @@ function test_compl_code() {
     inclpath=$2
     impl=$3
     main=$4
+    flags=$5
 
     echo -e "${C_YELLOW}=== Compile $impl  ===${C_NONE}"
-    echo "g++ -std=c++0x -o $outdir/binary -I$outdir -I$inclpath $impl $main"
-    g++ -std=c++0x -o "$outdir"/binary -I"$outdir" $inclpath "$impl" "$main"
+    echo "g++ -std=c++03 -Wpedantic -Werror -o $outdir/binary -I$outdir $inclpath $impl $main"
+    g++ -std=c++03 $flags -o "$outdir"/binary -I"$outdir" $inclpath "$impl" "$main"
     "$outdir"/binary
 }
 
@@ -87,8 +88,12 @@ for sourcef in testdata/stage_1/*.hpp; do
     esac
 
     case "$sourcef" in
+        *class_inherit*)
+            test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp "-Wpedantic" ;;
+        *class_in_ns*)
+            test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp "-Wpedantic" ;;
         *)
-            test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp
+            test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp "-Wpedantic -Werror "
         ;;
     esac
 

@@ -53,7 +53,10 @@ public struct ClassTranslateContext {
      *  prefix = prefix to use for the name of the stub class.
      *  name = name of the c++ class being stubbed.
      */
-    this(StubPrefix prefix, CppClassName name) {
+    this(const StubPrefix prefix, const CppClassName name, const CppNesting nesting,
+        const CppNsStack ns_nesting) {
+        import std.array : join;
+
         this.prefix = prefix;
         this.name = name;
 
@@ -66,12 +69,11 @@ public struct ClassTranslateContext {
 
         this.vars = VariableContainer(prefix, cb_ns, cp, data_ns, name);
         this.callbacks = CallbackContainer(cb_ns, cp);
+        this.class_nesting = CppClassNesting(nesting.map!(a => cast(string) a).join("::"));
+        this.ns_nesting = CppNsNesting(ns_nesting.map!(a => cast(string) a).join("::"));
     }
 
-    void translate(ref Cursor cursor, const ref CppNesting nesting,
-        ref CppModule hdr, ref CppModule impl) {
-        import std.array : join;
-
+    void translate(ref Cursor cursor, ref CppModule hdr, ref CppModule impl) {
         void doTraversal(ref ClassTranslateContext ctx, CppHdrImpl top) {
             ctx.push(top);
             auto c = Cursor(cursor);
@@ -85,7 +87,6 @@ public struct ClassTranslateContext {
         auto stub = CppHdrImpl(hdr.base, impl.base);
         stub.hdr.suppressIndent(1);
         stub.impl.suppressIndent(1);
-        this.nesting = CppClassNesting(nesting.map!(a => cast(string) a).join("::"));
 
         doTraversal(this, stub);
 
@@ -124,7 +125,7 @@ public struct ClassTranslateContext {
                 this.classdecl_used = true;
                 ///TODO change to using the name mangling function.
                 auto stubname = CppClassName(cast(string) prefix ~ name);
-                push(classTranslator(prefix, nesting, name, current.get));
+                push(classTranslator(prefix, class_nesting, name, current.get));
                 class_code = current.get;
                 MethodTranslateContext(prefix, stubname, access_spec).translate(c,
                     vars, callbacks, current.get);
@@ -160,7 +161,7 @@ private:
         auto ns_impl = impl.namespace(cast(string) data_ns);
         ns_impl.suppressIndent(1);
 
-        vars.render(this.nesting, ns_hdr, ns_impl);
+        vars.render(this.ns_nesting, ns_hdr, ns_impl);
         hdr.sep(2);
         impl.sep(2);
     }
@@ -212,7 +213,8 @@ private:
     CppHdrImpl class_code; // top of the new class created.
     immutable StubPrefix prefix;
     immutable CppClassName name;
-    CppClassNesting nesting;
+    immutable CppClassNesting class_nesting;
+    immutable CppNsNesting ns_nesting;
 
     VariableContainer vars;
     CallbackContainer callbacks;

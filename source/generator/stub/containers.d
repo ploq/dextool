@@ -103,7 +103,7 @@ struct VariableContainer {
         return vars.length;
     }
 
-    void render(T0, T1)(CppClassNesting nesting, ref T0 hdr, ref T1 impl) {
+    void render(T0, T1)(CppNsNesting nesting, ref T0 hdr, ref T1 impl) {
         auto hdr_structs = hdr.base;
         auto impl_structs = impl.base;
         hdr_structs.suppressIndent(1);
@@ -140,17 +140,17 @@ struct VariableContainer {
         }
     }
 
-    private void renderGroup(T0, T1)(CppMethodName group,
-        CppClassNesting nesting, ref T0 hdr, ref T1 impl, ref T1 ctor_init_impl) {
-        import std.string : toLower;
-
+    private void renderGroup(T0, T1)(CppMethodName group, CppNsNesting nesting,
+        ref T0 hdr, ref T1 impl, ref T1 ctor_init_impl) {
         string stub_data_name = stub_prefix ~ group;
 
         auto group_class = hdr.class_(stub_data_name);
         auto group_pub = group_class.public_;
         auto group_priv = group_class.private_;
         with (group_priv) {
-            friend(mangleToStubClassName(stub_prefix, class_name).str);
+            string ns = nesting.str.length == 0 ? "" : "::" ~ nesting.str;
+            string stub_class = mangleToStubClassName(stub_prefix, class_name).str;
+            friend(E("class " ~ ns ~ "::" ~ stub_class));
             sep(2);
         }
 

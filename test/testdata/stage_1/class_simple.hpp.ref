@@ -17,7 +17,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubSimple;
+    friend class ::StubSimple;
 
     StubCallbackSimple::IStubDtor* callback;
     unsigned call_counter;

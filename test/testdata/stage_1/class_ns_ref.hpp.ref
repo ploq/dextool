@@ -38,7 +38,7 @@ public:
     void ResetCallCounter();
     Foo::Bar& SetReturn();
 private:
-    friend StubGlass;
+    friend class ::StubGlass;
 
     StubCallbackGlass::Ifunc1* callback;
     unsigned call_counter;
@@ -54,7 +54,7 @@ public:
     void ResetCallCounter();
     Foo::Bar *& SetReturn();
 private:
-    friend StubGlass;
+    friend class ::StubGlass;
 
     StubCallbackGlass::Ifunc2* callback;
     unsigned call_counter;
@@ -70,7 +70,7 @@ public:
     void ResetCallCounter();
     Foo::Bar *& SetReturn();
 private:
-    friend StubGlass;
+    friend class ::StubGlass;
 
     StubCallbackGlass::Ifunc3* callback;
     unsigned call_counter;
@@ -86,7 +86,7 @@ public:
     void ResetCallCounter();
     ::Foo::Bar& SetReturn();
 private:
-    friend StubGlass;
+    friend class ::StubGlass;
 
     StubCallbackGlass::Ifunc4* callback;
     unsigned call_counter;
@@ -102,7 +102,7 @@ public:
     void ResetCallCounter();
     ::Foo::Bar *& SetReturn();
 private:
-    friend StubGlass;
+    friend class ::StubGlass;
 
     StubCallbackGlass::Ifunc5* callback;
     unsigned call_counter;
@@ -117,7 +117,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubGlass;
+    friend class ::StubGlass;
 
     StubCallbackGlass::IStubDtor* callback;
     unsigned call_counter;

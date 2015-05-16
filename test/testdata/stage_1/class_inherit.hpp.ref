@@ -19,7 +19,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubFoo;
+    friend class ::StubFoo;
 
     StubCallbackFoo::Ifunc2* callback;
     unsigned call_counter;
@@ -33,7 +33,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubFoo;
+    friend class ::StubFoo;
 
     StubCallbackFoo::Ifunc3* callback;
     unsigned call_counter;
@@ -81,7 +81,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubBar;
+    friend class ::BarSpace::StubBar;
 
     StubCallbackBar::Ifunc5* callback;
     unsigned call_counter;
@@ -131,7 +131,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubWarp;
+    friend class ::StubWarp;
 
     StubCallbackWarp::Ifunc2* callback;
     unsigned call_counter;
@@ -145,7 +145,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubWarp;
+    friend class ::StubWarp;
 
     StubCallbackWarp::Ifunc3* callback;
     unsigned call_counter;
@@ -159,7 +159,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubWarp;
+    friend class ::StubWarp;
 
     StubCallbackWarp::Ifunc4* callback;
     unsigned call_counter;
@@ -218,7 +218,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubSmurf;
+    friend class ::StubSmurf;
 
     StubCallbackSmurf::Ifunc2* callback;
     unsigned call_counter;
@@ -232,7 +232,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubSmurf;
+    friend class ::StubSmurf;
 
     StubCallbackSmurf::Ifunc3* callback;
     unsigned call_counter;
@@ -246,7 +246,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubSmurf;
+    friend class ::StubSmurf;
 
     StubCallbackSmurf::Ifunc5* callback;
     unsigned call_counter;
@@ -260,7 +260,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubSmurf;
+    friend class ::StubSmurf;
 
     StubCallbackSmurf::Ifunc4* callback;
     unsigned call_counter;
@@ -274,7 +274,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubSmurf;
+    friend class ::StubSmurf;
 
     StubCallbackSmurf::IStubDtor* callback;
     unsigned call_counter;
@@ -341,7 +341,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubDaddySmurf;
+    friend class ::StubDaddySmurf;
 
     StubCallbackDaddySmurf::Ifunc2* callback;
     unsigned call_counter;
@@ -355,7 +355,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubDaddySmurf;
+    friend class ::StubDaddySmurf;
 
     StubCallbackDaddySmurf::Ifunc3* callback;
     unsigned call_counter;
@@ -369,7 +369,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubDaddySmurf;
+    friend class ::StubDaddySmurf;
 
     StubCallbackDaddySmurf::Ifunc4* callback;
     unsigned call_counter;
@@ -383,7 +383,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubDaddySmurf;
+    friend class ::StubDaddySmurf;
 
     StubCallbackDaddySmurf::IStubDtor* callback;
     unsigned call_counter;

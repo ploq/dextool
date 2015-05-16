@@ -28,7 +28,7 @@ public:
     void ResetCallCounter();
     int& SetReturn();
 private:
-    friend StubSimple;
+    friend class ::StubSimple;
 
     StubCallbackSimple::Ifunc1* callback;
     unsigned call_counter;
@@ -44,7 +44,7 @@ public:
     void ResetCallCounter();
     int GetParam_x();
 private:
-    friend StubSimple;
+    friend class ::StubSimple;
 
     StubCallbackSimple::Ifunc2_int* callback;
     unsigned call_counter;
@@ -60,7 +60,7 @@ public:
     void ResetCallCounter();
     double GetParam_x();
 private:
-    friend StubSimple;
+    friend class ::StubSimple;
 
     StubCallbackSimple::Ifunc2_double* callback;
     unsigned call_counter;
@@ -76,7 +76,7 @@ public:
     void ResetCallCounter();
     Simple* GetParam_other();
 private:
-    friend StubSimple;
+    friend class ::StubSimple;
 
     StubCallbackSimple::IopAssign_Simple* callback;
     unsigned call_counter;
@@ -91,7 +91,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubSimple;
+    friend class ::StubSimple;
 
     StubCallbackSimple::Ifunc3* callback;
     unsigned call_counter;
@@ -105,7 +105,7 @@ public:
     unsigned GetCallCounter() const;
     void ResetCallCounter();
 private:
-    friend StubSimple;
+    friend class ::StubSimple;
 
     StubCallbackSimple::IStubDtor* callback;
     unsigned call_counter;
