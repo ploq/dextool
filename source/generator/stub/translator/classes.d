@@ -80,11 +80,11 @@ public struct ClassTranslateContext {
 
         auto top = CppHdrImpl(hdr, impl);
         auto internal = CppHdrImpl(hdr.base, impl.base);
-        internal.hdr.suppress_indent(1);
-        internal.impl.suppress_indent(1);
+        internal.hdr.suppressIndent(1);
+        internal.impl.suppressIndent(1);
         auto stub = CppHdrImpl(hdr.base, impl.base);
-        stub.hdr.suppress_indent(1);
-        stub.impl.suppress_indent(1);
+        stub.hdr.suppressIndent(1);
+        stub.impl.suppressIndent(1);
         this.nesting = CppClassNesting(nesting.map!(a => cast(string) a).join("::"));
 
         doTraversal(this, stub);
@@ -97,6 +97,8 @@ public struct ClassTranslateContext {
         doDataStruct(internal.hdr, internal.impl);
         doDataStructInit(prefix, CppClassName(prefix ~ name), vars,
             this.class_code.hdr, stub.impl);
+
+        hdr.sep;
     }
 
     /** Traverse cursor and translate a subset of kinds.
@@ -154,13 +156,13 @@ private:
             return;
 
         auto ns_hdr = hdr.namespace(cast(string) data_ns);
-        ns_hdr.suppress_indent(1);
+        ns_hdr.suppressIndent(1);
         auto ns_impl = impl.namespace(cast(string) data_ns);
-        ns_impl.suppress_indent(1);
+        ns_impl.suppressIndent(1);
 
         vars.render(this.nesting, ns_hdr, ns_impl);
-        hdr.sep;
-        impl.sep;
+        hdr.sep(2);
+        impl.sep(2);
     }
 
     void doDataStructInitHelper(const CppClassName class_name, const TypeName tn,
@@ -191,12 +193,10 @@ private:
         CppVariable getter_var = CppVariable(prefix ~ "_data");
 
         with (hdr.public_) {
-            suppress_indent(1);
             method(false, getter_cls ~ "&", getter_func.str, false);
-            sep;
+            sep(2);
         }
         with (hdr.private_) {
-            suppress_indent(1);
             stmt(E(cast(string) getter_cls) ~ "" ~ E(getter_var.str));
         }
 
@@ -204,7 +204,7 @@ private:
                 false)) {
             return_(getter_var.str);
         }
-        impl.sep;
+        impl.sep(2);
     }
 
 private:

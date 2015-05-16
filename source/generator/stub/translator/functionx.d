@@ -221,5 +221,5 @@ void doImpl(bool is_const, const StubPrefix prefix, const TypeKindVariable[] par
 
     }
 
-    impl.sep;
+    impl.sep(2);
 }

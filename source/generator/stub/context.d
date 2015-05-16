@@ -44,9 +44,9 @@ public class StubContext {
     this(StubPrefix prefix, HdrFilename filename) {
         this.filename = filename;
         this.hdr = new CppModule;
-        hdr.suppress_indent(1);
+        //hdr.suppressIndent(1);
         this.impl = new CppModule;
-        impl.suppress_indent(1);
+        //impl.suppressIndent(1);
 
         ctx = ImplStubContext(prefix, hdr, impl);
     }
@@ -80,7 +80,7 @@ public class StubContext {
     string output_impl(HdrFilename filename) {
         ///TODO add user defined header.
         auto o = new CppModule;
-        o.suppress_indent(1);
+        o.suppressIndent(1);
         o.include(cast(string) filename);
         o.sep(2);
         o.append(impl);
@@ -109,9 +109,8 @@ struct ImplStubContext {
     this(StubPrefix prefix, CppModule hdr, CppModule impl) {
         this.prefix = prefix;
         this.hdr = hdr;
-        hdr.suppress_indent(1);
         this.impl = impl;
-        impl.suppress_indent(1);
+
         hdr_impl.push(0, CppHdrImpl(hdr, impl));
         access_spec.push(0, CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier));
     }

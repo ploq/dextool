@@ -5,8 +5,10 @@
 class StubFoo;
 
 namespace StubCallbackFoo {
-struct Ifunc2 { virtual void func2() = 0; };
-struct Ifunc3 { virtual void func3() = 0; };
+struct Ifunc2 { virtual void func2() = 0;
+};
+struct Ifunc3 { virtual void func3() = 0;
+};
 } //NS:StubCallbackFoo
 
 namespace StubInternalFoo {
@@ -67,7 +69,8 @@ namespace BarSpace {
 class StubBar;
 
 namespace StubCallbackBar {
-struct Ifunc5 { virtual void func5() = 0; };
+struct Ifunc5 { virtual void func5() = 0;
+};
 } //NS:StubCallbackBar
 
 namespace StubInternalBar {
@@ -112,9 +115,12 @@ private:
 class StubWarp;
 
 namespace StubCallbackWarp {
-struct Ifunc2 { virtual void func2() = 0; };
-struct Ifunc3 { virtual void func3() = 0; };
-struct Ifunc4 { virtual void func4() = 0; };
+struct Ifunc2 { virtual void func2() = 0;
+};
+struct Ifunc3 { virtual void func3() = 0;
+};
+struct Ifunc4 { virtual void func4() = 0;
+};
 } //NS:StubCallbackWarp
 
 namespace StubInternalWarp {
@@ -192,11 +198,16 @@ private:
 class StubSmurf;
 
 namespace StubCallbackSmurf {
-struct Ifunc2 { virtual void func2() = 0; };
-struct Ifunc3 { virtual void func3() = 0; };
-struct Ifunc5 { virtual void func5() = 0; };
-struct Ifunc4 { virtual void func4() = 0; };
-struct IStubDtor { virtual void StubDtor() = 0; };
+struct Ifunc2 { virtual void func2() = 0;
+};
+struct Ifunc3 { virtual void func3() = 0;
+};
+struct Ifunc5 { virtual void func5() = 0;
+};
+struct Ifunc4 { virtual void func4() = 0;
+};
+struct IStubDtor { virtual void StubDtor() = 0;
+};
 } //NS:StubCallbackSmurf
 
 namespace StubInternalSmurf {
@@ -312,10 +323,14 @@ private:
 class StubDaddySmurf;
 
 namespace StubCallbackDaddySmurf {
-struct Ifunc2 { virtual void func2() = 0; };
-struct Ifunc3 { virtual void func3() = 0; };
-struct Ifunc4 { virtual void func4() = 0; };
-struct IStubDtor { virtual void StubDtor() = 0; };
+struct Ifunc2 { virtual void func2() = 0;
+};
+struct Ifunc3 { virtual void func3() = 0;
+};
+struct Ifunc4 { virtual void func4() = 0;
+};
+struct IStubDtor { virtual void StubDtor() = 0;
+};
 } //NS:StubCallbackDaddySmurf
 
 namespace StubInternalDaddySmurf {

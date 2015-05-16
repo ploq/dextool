@@ -62,15 +62,12 @@ CppModule accessSpecifierTranslator(CppAccessSpecifier kind, ref CppModule hdr) 
         break;
     case CX_CXXPublic:
         node = hdr.public_;
-        node.suppress_indent(1);
         break;
     case CX_CXXProtected:
         node = hdr.protected_;
-        node.suppress_indent(1);
         break;
     case CX_CXXPrivate:
         node = hdr.private_;
-        node.suppress_indent(1);
         break;
     }
 
@@ -81,9 +78,9 @@ CppHdrImpl classTranslator(StubPrefix prefix, CppClassNesting nesting,
     CppClassName name, ref CppHdrImpl hdr_impl) {
     auto doHeader(ref CppModule hdr) {
         auto node = hdr;
-        string stub_class = cast(string) prefix ~ cast(string) name;
+        string stub_class = prefix.str ~ name.str;
         with (hdr) {
-            auto n = cast(string) nesting;
+            auto n = nesting.str;
             node = class_(stub_class, "public " ~ n ~ (n.length == 0 ? "" : "::") ~ cast(string) name);
             sep();
         }
@@ -97,14 +94,13 @@ CppHdrImpl classTranslator(StubPrefix prefix, CppClassNesting nesting,
 void ctorTranslator(Cursor c, const StubPrefix prefix, ref CppModule hdr, ref CppModule impl) {
     void doHeader(CppClassName name, const ref TypeName[] params) {
         auto p = params.toString;
-        auto node = hdr.ctor(cast(string) name, p);
+        auto node = hdr.ctor(name.str, p);
     }
 
     void doImpl(const CppClassName name, const TypeName[] params) {
-        auto s_name = cast(string) name;
         auto p = params.toString;
-        auto node = impl.ctor_body(s_name, p);
-        impl.sep;
+        auto node = impl.ctor_body(name.str, p);
+        impl.sep(2);
     }
 
     CppClassName name = prefix ~ c.spelling;
@@ -117,7 +113,7 @@ void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer var
     ref CallbackContainer callbacks, ref CppModule hdr, ref CppModule impl) {
     void doHeader(CppClassName name, CppMethodName callback_name, ref CppModule hdr) {
         auto node = hdr.dtor(c.func.isVirtual, name.str);
-        hdr.sep();
+        hdr.sep(2);
 
         callbacks.push(CppType("void"), callback_name, TypeName[].init);
         vars.push(NameMangling.Callback, cast(CppType) callback_name,
@@ -143,7 +139,7 @@ void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer var
                     ""));
             }
         }
-        impl.sep;
+        impl.sep(2);
     }
 
     CppClassName name = c.spelling.removechars("~");
@@ -157,15 +153,15 @@ void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer var
 CppHdrImpl namespaceTranslator(CppClassStructNsName nest, ref CppHdrImpl hdr_impl) {
     CppModule doHeader(ref CppModule hdr) {
         auto r = hdr.namespace(cast(string) nest);
-        r.suppress_indent(1);
-        hdr.sep;
+        r.suppressIndent(1);
+        hdr.sep(2);
         return r;
     }
 
     CppModule doImpl(ref CppModule impl) {
         auto r = impl.namespace(cast(string) nest);
-        r.suppress_indent(1);
-        impl.sep;
+        r.suppressIndent(1);
+        impl.sep(2);
         return r;
     }
 

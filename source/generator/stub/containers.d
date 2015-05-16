@@ -106,11 +106,11 @@ struct VariableContainer {
     void render(T0, T1)(CppClassNesting nesting, ref T0 hdr, ref T1 impl) {
         auto hdr_structs = hdr.base;
         auto impl_structs = impl.base;
-        hdr_structs.suppress_indent(1);
-        impl_structs.suppress_indent(1);
+        hdr_structs.suppressIndent(1);
+        impl_structs.suppressIndent(1);
 
         auto impl_data = impl.base;
-        impl_data.suppress_indent(1);
+        impl_data.suppressIndent(1);
 
         // create data class containing the stub interface
         auto data_class = mangleToStubDataClass(stub_prefix);
@@ -118,21 +118,19 @@ struct VariableContainer {
         auto hdr_data_pub = hdr_data.public_;
         hdr_data.sep;
         auto hdr_data_priv = hdr_data.private_;
-        hdr_data_pub.suppress_indent(1);
-        hdr_data_priv.suppress_indent(1);
 
         with (hdr_data_pub) {
             ctor(data_class.str);
             dtor(data_class.str);
-            sep;
+            sep(2);
         }
 
         CppModule ctor_init;
         with (impl_data) {
             ctor_init = ctor_body(data_class.str);
-            sep;
+            sep(2);
             dtor_body(data_class.str);
-            sep;
+            sep(2);
         }
 
         // fill with data
@@ -150,10 +148,8 @@ struct VariableContainer {
 
         auto group_class = hdr.class_(stub_data_name);
         auto group_pub = group_class.public_;
-        group_pub.suppress_indent(1);
         auto group_priv = group_class.private_;
         with (group_priv) {
-            suppress_indent(1);
             friend(mangleToStubClassName(stub_prefix, class_name).str);
             sep(2);
         }
@@ -208,38 +204,38 @@ struct VariableContainer {
                     false)) {
                 return_(tn.name.str);
             }
-            impl.sep;
+            impl.sep(2);
             with (impl.method_body("void", stub_data_name.str, "SetCallback",
                     false, tn.type.str ~ " value")) {
                 stmt(E(tn.name.str) = E("value"));
             }
-            impl.sep;
+            impl.sep(2);
             break;
         case CallCounter:
             with (impl.method_body(tn.type.str, stub_data_name.str, "GetCallCounter",
                     true)) {
                 return_(tn.name.str);
             }
-            impl.sep;
+            impl.sep(2);
             with (impl.method_body("void", stub_data_name.str, "ResetCallCounter",
                     false)) {
                 stmt(E(tn.name.str) = E("0"));
             }
-            impl.sep;
+            impl.sep(2);
             break;
         case ReturnType:
             with (impl.method_body(tn.type.str ~ "&", stub_data_name.str, "SetReturn",
                     false)) {
                 return_(tn.name.str);
             }
-            impl.sep;
+            impl.sep(2);
             break;
         default:
             with (impl.method_body(tn.type.str, stub_data_name.str, get_method.str,
                     false)) {
                 return_(tn.name.str);
             }
-            impl.sep;
+            impl.sep(2);
         }
     }
 
@@ -265,7 +261,7 @@ struct VariableContainer {
         with (impl.method_body(struct_type.str ~ "&", data_name.str, tn.name.str, false)) {
             return_(E(variable.str));
         }
-        impl.sep;
+        impl.sep(2);
     }
 
 private:
@@ -293,14 +289,14 @@ private:
     void renderInit(T0, T1)(TypeName tn, CppMethodName method, ref T0 hdr,
         ref T1 impl, ref T1 ctor_init_impl) {
         void doHeader(TypeName tn, ref T0 hdr) {
-            hdr.func("void", "StubInit", format("%s* %s", tn.type.str, tn.name.str))[$.begin = ";",
-                $.end = newline, $.noindent = true];
+            hdr.func("void", "StubInit", format("%s* %s", tn.type.str, tn.name.str));
+            hdr.sep(2);
         }
 
         void doImpl(TypeName tn, ref T1 impl, ref T1 ctor_init_impl) {
             auto init_func = stub_prefix.str ~ "Init";
 
-            auto f = impl.func("void", init_func, tn.type ~ "* " ~ tn.name);
+            auto f = impl.func_body("void", init_func, tn.type ~ "* " ~ tn.name);
             with (f) {
                 stmt(E("char* d") = E("reinterpret_cast<char*>")(tn.name.str));
                 stmt(E("char* end") = E("d") + E("sizeof")(tn.type.str));
@@ -308,7 +304,7 @@ private:
                     stmt(E("*d") = 0);
                 }
             }
-            impl.sep;
+            impl.sep(2);
 
             ctor_init_impl.stmt(
                 E(init_func)("&" ~ mangleToStubDataClassInternalVariable(stub_prefix,
@@ -393,18 +389,17 @@ struct CallbackContainer {
         if (length == 0)
             return;
 
-        auto ns_hdr = hdr.namespace(cast(string) cb_ns);
-        ns_hdr.suppress_indent(1);
+        auto ns_hdr = hdr.namespace(cb_ns.str);
+        ns_hdr.suppressThisIndent(1);
+        ns_hdr.suppressIndent(1);
         foreach (c; items) {
-            auto s = ns_hdr.struct_(cast(string) cprefix ~ cast(string) c.name);
-            s[$.begin = " {", $.noindent = true];
-            auto m = s.method(true, cast(string) c.return_type,
-                cast(string) c.name, false, c.params.toString);
-            m[$.begin = "", $.end = " = 0; ", $.noindent = true];
-            m.set_indentation(1);
+            auto s = ns_hdr.struct_(cprefix.str ~ c.name.str)[$.begin = " { "];
+            auto m = s.method(true, c.return_type.str, c.name.str, false, c.params.toString);
+            m[$.begin = "", $.end = " = 0;"];
+            m.suppressThisIndent(1);
         }
 
-        hdr.sep;
+        hdr.sep(2);
     }
 
 private:
@@ -438,13 +433,13 @@ unittest {
 
     cb.push(CppType("void"), CppMethodName("smurf"), TypeName[].init);
     auto m = new CppModule;
-    m.suppress_indent(1);
 
     cb.renderInterfaces(m);
 
     auto rval = m.render;
     auto exp = "namespace Foo {
-struct Stubsmurf { virtual void smurf() = 0; };
+struct Stubsmurf { virtual void smurf() = 0;
+};
 } //NS:Foo
 
 ";

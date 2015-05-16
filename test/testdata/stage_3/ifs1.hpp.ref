@@ -5,8 +5,10 @@
 class StubIfs2;
 
 namespace StubCallbackIfs2 {
-struct Iifs2_func1_int_char { virtual int ifs2_func1_int_char(int x0, char x1) = 0; };
-struct IStubDtor { virtual void StubDtor() = 0; };
+struct Iifs2_func1_int_char { virtual int ifs2_func1_int_char(int x0, char x1) = 0;
+};
+struct IStubDtor { virtual void StubDtor() = 0;
+};
 } //NS:StubCallbackIfs2
 
 namespace StubInternalIfs2 {
@@ -75,8 +77,10 @@ private:
 class StubIfs3;
 
 namespace StubCallbackIfs3 {
-struct Idostuff { virtual void dostuff() = 0; };
-struct IStubDtor { virtual void StubDtor() = 0; };
+struct Idostuff { virtual void dostuff() = 0;
+};
+struct IStubDtor { virtual void StubDtor() = 0;
+};
 } //NS:StubCallbackIfs3
 
 namespace StubInternalIfs3 {
@@ -139,11 +143,16 @@ private:
 class StubIfs1;
 
 namespace StubCallbackIfs1 {
-struct Iifs2_func1_int_char { virtual int ifs2_func1_int_char(int x0, char x1) = 0; };
-struct Irun { virtual void run() = 0; };
-struct Iget_ifc2 { virtual Ifs2 & get_ifc2() = 0; };
-struct Iget_ifc3 { virtual Ifs3 & get_ifc3() = 0; };
-struct IStubDtor { virtual void StubDtor() = 0; };
+struct Iifs2_func1_int_char { virtual int ifs2_func1_int_char(int x0, char x1) = 0;
+};
+struct Irun { virtual void run() = 0;
+};
+struct Iget_ifc2 { virtual Ifs2 & get_ifc2() = 0;
+};
+struct Iget_ifc3 { virtual Ifs3 & get_ifc3() = 0;
+};
+struct IStubDtor { virtual void StubDtor() = 0;
+};
 } //NS:StubCallbackIfs1
 
 namespace StubInternalIfs1 {

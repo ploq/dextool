@@ -15,12 +15,18 @@ public:
 class StubGlass;
 
 namespace StubCallbackGlass {
-struct Ifunc1 { virtual Foo::Bar func1() = 0; };
-struct Ifunc2 { virtual Foo::Bar & func2() = 0; };
-struct Ifunc3 { virtual Foo::Bar * func3() = 0; };
-struct Ifunc4 { virtual ::Foo::Bar func4() = 0; };
-struct Ifunc5 { virtual ::Foo::Bar & func5() = 0; };
-struct IStubDtor { virtual void StubDtor() = 0; };
+struct Ifunc1 { virtual Foo::Bar func1() = 0;
+};
+struct Ifunc2 { virtual Foo::Bar & func2() = 0;
+};
+struct Ifunc3 { virtual Foo::Bar * func3() = 0;
+};
+struct Ifunc4 { virtual ::Foo::Bar func4() = 0;
+};
+struct Ifunc5 { virtual ::Foo::Bar & func5() = 0;
+};
+struct IStubDtor { virtual void StubDtor() = 0;
+};
 } //NS:StubCallbackGlass
 
 namespace StubInternalGlass {
