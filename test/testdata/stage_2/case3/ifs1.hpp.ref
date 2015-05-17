@@ -133,7 +133,7 @@ public:
     StubInternalIfs1::StubStubData& GetStub();
 
 private:
-    StubInternalIfs1::StubStubData Stub_data;
+    mutable StubInternalIfs1::StubStubData Stub_data;
 };
 
 #endif // stub_ifs1_hpp

@@ -254,12 +254,12 @@ struct VariableContainer {
         auto variable = mangleToStubDataClassInternalVariable(stub_prefix,
             CppMethodName(tn.name.str));
 
-        hdr_pub.method(false, E(struct_type.str) ~ E("&"), tn.name.str, false);
-        hdr_priv.stmt(E(struct_type.str) ~ "" ~ E(variable.str));
+        hdr_pub.method(false, struct_type.str ~ "&", tn.name.str, false);
+        hdr_priv.stmt(E(struct_type.str) ~ E(variable.str));
 
         auto data_name = mangleToStubDataClass(stub_prefix);
         with (impl.method_body(struct_type.str ~ "&", data_name.str, tn.name.str, false)) {
-            return_(E(variable.str));
+            return_(variable.str);
         }
         impl.sep(2);
     }

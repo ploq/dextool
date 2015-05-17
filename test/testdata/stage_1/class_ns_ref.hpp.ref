@@ -161,7 +161,7 @@ public:
     StubInternalGlass::StubStubData& GetStub();
 
 private:
-    StubInternalGlass::StubStubData Stub_data;
+    mutable StubInternalGlass::StubStubData Stub_data;
 };
 
 #endif // stub_class_ns_ref_hpp

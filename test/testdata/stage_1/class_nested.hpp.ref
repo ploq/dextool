@@ -45,7 +45,7 @@ public:
     StubInternalOuterClass::StubStubData& GetStub();
 
 private:
-    StubInternalOuterClass::StubStubData Stub_data;
+    mutable StubInternalOuterClass::StubStubData Stub_data;
 };
 
 class StubInnerClass;
@@ -91,7 +91,7 @@ public:
     StubInternalInnerClass::StubStubData& GetStub();
 
 private:
-    StubInternalInnerClass::StubStubData Stub_data;
+    mutable StubInternalInnerClass::StubStubData Stub_data;
 };
 
 #endif // stub_class_nested_hpp

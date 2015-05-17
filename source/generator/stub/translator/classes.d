@@ -92,7 +92,7 @@ public struct ClassTranslateContext {
         doTraversal(this, stub);
 
         // forward declaration of stubbed class.
-        internal.hdr.stmt(E("class") ~ mangleToStubClassName(prefix, name).str);
+        internal.hdr.stmt(E("class") ~ E(mangleToStubClassName(prefix, name).str));
         internal.hdr.sep(2);
 
         callbacks.renderInterfaces(internal.hdr);
@@ -185,22 +185,6 @@ void doDataStruct(const StubNs data_ns, const CppNsNesting ns_nesting,
     impl.sep(2);
 }
 
-void doDataStructInitHelper(const CppClassName class_name, const TypeName tn,
-    const CppMethodName method, ref CppModule pub_hdr, ref CppModule priv_hdr, ref CppModule impl) {
-    auto type = tn.type.str;
-    auto return_type = cast(string) tn.type ~ "&";
-    auto name = tn.name.str;
-    auto var_name = type ~ " " ~ name;
-
-    pub_hdr.func(return_type, method.str); //[$.begin = ";", $.end = newline, $.noindent = true];
-    priv_hdr.stmt(var_name);
-
-    with (impl.method_body(return_type, class_name.str, method.str, false)) {
-        return_("this->" ~ name);
-    }
-    impl.sep;
-}
-
 void doDataStructInit(const StubPrefix prefix, const StubNs data_ns,
     const CppClassName class_name, VariableContainer vars, ref CppModule hdr, ref CppModule impl) {
     if (vars.length == 0)
@@ -215,7 +199,7 @@ void doDataStructInit(const StubPrefix prefix, const StubNs data_ns,
         sep(2);
     }
     with (hdr.private_) {
-        stmt(E(cast(string) getter_cls) ~ "" ~ E(getter_var.str));
+        stmt(E("mutable") ~ E(getter_cls.str) ~ E(getter_var.str));
     }
 
     with (impl.method_body(getter_cls.str ~ "&", class_name.str, getter_func.str, false)) {
@@ -286,9 +270,8 @@ void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer var
         with (impl.dtor_body(stub_name.str)) {
             stmt("%s.%s().%s++".format(data.str, getter.str, counter.str));
             sep(2);
-            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ E(" != 0"))) {
-                stmt(E(data.str).e(getter.str)("").e(callback.str) ~ E("->") ~ E(callback_name.str)(
-                    ""));
+            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ E("!= 0"))) {
+                stmt(E(data.str).e(getter.str)("").e(callback.str ~ "->" ~ callback_name.str)(""));
             }
         }
         impl.sep(2);

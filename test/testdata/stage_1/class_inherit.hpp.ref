@@ -62,7 +62,7 @@ public:
     StubInternalFoo::StubStubData& GetStub();
 
 private:
-    StubInternalFoo::StubStubData Stub_data;
+    mutable StubInternalFoo::StubStubData Stub_data;
 };
 
 namespace BarSpace {
@@ -107,7 +107,7 @@ public:
     StubInternalBar::StubStubData& GetStub();
 
 private:
-    StubInternalBar::StubStubData Stub_data;
+    mutable StubInternalBar::StubStubData Stub_data;
 };
 
 } //NS:BarSpace
@@ -192,7 +192,7 @@ public:
     StubInternalWarp::StubStubData& GetStub();
 
 private:
-    StubInternalWarp::StubStubData Stub_data;
+    mutable StubInternalWarp::StubStubData Stub_data;
 };
 
 class StubSmurf;
@@ -317,7 +317,7 @@ public:
     StubInternalSmurf::StubStubData& GetStub();
 
 private:
-    StubInternalSmurf::StubStubData Stub_data;
+    mutable StubInternalSmurf::StubStubData Stub_data;
 };
 
 class StubDaddySmurf;
@@ -422,7 +422,7 @@ public:
     StubInternalDaddySmurf::StubStubData& GetStub();
 
 private:
-    StubInternalDaddySmurf::StubStubData Stub_data;
+    mutable StubInternalDaddySmurf::StubStubData Stub_data;
 };
 
 #endif // stub_class_inherit_hpp

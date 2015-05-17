@@ -210,7 +210,7 @@ public:
     StubInternalSimple::StubStubData& GetStub();
 
 private:
-    StubInternalSimple::StubStubData Stub_data;
+    mutable StubInternalSimple::StubStubData Stub_data;
 };
 
 #endif // stub_class_no_virtual_hpp

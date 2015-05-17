@@ -71,7 +71,7 @@ public:
     StubInternalIfs2::StubStubData& GetStub();
 
 private:
-    StubInternalIfs2::StubStubData Stub_data;
+    mutable StubInternalIfs2::StubStubData Stub_data;
 };
 
 class StubIfs3;
@@ -137,7 +137,7 @@ public:
     StubInternalIfs3::StubStubData& GetStub();
 
 private:
-    StubInternalIfs3::StubStubData Stub_data;
+    mutable StubInternalIfs3::StubStubData Stub_data;
 };
 
 class StubIfs1;
@@ -271,7 +271,7 @@ public:
     StubInternalIfs1::StubStubData& GetStub();
 
 private:
-    StubInternalIfs1::StubStubData Stub_data;
+    mutable StubInternalIfs1::StubStubData Stub_data;
 };
 
 #endif // stub_ifs1_hpp

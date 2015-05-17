@@ -1,15 +1,31 @@
-#ifndef stub_class_impl_hpp
-#define stub_class_impl_hpp
-#include "class_impl.hpp"
+#ifndef stub_class_const_hpp
+#define stub_class_const_hpp
+#include "class_const.hpp"
 
 class StubSimple;
 
 namespace StubCallbackSimple {
+struct Ifunc1 { virtual void func1() = 0;
+};
 struct IStubDtor { virtual void StubDtor() = 0;
 };
 } //NS:StubCallbackSimple
 
 namespace StubInternalSimple {
+class Stubfunc1 {
+public:
+    StubCallbackSimple::Ifunc1* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc1* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+private:
+    friend class ::StubSimple;
+
+    StubCallbackSimple::Ifunc1* callback;
+    unsigned call_counter;
+};
+void StubInit(Stubfunc1* value);
+
 class StubStubDtor {
 public:
     StubCallbackSimple::IStubDtor* GetCallback();
@@ -29,19 +45,21 @@ public:
     StubStubData();
     ~StubStubData();
 
+    StubInternalSimple::Stubfunc1& func1();
     StubInternalSimple::StubStubDtor& StubDtor();
 
 private:
+    StubInternalSimple::Stubfunc1 stub_func1;
     StubInternalSimple::StubStubDtor stub_StubDtor;
 };
 } //NS:StubInternalSimple
 
 class StubSimple : public Simple {
 public:
+    virtual void func1() const;
+public:
     StubSimple();
-    StubSimple(char x);
-    StubSimple(int y);
-    ~StubSimple();
+    virtual ~StubSimple();
 
 public:
     StubInternalSimple::StubStubData& GetStub();
@@ -50,4 +68,4 @@ private:
     mutable StubInternalSimple::StubStubData Stub_data;
 };
 
-#endif // stub_class_impl_hpp
+#endif // stub_class_const_hpp

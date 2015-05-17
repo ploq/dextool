@@ -72,7 +72,7 @@ public:
     StubInternalSmurf::StubStubData& GetStub();
 
 private:
-    StubInternalSmurf::StubStubData Stub_data;
+    mutable StubInternalSmurf::StubStubData Stub_data;
 };
 
 } //NS:bar

@@ -206,9 +206,10 @@ void doImpl(bool is_const, const StubPrefix prefix, const TypeKindVariable[] par
         sep(2);
 
         if (return_type == CppType("void")) {
-            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ "!= 0")) {
-                stmt(E(data.str).e(getter.str)("").e(callback.str) ~ E("->") ~ E(
-                    callback_method.str)(params.toStringOfName));
+            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ E("!= 0"))) {
+                stmt(
+                    E(data.str).e(getter.str)("").e(callback.str ~ "->" ~ callback_method.str)(
+                    params.toStringOfName));
             }
         }
         else {
@@ -216,13 +217,13 @@ void doImpl(bool is_const, const StubPrefix prefix, const TypeKindVariable[] par
             if (findAmong(return_type.str, ['&']).length != 0) {
                 star = "*";
             }
-            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ "!= 0")) {
-                return_(E(data.str).e(getter.str)("").e(callback.str) ~ E("->") ~ E(
-                    callback_method.str)(params.toStringOfName));
+            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ E("!= 0"))) {
+                return_(
+                    E(data.str).e(getter.str)("").e(callback.str ~ "->" ~ callback_method.str)(
+                    params.toStringOfName));
             }
             with (else_()) {
-                return_(
-                    E(star) ~ E(data.str).e(getter.str)("").e(mangleToReturnVariable(prefix).str));
+                return_(E(star ~ data.str).e(getter.str)("").e(mangleToReturnVariable(prefix).str));
             }
         }
 
