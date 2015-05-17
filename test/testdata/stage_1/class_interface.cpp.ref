@@ -85,29 +85,29 @@ void StubInit(Stubfunc2_double* value) {
     }
 }
 
-StubCallbackSimple::IopAssign_Simple* StubopAssign_Simple::GetCallback() {
+StubCallbackSimple::IopAssign_const_Simple* StubopAssign_const_Simple::GetCallback() {
     return callback;
 }
 
-void StubopAssign_Simple::SetCallback(StubCallbackSimple::IopAssign_Simple* value) {
+void StubopAssign_const_Simple::SetCallback(StubCallbackSimple::IopAssign_const_Simple* value) {
     callback = value;
 }
 
-unsigned StubopAssign_Simple::GetCallCounter() const {
+unsigned StubopAssign_const_Simple::GetCallCounter() const {
     return call_counter;
 }
 
-void StubopAssign_Simple::ResetCallCounter() {
+void StubopAssign_const_Simple::ResetCallCounter() {
     call_counter = 0;
 }
 
-Simple* StubopAssign_Simple::GetParam_other() {
+Simple* StubopAssign_const_Simple::GetParam_other() {
     return Param_other;
 }
 
-void StubInit(StubopAssign_Simple* value) {
+void StubInit(StubopAssign_const_Simple* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubopAssign_Simple);
+    char* end = d + sizeof(StubopAssign_const_Simple);
     for (; d != end; ++d) {
         *d = 0;
     }
@@ -165,7 +165,7 @@ StubStubData::StubStubData() {
     StubInit(&stub_func1);
     StubInit(&stub_func2_int);
     StubInit(&stub_func2_double);
-    StubInit(&stub_opAssign_Simple);
+    StubInit(&stub_opAssign_const_Simple);
     StubInit(&stub_func3);
     StubInit(&stub_StubDtor);
 }
@@ -185,8 +185,8 @@ StubInternalSimple::Stubfunc2_double& StubStubData::func2_double() {
     return stub_func2_double;
 }
 
-StubInternalSimple::StubopAssign_Simple& StubStubData::opAssign_Simple() {
-    return stub_opAssign_Simple;
+StubInternalSimple::StubopAssign_const_Simple& StubStubData::opAssign_const_Simple() {
+    return stub_opAssign_const_Simple;
 }
 
 StubInternalSimple::Stubfunc3& StubStubData::func3() {
@@ -229,11 +229,11 @@ void StubSimple::func2(double x) {
 }
 
 void StubSimple::operator=(const Simple & other) {
-    Stub_data.opAssign_Simple().call_counter++;
-    Stub_data.opAssign_Simple().Param_other = const_cast<Simple*>(&other);
+    Stub_data.opAssign_const_Simple().call_counter++;
+    Stub_data.opAssign_const_Simple().Param_other = const_cast<Simple*>(&other);
 
-    if (Stub_data.opAssign_Simple().callback != 0) {
-        Stub_data.opAssign_Simple().callback->opAssign_Simple(other);
+    if (Stub_data.opAssign_const_Simple().callback != 0) {
+        Stub_data.opAssign_const_Simple().callback->opAssign_const_Simple(other);
     }
 }
 

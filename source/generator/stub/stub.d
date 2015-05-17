@@ -20,11 +20,6 @@ module generator.stub.stub;
 
 private:
 
-import std.algorithm : map, startsWith;
-import std.array : array;
-import std.conv : to;
-import std.string : removechars;
-
 import clang.c.index;
 import clang.Cursor;
 
@@ -33,9 +28,6 @@ import dsrcgen.cpp;
 import translator.Type;
 
 import generator.stub.types;
-import generator.stub.containers;
-import generator.stub.mangling;
-import generator.stub.misc;
 
 package:
 
@@ -72,82 +64,6 @@ CppModule accessSpecifierTranslator(CppAccessSpecifier kind, ref CppModule hdr) 
     }
 
     return node;
-}
-
-CppHdrImpl classTranslator(StubPrefix prefix, CppClassNesting nesting,
-    CppClassName name, ref CppHdrImpl hdr_impl) {
-    auto doHeader(ref CppModule hdr) {
-        auto node = hdr;
-        string stub_class = prefix.str ~ name.str;
-        with (hdr) {
-            auto n = nesting.str;
-            node = class_(stub_class, "public " ~ n ~ (n.length == 0 ? "" : "::") ~ cast(string) name);
-            sep();
-        }
-
-        return node;
-    }
-
-    return CppHdrImpl(doHeader(hdr_impl.hdr), hdr_impl.impl);
-}
-
-void ctorTranslator(Cursor c, const StubPrefix prefix, ref CppModule hdr, ref CppModule impl) {
-    void doHeader(CppClassName name, const ref TypeName[] params) {
-        auto p = params.toString;
-        auto node = hdr.ctor(name.str, p);
-    }
-
-    void doImpl(const CppClassName name, const TypeName[] params) {
-        auto p = params.toString;
-        auto node = impl.ctor_body(name.str, p);
-        impl.sep(2);
-    }
-
-    CppClassName name = prefix ~ c.spelling;
-    auto params = parmDeclToTypeName(c);
-    doHeader(name, params);
-    doImpl(name, params);
-}
-
-void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer vars,
-    ref CallbackContainer callbacks, ref CppModule hdr, ref CppModule impl) {
-    void doHeader(CppClassName name, CppMethodName callback_name, ref CppModule hdr) {
-        auto node = hdr.dtor(c.func.isVirtual, name.str);
-        hdr.sep(2);
-
-        callbacks.push(CppType("void"), callback_name, TypeName[].init);
-        vars.push(NameMangling.Callback, cast(CppType) callback_name,
-            cast(CppVariable) callback_name, callback_name);
-        vars.push(NameMangling.CallCounter, CppType("unsigned"),
-            cast(CppVariable) callback_name, callback_name);
-    }
-
-    void doImpl(const CppClassName name, const CppClassName stub_name,
-        const CppMethodName callback_name, ref CppModule impl) {
-        auto data = mangleToStubDataClassVariable(prefix);
-        auto getter = mangleToStubDataGetter(callback_name, TypeKindVariable[].init);
-        auto counter = mangleToStubStructMember(prefix,
-            NameMangling.CallCounter, CppVariable(callback_name.str));
-        auto callback = mangleToStubStructMember(prefix, NameMangling.Callback,
-            CppVariable(callback_name.str));
-
-        with (impl.dtor_body(stub_name.str)) {
-            stmt("%s.%s().%s++".format(data.str, getter.str, counter.str));
-            sep(2);
-            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ E(" != 0"))) {
-                stmt(E(data.str).e(getter.str)("").e(callback.str) ~ E("->") ~ E(callback_name.str)(
-                    ""));
-            }
-        }
-        impl.sep(2);
-    }
-
-    CppClassName name = c.spelling.removechars("~");
-    CppClassName stub_name = prefix ~ name;
-    CppMethodName callback_name = prefix ~ "Dtor";
-
-    doHeader(stub_name, callback_name, hdr);
-    doImpl(name, stub_name, callback_name, impl);
 }
 
 CppHdrImpl namespaceTranslator(CppClassStructNsName nest, ref CppHdrImpl hdr_impl) {

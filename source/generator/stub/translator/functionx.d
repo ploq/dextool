@@ -49,10 +49,18 @@ version (unittest) {
 }
 
 void functionTranslator(Cursor c, const StubPrefix prefix,
-    const CppClassName class_name, ref VariableContainer vars,
-    ref CallbackContainer callbacks, ref CppModule hdr, ref CppModule impl) {
+    const CppClassName class_name, const OnlyStubVirtual only_stub_virtual,
+    ref VariableContainer vars, ref CallbackContainer callbacks, ref CppModule hdr,
+    ref CppModule impl) {
 
-    if (!c.func.isVirtual) {
+    if (cast(bool) only_stub_virtual == false) {
+        auto loc = c.location;
+        logger.warningf(
+            "%s:%d:%d:%s: Stubbing NONE virtual function (usually bad... Be sure you know what you are doing)",
+            loc.file.name, loc.line, loc.column, c.spelling);
+        logger.trace(clang.Cursor.abilities(c.func));
+    }
+    else if (!c.func.isVirtual) {
         auto loc = c.location;
         logger.warningf("%s:%d:%d:%s: Skipping, not a virtual function",
             loc.file.name, loc.line, loc.column, c.spelling);
@@ -120,23 +128,22 @@ void analyzeCursor(Cursor c, out TypeKindVariable[] params,
 
 void doHeader(bool is_virtual, bool is_const, const TypeKindVariable[] params,
     const string return_type, const CppMethodName method, ref CppModule hdr) {
-    import std.algorithm.iteration : map;
-
     hdr.method(is_virtual, return_type, method.str, is_const, params.toParamString);
 }
 
 auto castAndStoreValue(const TypeKindVariable v) @safe {
-    //TODO change TypeName to use TypeKind instead of CppType.
-    import std.algorithm : canFind;
-
-    bool do_const_cast;
-
     string get_ptr = v.type.isRef ? "&" : "";
-
-    do_const_cast = v.type.isConst && (v.type.isRef || v.type.isPointer);
+    bool do_const_cast = v.type.isConst && (v.type.isRef || v.type.isPointer);
 
     if (do_const_cast) {
-        return E("const_cast<" ~ v.type.name ~ "*>")(get_ptr ~ v.name);
+        string stars = v.type.getPointerStars;
+
+        if (v.type.isRef) {
+            stars ~= '*';
+        }
+        string without_const = v.type.name ~ stars;
+
+        return E("const_cast<" ~ without_const ~ ">")(get_ptr ~ v.name);
     }
     return get_ptr ~ v.name.str;
 }

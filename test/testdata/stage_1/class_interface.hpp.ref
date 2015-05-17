@@ -11,7 +11,7 @@ struct Ifunc2_int { virtual void func2_int(int x) = 0;
 };
 struct Ifunc2_double { virtual void func2_double(double x) = 0;
 };
-struct IopAssign_Simple { virtual void opAssign_Simple(const Simple & other) = 0;
+struct IopAssign_const_Simple { virtual void opAssign_const_Simple(const Simple & other) = 0;
 };
 struct Ifunc3 { virtual void func3() = 0;
 };
@@ -68,21 +68,21 @@ private:
 };
 void StubInit(Stubfunc2_double* value);
 
-class StubopAssign_Simple {
+class StubopAssign_const_Simple {
 public:
-    StubCallbackSimple::IopAssign_Simple* GetCallback();
-    void SetCallback(StubCallbackSimple::IopAssign_Simple* value);
+    StubCallbackSimple::IopAssign_const_Simple* GetCallback();
+    void SetCallback(StubCallbackSimple::IopAssign_const_Simple* value);
     unsigned GetCallCounter() const;
     void ResetCallCounter();
     Simple* GetParam_other();
 private:
     friend class ::StubSimple;
 
-    StubCallbackSimple::IopAssign_Simple* callback;
+    StubCallbackSimple::IopAssign_const_Simple* callback;
     unsigned call_counter;
     Simple* Param_other;
 };
-void StubInit(StubopAssign_Simple* value);
+void StubInit(StubopAssign_const_Simple* value);
 
 class Stubfunc3 {
 public:
@@ -120,7 +120,7 @@ public:
     StubInternalSimple::Stubfunc1& func1();
     StubInternalSimple::Stubfunc2_int& func2_int();
     StubInternalSimple::Stubfunc2_double& func2_double();
-    StubInternalSimple::StubopAssign_Simple& opAssign_Simple();
+    StubInternalSimple::StubopAssign_const_Simple& opAssign_const_Simple();
     StubInternalSimple::Stubfunc3& func3();
     StubInternalSimple::StubStubDtor& StubDtor();
 
@@ -128,7 +128,7 @@ private:
     StubInternalSimple::Stubfunc1 stub_func1;
     StubInternalSimple::Stubfunc2_int stub_func2_int;
     StubInternalSimple::Stubfunc2_double stub_func2_double;
-    StubInternalSimple::StubopAssign_Simple stub_opAssign_Simple;
+    StubInternalSimple::StubopAssign_const_Simple stub_opAssign_const_Simple;
     StubInternalSimple::Stubfunc3 stub_func3;
     StubInternalSimple::StubStubDtor stub_StubDtor;
 };

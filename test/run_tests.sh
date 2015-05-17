@@ -77,6 +77,8 @@ for sourcef in testdata/stage_1/*.hpp; do
     out_impl="$outdir/stub_"${inhdr_base%.hpp}".cpp"
 
     case "$sourcef" in
+        *class_no_virtual*)
+            test_gen_code "$outdir" "$sourcef" "--debug --func-scope=all" ;;
         # **)
         #     test_gen_code "$outdir" "$sourcef" "--debug" ;;
         # **)
@@ -103,11 +105,11 @@ for sourcef in testdata/stage_1/*.hpp; do
 done
 
 echo "Stage 2"
-test_gen_code "$outdir" "testdata/stage_2/case1/ifs1.hpp" "--limit=all"
+test_gen_code "$outdir" "testdata/stage_2/case1/ifs1.hpp" "--file-scope=all"
 test_compl_code "$outdir" "-Itestdata/stage_2/case1" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
 # Test compilator parameter with extra include path result in a correct stub.
-test_gen_code "$outdir" "testdata/stage_2/case2/ifs1.hpp" "--limit=all" "" "-Itestdata/stage_2/case2/sub"
+test_gen_code "$outdir" "testdata/stage_2/case2/ifs1.hpp" "--file-scope=all" "" "-Itestdata/stage_2/case2/sub"
 test_compl_code "$outdir" "-Itestdata/stage_2/case2 -Itestdata/stage_2/case2/sub" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
 # Test limiting of stubbing to the supplied file.
@@ -115,7 +117,7 @@ test_gen_code "$outdir" "testdata/stage_2/case3/ifs1.hpp" "" "" "-Itestdata/stag
 test_compl_code "$outdir" "-Itestdata/stage_2/case3 -Itestdata/stage_2/case3/sub" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
 echo "Stage 3"
-test_gen_code "$outdir" "testdata/stage_3/ifs1.hpp" "--limit=all"
+test_gen_code "$outdir" "testdata/stage_3/ifs1.hpp" "--file-scope=all"
 test_compl_code "$outdir" "-Itestdata/stage_3" "$outdir/stub_ifs1.cpp" "testdata/stage_3/main.cpp"
 
 rm -r "$outdir"

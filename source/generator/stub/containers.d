@@ -103,7 +103,7 @@ struct VariableContainer {
         return vars.length;
     }
 
-    void render(T0, T1)(CppNsNesting nesting, ref T0 hdr, ref T1 impl) {
+    void render(T0, T1)(const CppNsNesting nesting, ref T0 hdr, ref T1 impl) const {
         auto hdr_structs = hdr.base;
         auto impl_structs = impl.base;
         hdr_structs.suppressIndent(1);
@@ -141,7 +141,7 @@ struct VariableContainer {
     }
 
     private void renderGroup(T0, T1)(CppMethodName group, CppNsNesting nesting,
-        ref T0 hdr, ref T1 impl, ref T1 ctor_init_impl) {
+        ref T0 hdr, ref T1 impl, ref T1 ctor_init_impl) const {
         string stub_data_name = stub_prefix ~ group;
 
         auto group_class = hdr.class_(stub_data_name);
@@ -160,8 +160,8 @@ struct VariableContainer {
                 CppMethodName set_method = "Set" ~ item.typename.name.str;
 
                 renderGetSetHdr(item, get_method, set_method, group_pub, group_priv);
-                renderGetSetImpl(item, CppClassName(stub_data_name), get_method, set_method,
-                    impl);
+                renderGetSetImpl(item, data_ns, CppClassName(stub_data_name),
+                    get_method, set_method, impl);
             }
         }
         renderInit(TypeName(CppType(stub_data_name), CppVariable("value")),
@@ -171,7 +171,7 @@ struct VariableContainer {
 
     private void renderGetSetHdr(T0, T1)(InternalType it,
         const CppMethodName get_method, const CppMethodName set_method, ref T0 hdr_pub,
-        T1 hdr_priv) {
+        T1 hdr_priv) const {
         TypeName tn = InternalToTypeName(it);
 
         switch (it.mangling) with (NameMangling) {
@@ -193,9 +193,9 @@ struct VariableContainer {
         hdr_priv.stmt(format("%s %s", tn.type.str, tn.name.str));
     }
 
-    private void renderGetSetImpl(T0)(InternalType it,
+    private void renderGetSetImpl(T0)(InternalType it, const StubNs data_ns,
         const CppClassName stub_data_name, const CppMethodName get_method,
-        const CppMethodName set_method, ref T0 impl) {
+        const CppMethodName set_method, ref T0 impl) const {
         TypeName tn = InternalToTypeName(it);
 
         switch (it.mangling) with (NameMangling) {
@@ -240,7 +240,7 @@ struct VariableContainer {
     }
 
     private void renderDataFunc(T0, T1, T2)(CppMethodName group, ref T0 hdr_pub,
-        ref T1 hdr_priv, ref T2 impl) {
+        ref T1 hdr_priv, ref T2 impl) const {
         import std.algorithm : find;
 
         auto internal = vars.find!(a => a.mangling == NameMangling.Callback && a.group == group);
@@ -286,8 +286,8 @@ private:
     }
 
     /// Init function for a struct of data.
-    void renderInit(T0, T1)(TypeName tn, CppMethodName method, ref T0 hdr,
-        ref T1 impl, ref T1 ctor_init_impl) {
+    void renderInit(T0, T1, T2)(TypeName tn, CppMethodName method, ref T0 hdr,
+        ref T1 impl, ref T2 ctor_init_impl) const {
         void doHeader(TypeName tn, ref T0 hdr) {
             hdr.func("void", "StubInit", format("%s* %s", tn.type.str, tn.name.str));
             hdr.sep(2);

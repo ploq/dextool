@@ -51,7 +51,7 @@ pure @safe nothrow struct TypeKind {
      * const int&
      * ---
      */
-    @property string toString() const {
+    @property string toString() const pure @safe nothrow {
         return full_name;
     }
 
@@ -73,7 +73,7 @@ body {
     import std.algorithm;
     import std.array;
 
-    TypeKind result;
+    TypeKind result = type.toProperty;
     result.t = type;
     result.full_name = type.spelling;
 
@@ -98,11 +98,6 @@ body {
                 result = translateTypedef(type);
                 break;
 
-            case CXType_Record:
-            case CXType_Enum:
-                result.name = type.spelling;
-                break;
-
             case CXType_ConstantArray:
                 result.name = translateConstantArray(type, false);
                 break;
@@ -114,13 +109,12 @@ body {
                 break;
 
             default:
-                logger.trace(format("%s|%s|%s|%s", type.kind, type.declaration,
-                    type.isValid, type.typeKindSpelling));
-                result.name = type.spelling;
+                result = translateDefault(type);
             }
         }
     }
-    logger.trace(result);
+    logger.tracef("name:%s full:%s c:%s r:%s p:%s", result.name,
+        result.toString, result.isConst, result.isRef, result.isPointer);
 
     return result;
 }
@@ -157,16 +151,47 @@ TypeKind toProperty(Type type) {
     return result;
 }
 
+TypeKind translateDefault(Type type) {
+    logger.trace(format("%s|%s|%s|%s", type.kind, type.declaration,
+        type.isValid, type.typeKindSpelling));
+
+    TypeKind result = type.toProperty;
+    result.t = type;
+    result.full_name = type.spelling;
+    result.name = translateCursorType(type.kind);
+
+    return result;
+}
+
 TypeKind translateTypedef(Type type)
 in {
     assert(type.kind == CXTypeKind.CXType_Typedef);
 }
 body {
+    logger.trace(format("%s|%s|%s|%s", type.kind, type.declaration,
+        type.isValid, type.typeKindSpelling));
+    static bool valueTypeIsConst(Type type) {
+        auto pointee = type.pointeeType;
+
+        while (pointee.kind == CXTypeKind.CXType_Pointer)
+            pointee = pointee.pointeeType;
+
+        return pointee.isConst;
+    }
+
     TypeKind result;
 
-    result.isConst = type.isConst;
+    result = type.toProperty;
+
+    if (valueTypeIsConst(type)) {
+        result.isConst = true;
+    }
+
+    result.name = type.declaration.spelling;
+    if (result.name.length == 0) {
+        result.name = type.spelling;
+    }
     result.t = type;
-    result.name = type.spelling;
     result.full_name = type.spelling;
 
     return result;
@@ -212,7 +237,7 @@ body {
         return pointee.isConst;
     }
 
-    TypeKind result;
+    TypeKind result = type.toProperty;
     result.isPointer = true;
 
     if (valueTypeIsConst(type)) {
@@ -220,7 +245,10 @@ body {
     }
 
     auto tmp = translateType(type.pointeeType);
-    result.name = tmp.name;
+    result.name = tmp.t.declaration.spelling;
+    if (result.name.length == 0) {
+        result.name = tmp.name;
+    }
     result.t = type;
     result.full_name = type.spelling;
 
@@ -242,7 +270,7 @@ body {
         return pointee.isConst;
     }
 
-    TypeKind result;
+    TypeKind result = type.toProperty;
     result.isRef = true;
 
     if (valueTypeIsConst(type)) {
@@ -251,6 +279,9 @@ body {
 
     auto tmp = translateType(type.pointeeType);
     result.name = tmp.t.declaration.spelling;
+    if (result.name.length == 0) {
+        result.name = tmp.name;
+    }
     result.t = type;
     result.full_name = type.spelling;
 
@@ -288,30 +319,29 @@ string translateCursorType(CXTypeKind kind) {
     case CXType_Bool:
         return "bool";
     case CXType_Char_U:
-        return "<unimplemented>";
+        return "unsigned char";
     case CXType_UChar:
-        return "ubyte";
+        return "unsigned char";
     case CXType_Char16:
-        return "wchar";
+        return "<unimplemented>";
     case CXType_Char32:
-        return "dchar";
+        return "<unimplemented>";
     case CXType_UShort:
-        return "ushort";
+        return "unsigned short";
     case CXType_UInt:
-        return "uint";
+        return "unsigned int";
 
     case CXType_ULong:
-        //includeHandler.addCompatible();
-        return "c_ulong";
+        return "unsigned long";
 
     case CXType_ULongLong:
-        return "ulong";
+        return "unsigned long long";
     case CXType_UInt128:
         return "<unimplemented>";
     case CXType_Char_S:
         return "char";
     case CXType_SChar:
-        return "byte";
+        return "char";
     case CXType_WChar:
         return "wchar";
     case CXType_Short:
@@ -320,11 +350,10 @@ string translateCursorType(CXTypeKind kind) {
         return "int";
 
     case CXType_Long:
-        //includeHandler.addCompatible();
-        return "c_long";
+        return "long";
 
     case CXType_LongLong:
-        return "long";
+        return "long long";
     case CXType_Int128:
         return "<unimplemented>";
     case CXType_Float:
@@ -332,7 +361,7 @@ string translateCursorType(CXTypeKind kind) {
     case CXType_Double:
         return "double";
     case CXType_LongDouble:
-        return "real";
+        return "long double";
     case CXType_NullPtr:
         return "null";
     case CXType_Overload:

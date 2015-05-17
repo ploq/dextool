@@ -104,11 +104,13 @@ auto toString(const TypeName[] vars) pure @safe nothrow {
 }
 
 /// Convert a vector of TypeKindVariable to an underscore separated string of types.
-auto toStringOfType(const TypeKindVariable[] vars) {
+auto toStringOfType(const TypeKindVariable[] vars) pure @safe nothrow {
     import std.algorithm : map;
     import std.array : join;
+    import std.string : replace;
 
-    return vars.map!(a => "_" ~ cast(string) a.type.name).join("");
+    return vars.map!(a => "_" ~ (a.type.isConst ? "const_" : "") ~ a.type.name).join("").replace(" ",
+        "_");
 }
 
 /// Convert a vector of TypeKindVariable to a comma separated string of parameters.
@@ -125,4 +127,14 @@ auto toParamString(const TypeKindVariable[] vars) {
     import std.array : join;
 
     return vars.map!(a => a.type.toString ~ " " ~ a.name.str).join(", ");
+}
+
+string getPointerStars(const TypeKind v) pure @safe {
+    import std.algorithm : count;
+
+    char[] stars;
+    stars.length = v.toString.count('*');
+    stars[] = '*';
+
+    return stars.idup;
 }

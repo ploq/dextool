@@ -31,8 +31,7 @@ import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
 import generator.stub.containers : VariableContainer, CallbackContainer;
 import generator.stub.mangling;
 import generator.stub.misc;
-import generator.stub.stub : classTranslator, ctorTranslator, dtorTranslator,
-    accessSpecifierTranslator, consumeAccessSpecificer;
+import generator.stub.stub : accessSpecifierTranslator, consumeAccessSpecificer;
 import generator.stub.types;
 
 import generator.stub.translator.class_methods : MethodTranslateContext;
@@ -53,16 +52,18 @@ public struct ClassTranslateContext {
      *  prefix = prefix to use for the name of the stub class.
      *  name = name of the c++ class being stubbed.
      */
-    this(const StubPrefix prefix, const CppClassName name, const CppNesting nesting,
-        const CppNsStack ns_nesting) {
+    this(const StubPrefix prefix, const OnlyStubVirtual only_virt,
+        const CppClassName name, const CppNesting nesting, const CppNsStack ns_nesting) {
         import std.array : join;
 
         this.prefix = prefix;
+        this.only_virtual = only_virt;
         this.name = name;
+
+        this.data_ns = StubNs(prefix ~ "Internal" ~ name);
 
         CallbackNs cb_ns = prefix ~ "Callback" ~ name;
         CallbackPrefix cp = "I";
-        this.data_ns = StubNs(prefix ~ "Internal" ~ name);
         CallbackStruct cb_st = prefix ~ "Callback";
         CountStruct cnt_st = prefix ~ "Counter";
         StaticStruct st_st = prefix ~ "Static";
@@ -95,8 +96,8 @@ public struct ClassTranslateContext {
         internal.hdr.sep(2);
 
         callbacks.renderInterfaces(internal.hdr);
-        doDataStruct(internal.hdr, internal.impl);
-        doDataStructInit(prefix, CppClassName(prefix ~ name), vars,
+        doDataStruct(data_ns, ns_nesting, vars, internal.hdr, internal.impl);
+        doDataStructInit(prefix, data_ns, CppClassName(prefix ~ name), vars,
             this.class_code.hdr, stub.impl);
 
         hdr.sep;
@@ -127,7 +128,7 @@ public struct ClassTranslateContext {
                 auto stubname = CppClassName(cast(string) prefix ~ name);
                 push(classTranslator(prefix, class_nesting, name, current.get));
                 class_code = current.get;
-                MethodTranslateContext(prefix, stubname, access_spec).translate(c,
+                MethodTranslateContext(prefix, stubname, access_spec, only_virtual).translate(c,
                     vars, callbacks, current.get);
                 break;
             }
@@ -152,73 +153,151 @@ public struct ClassTranslateContext {
     }
 
 private:
-    void doDataStruct(ref CppModule hdr, ref CppModule impl) {
-        if (vars.length == 0)
-            return;
-
-        auto ns_hdr = hdr.namespace(cast(string) data_ns);
-        ns_hdr.suppressIndent(1);
-        auto ns_impl = impl.namespace(cast(string) data_ns);
-        ns_impl.suppressIndent(1);
-
-        vars.render(this.ns_nesting, ns_hdr, ns_impl);
-        hdr.sep(2);
-        impl.sep(2);
-    }
-
-    void doDataStructInitHelper(const CppClassName class_name, const TypeName tn,
-        const CppMethodName method, ref CppModule pub_hdr, ref CppModule priv_hdr,
-        ref CppModule impl) {
-        auto type = cast(string) tn.type;
-        auto return_type = cast(string) tn.type ~ "&";
-        auto name = cast(string) tn.name;
-        auto method_ = cast(string) method;
-        auto var_name = type ~ " " ~ name;
-
-        pub_hdr.func(return_type, method_)[$.begin = ";", $.end = newline, $.noindent = true];
-        priv_hdr.stmt(var_name);
-
-        with (impl.method_body(return_type, class_name.str, method_, false)) {
-            return_("this->" ~ name);
-        }
-        impl.sep;
-    }
-
-    void doDataStructInit(const StubPrefix prefix, const CppClassName class_name,
-        VariableContainer vars, ref CppModule hdr, ref CppModule impl) {
-        if (vars.length == 0)
-            return;
-
-        CppClassName getter_cls = mangleToStubDataClass(data_ns, prefix);
-        CppMethodName getter_func = CppMethodName("Get" ~ prefix.str);
-        CppVariable getter_var = CppVariable(prefix ~ "_data");
-
-        with (hdr.public_) {
-            method(false, getter_cls ~ "&", getter_func.str, false);
-            sep(2);
-        }
-        with (hdr.private_) {
-            stmt(E(cast(string) getter_cls) ~ "" ~ E(getter_var.str));
-        }
-
-        with (impl.method_body(getter_cls.str ~ "&", class_name.str, getter_func.str,
-                false)) {
-            return_(getter_var.str);
-        }
-        impl.sep(2);
-    }
-
-private:
     bool classdecl_used;
     CppHdrImpl class_code; // top of the new class created.
     immutable StubPrefix prefix;
     immutable CppClassName name;
     immutable CppClassNesting class_nesting;
     immutable CppNsNesting ns_nesting;
+    immutable OnlyStubVirtual only_virtual;
 
     VariableContainer vars;
     CallbackContainer callbacks;
     CppAccessSpecifier access_spec;
 
     immutable StubNs data_ns;
+}
+
+private:
+
+void doDataStruct(const StubNs data_ns, const CppNsNesting ns_nesting,
+    ref VariableContainer vars, ref CppModule hdr, ref CppModule impl) {
+    if (vars.length == 0)
+        return;
+
+    auto ns_hdr = hdr.namespace(data_ns.str);
+    ns_hdr.suppressIndent(1);
+    auto ns_impl = impl.namespace(data_ns.str);
+    ns_impl.suppressIndent(1);
+
+    vars.render(ns_nesting, ns_hdr, ns_impl);
+    hdr.sep(2);
+    impl.sep(2);
+}
+
+void doDataStructInitHelper(const CppClassName class_name, const TypeName tn,
+    const CppMethodName method, ref CppModule pub_hdr, ref CppModule priv_hdr, ref CppModule impl) {
+    auto type = tn.type.str;
+    auto return_type = cast(string) tn.type ~ "&";
+    auto name = tn.name.str;
+    auto var_name = type ~ " " ~ name;
+
+    pub_hdr.func(return_type, method.str); //[$.begin = ";", $.end = newline, $.noindent = true];
+    priv_hdr.stmt(var_name);
+
+    with (impl.method_body(return_type, class_name.str, method.str, false)) {
+        return_("this->" ~ name);
+    }
+    impl.sep;
+}
+
+void doDataStructInit(const StubPrefix prefix, const StubNs data_ns,
+    const CppClassName class_name, VariableContainer vars, ref CppModule hdr, ref CppModule impl) {
+    if (vars.length == 0)
+        return;
+
+    CppClassName getter_cls = mangleToStubDataClass(data_ns, prefix);
+    CppMethodName getter_func = CppMethodName("Get" ~ prefix.str);
+    CppVariable getter_var = CppVariable(prefix ~ "_data");
+
+    with (hdr.public_) {
+        method(false, getter_cls ~ "&", getter_func.str, false);
+        sep(2);
+    }
+    with (hdr.private_) {
+        stmt(E(cast(string) getter_cls) ~ "" ~ E(getter_var.str));
+    }
+
+    with (impl.method_body(getter_cls.str ~ "&", class_name.str, getter_func.str, false)) {
+        return_(getter_var.str);
+    }
+    impl.sep(2);
+}
+
+CppHdrImpl classTranslator(StubPrefix prefix, CppClassNesting nesting,
+    CppClassName name, ref CppHdrImpl hdr_impl) {
+    auto doHeader(ref CppModule hdr) {
+        auto node = hdr;
+        string stub_class = prefix.str ~ name.str;
+        with (hdr) {
+            auto n = nesting.str;
+            node = class_(stub_class, "public " ~ n ~ (n.length == 0 ? "" : "::") ~ name.str);
+            sep();
+        }
+
+        return node;
+    }
+
+    return CppHdrImpl(doHeader(hdr_impl.hdr), hdr_impl.impl);
+}
+
+void ctorTranslator(Cursor c, const StubPrefix prefix, ref CppModule hdr, ref CppModule impl) {
+    void doHeader(CppClassName name, const ref TypeName[] params) {
+        auto p = params.toString;
+        auto node = hdr.ctor(name.str, p);
+    }
+
+    void doImpl(const CppClassName name, const TypeName[] params) {
+        auto p = params.toString;
+        auto node = impl.ctor_body(name.str, p);
+        impl.sep(2);
+    }
+
+    CppClassName name = prefix ~ c.spelling;
+    auto params = parmDeclToTypeName(c);
+    doHeader(name, params);
+    doImpl(name, params);
+}
+
+void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer vars,
+    ref CallbackContainer callbacks, ref CppModule hdr, ref CppModule impl) {
+    import std.string : removechars;
+
+    void doHeader(CppClassName name, CppMethodName callback_name, ref CppModule hdr) {
+        auto node = hdr.dtor(c.func.isVirtual, name.str);
+        hdr.sep(2);
+
+        callbacks.push(CppType("void"), callback_name, TypeName[].init);
+        vars.push(NameMangling.Callback, cast(CppType) callback_name,
+            cast(CppVariable) callback_name, callback_name);
+        vars.push(NameMangling.CallCounter, CppType("unsigned"),
+            cast(CppVariable) callback_name, callback_name);
+    }
+
+    void doImpl(const CppClassName name, const CppClassName stub_name,
+        const CppMethodName callback_name, ref CppModule impl) {
+        auto data = mangleToStubDataClassVariable(prefix);
+        auto getter = mangleToStubDataGetter(callback_name, TypeKindVariable[].init);
+        auto counter = mangleToStubStructMember(prefix,
+            NameMangling.CallCounter, CppVariable(callback_name.str));
+        auto callback = mangleToStubStructMember(prefix, NameMangling.Callback,
+            CppVariable(callback_name.str));
+
+        with (impl.dtor_body(stub_name.str)) {
+            stmt("%s.%s().%s++".format(data.str, getter.str, counter.str));
+            sep(2);
+            with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ E(" != 0"))) {
+                stmt(E(data.str).e(getter.str)("").e(callback.str) ~ E("->") ~ E(callback_name.str)(
+                    ""));
+            }
+        }
+        impl.sep(2);
+    }
+
+    CppClassName name = c.spelling.removechars("~");
+    CppClassName stub_name = prefix ~ name;
+    CppMethodName callback_name = prefix ~ "Dtor";
+
+    doHeader(stub_name, callback_name, hdr);
+    doImpl(name, stub_name, callback_name, impl);
 }

@@ -43,6 +43,8 @@ alias CppNsStack = CppNs[];
 
 alias HdrFilename = Typedef!(string, string.init, "HeaderFilename");
 
+alias OnlyStubVirtual = Typedef!(bool, bool.init, "StubOnlyVirtual");
+
 package:
 //TODO use the following typedefs in CppHdrImpl to avoid confusing hdr and impl.
 alias CppModuleHdr = Typedef!(CppModule, CppModule.init, "CppHeader");

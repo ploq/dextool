@@ -42,11 +42,13 @@ arguments:
  CFLAGS         Compiler flags.
 
 options:
- -h, --help     show this
- -d=<dest>      destination of generated files [default: .]
- --debug        turn on debug output for tracing of generator flow
- --limit=<l>    limit generation to input FILE or process everything [default: single]
-                Can be single or all.
+ -h, --help         show this
+ -d=<dest>          destination of generated files [default: .]
+ --debug            turn on debug output for tracing of generator flow
+ --file-scope=<l>   limit generation to input FILE or process everything [default: single]
+                    Allowed values are: all, single
+ --func-scope=<l>   limit generation to kind of functions [default: virtual]
+                    Allowed values are: all, virtual
 ";
 
 enum ExitStatusType {
@@ -54,20 +56,37 @@ enum ExitStatusType {
     Errors
 }
 
-enum GeneratorLimitType {
+enum FileScopeType {
     Invalid,
     All,
     Single
 }
 
-auto stringToGeneratorLimitType(string s) {
-    switch (s) {
+enum FuncScopeType {
+    Invalid,
+    All,
+    Virtual
+}
+
+auto stringToFileScopeType(string s) {
+    switch (s) with (FileScopeType) {
     case "all":
-        return GeneratorLimitType.All;
+        return All;
     case "single":
-        return GeneratorLimitType.Single;
+        return Single;
     default:
-        return GeneratorLimitType.Invalid;
+        return Invalid;
+    }
+}
+
+auto stringToFuncScopeType(string s) {
+    switch (s) with (FuncScopeType) {
+    case "all":
+        return All;
+    case "virtual":
+        return Virtual;
+    default:
+        return Invalid;
     }
 }
 
@@ -123,7 +142,7 @@ auto try_open_file(string filename, string mode) @trusted nothrow {
 }
 
 ExitStatusType gen_stub(const string infile, const string outdir,
-    const ref string[] cflags, GeneratorLimitType limit) {
+    const ref string[] cflags, FileScopeType file_scope, FuncScopeType func_scope) {
     import std.exception;
     import std.path : baseName, buildPath, stripExtension;
     import generator;
@@ -152,8 +171,10 @@ ExitStatusType gen_stub(const string infile, const string outdir,
         return ExitStatusType.Errors;
 
     auto ctx = new StubContext(prefix, HdrFilename(infile.baseName));
-    if (limit == GeneratorLimitType.Single)
+    if (file_scope == FileScopeType.Single)
         ctx.onlyTranslateFile(HdrFilename(infile));
+    if (func_scope == FuncScopeType.Virtual)
+        ctx.onlyStubVirtual;
     ctx.translate(file_ctx.cursor);
 
     auto outfile_hdr = try_open_file(hdr_out_filename, "w");
@@ -205,20 +226,27 @@ ExitStatusType do_test_double(ref ArgValue[string] parsed) {
     import std.algorithm : among;
 
     ExitStatusType exit_status = ExitStatusType.Errors;
-    GeneratorLimitType limit = stringToGeneratorLimitType(parsed["--limit"].toString);
+    FileScopeType file_scope = stringToFileScopeType(parsed["--file-scope"].toString);
+    FuncScopeType func_scope = stringToFuncScopeType(parsed["--func-scope"].toString);
 
     string[] cflags;
     if (parsed["--"].isTrue) {
         cflags = parsed["CFLAGS"].asList;
     }
 
-    if (limit == GeneratorLimitType.Invalid) {
-        logger.error("Usage error: --limit must be either all or single");
+    if (file_scope == FileScopeType.Invalid) {
+        logger.error("Usage error: --file-scope must be either of: [all, single]");
         writeln(doc);
     }
+
+    if (func_scope == FileScopeType.Invalid) {
+        logger.error("Usage error: --func-scope must be either of: [all, virtual]");
+        writeln(doc);
+    }
+
     else if (parsed["stub"].isTrue) {
-        exit_status = gen_stub(parsed["FILE"].toString, parsed["-d"].toString, cflags,
-            limit);
+        exit_status = gen_stub(parsed["FILE"].toString, parsed["-d"].toString,
+            cflags, file_scope, func_scope);
     }
     else if (parsed["mock"].isTrue) {
         logger.error("Mock generation not implemented yet");

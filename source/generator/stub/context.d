@@ -53,6 +53,10 @@ public class StubContext {
         ctx.onlyTranslateFile(filename);
     }
 
+    void onlyStubVirtual() {
+        ctx.onlyStubVirtual;
+    }
+
     void translate(Cursor c) {
         visitAst!ImplStubContext(c, ctx);
     }
@@ -96,7 +100,6 @@ private:
 
 /// Traverse the AST and generate a stub by filling the CppModules with data.
 struct ImplStubContext {
-
     /** Context for total stubbing of a c++ header file.
      *
      * Params:
@@ -116,6 +119,10 @@ struct ImplStubContext {
     void onlyTranslateFile(HdrFilename filename) {
         only_infile = true;
         this.filename = filename;
+    }
+
+    void onlyStubVirtual() {
+        this.only_stub_virtual = OnlyStubVirtual(true);
     }
 
     void incr() {
@@ -157,7 +164,8 @@ struct ImplStubContext {
                     // therefor pushing current ns/class/struct to the stack
                     // for cases it is needed after processing current cursor.
                     auto name = CppClassName(c.spelling);
-                    (ClassTranslateContext(prefix, name, class_nesting.values, ns_nesting.values)).translate(c,
+                    (ClassTranslateContext(prefix, only_stub_virtual, name,
+                        class_nesting.values, ns_nesting.values)).translate(c,
                         hdr_impl.top.hdr, hdr_impl.top.impl);
                     class_nesting.push(level, CppClassStructNsName(c.spelling));
                 }
@@ -190,6 +198,7 @@ private:
     int level;
 
     bool only_infile;
+    OnlyStubVirtual only_stub_virtual;
     HdrFilename filename;
 
     StubPrefix prefix;

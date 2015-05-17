@@ -33,6 +33,7 @@ import clang.Cursor;
 import translator.Type;
 
 import generator.stub.types;
+import generator.stub.misc : getPointerStars;
 
 public:
 
@@ -95,14 +96,14 @@ private auto mangleToVariable(const CppMethodName method) pure nothrow @safe {
 /// ---
 /// result is: Foo_int
 auto mangleToCallbackMethod(const CppMethodName method, TypeKindVariable[] params) pure @safe {
-    import std.algorithm : map;
+    import generator.stub.misc : toStringOfType;
 
     Nullable!CppMethodName rval;
     // same mangle schema but different return types so resuing but in a safe
     // manner not don't affect the rest of the program.
     auto tmp = mangleToVariable(method);
     if (!tmp.isNull) {
-        rval = CppMethodName(tmp.get ~ params.map!(a => "_" ~ cast(string) a.type.name).join(""));
+        rval = CppMethodName(tmp.get ~ params.toStringOfType);
     }
 
     return rval;
@@ -147,8 +148,9 @@ auto mangleToStubStructType(const StubPrefix prefix, CppMethodName method, CppCl
         prefix.str, method.str));
 }
 
-auto mangleToStubStructMemberType(const TypeKind tk) pure nothrow @safe {
-    string ptr = tk.isRef || tk.isPointer ? "*" : "";
+auto mangleToStubStructMemberType(const TypeKind tk) pure @safe {
+    string ptr = tk.getPointerStars;
+    ptr ~= tk.isRef ? "*" : "";
     return CppType(tk.name ~ ptr);
 }
 
@@ -233,6 +235,7 @@ auto mangleToStubDataClassInternalVariable(const StubPrefix prefix, const CppMet
 auto mangleToStubDataGetter(const CppMethodName method, const TypeKindVariable[] params) nothrow @safe {
     import std.algorithm : map;
     import std.array : join;
+    import generator.stub.misc : toStringOfType;
 
     string getter = method.str;
 
@@ -254,7 +257,7 @@ auto mangleToStubDataGetter(const CppMethodName method, const TypeKindVariable[]
         cast(void) tmp.get; // willfully crash
     }
 
-    getter ~= params.map!(a => "_" ~ cast(string) a.type.name).join("");
+    getter ~= params.toStringOfType;
 
     return CppMethodName(getter);
 }
