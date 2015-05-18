@@ -8,10 +8,10 @@ namespace StubCallbackSimple {
 struct Ifunc1 { virtual void func1() = 0; };
 struct Ifunc2 { virtual int func2() = 0; };
 struct Ifunc6_some_pointer { virtual char * func6_some_pointer(some_pointer w) = 0; };
-struct Ifunc7_int_char { virtual float func7_int_char(int & y, char * yy) = 0; };
-struct Ifunc3_int_const_int { virtual const double func3_int_const_int(int x, const int xx) = 0; };
-struct Ifunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp { virtual const void *const func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp(MadeUp z, const MadeUp zz, const MadeUp & zzz, const MadeUp **const zzzz) = 0; };
-struct IopAssign_const_Simple { virtual void opAssign_const_Simple(const Simple & other) = 0; };
+struct Ifunc7_intRef_charPtr { virtual float func7_intRef_charPtr(int & y, char * yy) = 0; };
+struct Ifunc3_int_constint { virtual const double func3_int_constint(int x, const int xx) = 0; };
+struct Ifunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr { virtual const void *const func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr(MadeUp z, const MadeUp zz, const MadeUp & zzz, const MadeUp **const zzzz) = 0; };
+struct IopAssign_constSimpleRef { virtual void opAssign_constSimpleRef(const Simple & other) = 0; };
 struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSimple
 
@@ -64,10 +64,10 @@ private:
 };
 void StubInit(Stubfunc6_some_pointer* value);
 
-class Stubfunc7_int_char {
+class Stubfunc7_intRef_charPtr {
 public:
-    StubCallbackSimple::Ifunc7_int_char* GetCallback();
-    void SetCallback(StubCallbackSimple::Ifunc7_int_char* value);
+    StubCallbackSimple::Ifunc7_intRef_charPtr* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc7_intRef_charPtr* value);
     unsigned GetCallCounter() const;
     void ResetCallCounter();
     int* GetParam_y();
@@ -76,18 +76,18 @@ public:
 private:
     friend class ::StubSimple;
 
-    StubCallbackSimple::Ifunc7_int_char* callback;
+    StubCallbackSimple::Ifunc7_intRef_charPtr* callback;
     unsigned call_counter;
     int* Param_y;
     char* Param_yy;
     float stub_return;
 };
-void StubInit(Stubfunc7_int_char* value);
+void StubInit(Stubfunc7_intRef_charPtr* value);
 
-class Stubfunc3_int_const_int {
+class Stubfunc3_int_constint {
 public:
-    StubCallbackSimple::Ifunc3_int_const_int* GetCallback();
-    void SetCallback(StubCallbackSimple::Ifunc3_int_const_int* value);
+    StubCallbackSimple::Ifunc3_int_constint* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc3_int_constint* value);
     unsigned GetCallCounter() const;
     void ResetCallCounter();
     int GetParam_x();
@@ -96,18 +96,18 @@ public:
 private:
     friend class ::StubSimple;
 
-    StubCallbackSimple::Ifunc3_int_const_int* callback;
+    StubCallbackSimple::Ifunc3_int_constint* callback;
     unsigned call_counter;
     int Param_x;
     int Param_xx;
     double stub_return;
 };
-void StubInit(Stubfunc3_int_const_int* value);
+void StubInit(Stubfunc3_int_constint* value);
 
-class Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp {
+class Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr {
 public:
-    StubCallbackSimple::Ifunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp* GetCallback();
-    void SetCallback(StubCallbackSimple::Ifunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp* value);
+    StubCallbackSimple::Ifunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr* value);
     unsigned GetCallCounter() const;
     void ResetCallCounter();
     MadeUp GetParam_z();
@@ -118,7 +118,7 @@ public:
 private:
     friend class ::StubSimple;
 
-    StubCallbackSimple::Ifunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp* callback;
+    StubCallbackSimple::Ifunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr* callback;
     unsigned call_counter;
     MadeUp Param_z;
     MadeUp Param_zz;
@@ -126,23 +126,23 @@ private:
     MadeUp** Param_zzzz;
     void * stub_return;
 };
-void StubInit(Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp* value);
+void StubInit(Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr* value);
 
-class StubopAssign_const_Simple {
+class StubopAssign_constSimpleRef {
 public:
-    StubCallbackSimple::IopAssign_const_Simple* GetCallback();
-    void SetCallback(StubCallbackSimple::IopAssign_const_Simple* value);
+    StubCallbackSimple::IopAssign_constSimpleRef* GetCallback();
+    void SetCallback(StubCallbackSimple::IopAssign_constSimpleRef* value);
     unsigned GetCallCounter() const;
     void ResetCallCounter();
     Simple* GetParam_other();
 private:
     friend class ::StubSimple;
 
-    StubCallbackSimple::IopAssign_const_Simple* callback;
+    StubCallbackSimple::IopAssign_constSimpleRef* callback;
     unsigned call_counter;
     Simple* Param_other;
 };
-void StubInit(StubopAssign_const_Simple* value);
+void StubInit(StubopAssign_constSimpleRef* value);
 
 class StubStubDtor {
 public:
@@ -166,20 +166,20 @@ public:
     StubInternalSimple::Stubfunc1& func1();
     StubInternalSimple::Stubfunc2& func2();
     StubInternalSimple::Stubfunc6_some_pointer& func6_some_pointer();
-    StubInternalSimple::Stubfunc7_int_char& func7_int_char();
-    StubInternalSimple::Stubfunc3_int_const_int& func3_int_const_int();
-    StubInternalSimple::Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp& func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp();
-    StubInternalSimple::StubopAssign_const_Simple& opAssign_const_Simple();
+    StubInternalSimple::Stubfunc7_intRef_charPtr& func7_intRef_charPtr();
+    StubInternalSimple::Stubfunc3_int_constint& func3_int_constint();
+    StubInternalSimple::Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr& func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr();
+    StubInternalSimple::StubopAssign_constSimpleRef& opAssign_constSimpleRef();
     StubInternalSimple::StubStubDtor& StubDtor();
 
 private:
     StubInternalSimple::Stubfunc1 stub_func1;
     StubInternalSimple::Stubfunc2 stub_func2;
     StubInternalSimple::Stubfunc6_some_pointer stub_func6_some_pointer;
-    StubInternalSimple::Stubfunc7_int_char stub_func7_int_char;
-    StubInternalSimple::Stubfunc3_int_const_int stub_func3_int_const_int;
-    StubInternalSimple::Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp stub_func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp;
-    StubInternalSimple::StubopAssign_const_Simple stub_opAssign_const_Simple;
+    StubInternalSimple::Stubfunc7_intRef_charPtr stub_func7_intRef_charPtr;
+    StubInternalSimple::Stubfunc3_int_constint stub_func3_int_constint;
+    StubInternalSimple::Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr stub_func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr;
+    StubInternalSimple::StubopAssign_constSimpleRef stub_opAssign_constSimpleRef;
     StubInternalSimple::StubStubDtor stub_StubDtor;
 };
 } //NS:StubInternalSimple

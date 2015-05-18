@@ -13,6 +13,11 @@ public:
     // distinguised from each other.
     virtual void func2(int x) = 0;
     virtual void func2(double x) = 0;
+    virtual void func2(double* x) = 0;
+
+    // Test that name mangling avoids collisions.
+    virtual void func3(long x, long y) = 0;
+    virtual void func3(long long x) = 0;
 
     // Test operators result in opAssign etc.
     virtual void operator=(const Simple& other) = 0;

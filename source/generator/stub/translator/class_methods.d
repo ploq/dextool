@@ -92,11 +92,19 @@ private:
     StubPrefix prefix;
     OnlyStubVirtual only_stub_virtual;
 
+    //TODO chhange to RefCounted
     NullableRef!VariableContainer vars;
     NullableRef!CallbackContainer callbacks;
+
     CppAccessSpecifier access_spec;
 }
 
+/** Traverse all inherited classes and call method translator on them.
+ *
+ * Thanks to how method translatorn is implemented it is recursive.
+ * But this function, inheritMethodTranslator, is not. It traverses the leafs
+ * and nothhing more.
+ */
 void inheritMethodTranslator(ref Cursor cursor, const StubPrefix prefix,
     const CppClassName name, const OnlyStubVirtual only_virt,
     ref VariableContainer vars, ref CallbackContainer callbacks, ref CppHdrImpl hdr_impl) {

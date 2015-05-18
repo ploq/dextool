@@ -85,29 +85,117 @@ void StubInit(Stubfunc2_double* value) {
     }
 }
 
-StubCallbackSimple::IopAssign_const_Simple* StubopAssign_const_Simple::GetCallback() {
+StubCallbackSimple::Ifunc2_doublePtr* Stubfunc2_doublePtr::GetCallback() {
     return callback;
 }
 
-void StubopAssign_const_Simple::SetCallback(StubCallbackSimple::IopAssign_const_Simple* value) {
+void Stubfunc2_doublePtr::SetCallback(StubCallbackSimple::Ifunc2_doublePtr* value) {
     callback = value;
 }
 
-unsigned StubopAssign_const_Simple::GetCallCounter() const {
+unsigned Stubfunc2_doublePtr::GetCallCounter() const {
     return call_counter;
 }
 
-void StubopAssign_const_Simple::ResetCallCounter() {
+void Stubfunc2_doublePtr::ResetCallCounter() {
     call_counter = 0;
 }
 
-Simple* StubopAssign_const_Simple::GetParam_other() {
+double* Stubfunc2_doublePtr::GetParam_x() {
+    return Param_x;
+}
+
+void StubInit(Stubfunc2_doublePtr* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(Stubfunc2_doublePtr);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+StubCallbackSimple::Ifunc3_long_long* Stubfunc3_long_long::GetCallback() {
+    return callback;
+}
+
+void Stubfunc3_long_long::SetCallback(StubCallbackSimple::Ifunc3_long_long* value) {
+    callback = value;
+}
+
+unsigned Stubfunc3_long_long::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc3_long_long::ResetCallCounter() {
+    call_counter = 0;
+}
+
+long Stubfunc3_long_long::GetParam_x() {
+    return Param_x;
+}
+
+long Stubfunc3_long_long::GetParam_y() {
+    return Param_y;
+}
+
+void StubInit(Stubfunc3_long_long* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(Stubfunc3_long_long);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+StubCallbackSimple::Ifunc3_longlong* Stubfunc3_longlong::GetCallback() {
+    return callback;
+}
+
+void Stubfunc3_longlong::SetCallback(StubCallbackSimple::Ifunc3_longlong* value) {
+    callback = value;
+}
+
+unsigned Stubfunc3_longlong::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubfunc3_longlong::ResetCallCounter() {
+    call_counter = 0;
+}
+
+long long Stubfunc3_longlong::GetParam_x() {
+    return Param_x;
+}
+
+void StubInit(Stubfunc3_longlong* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(Stubfunc3_longlong);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+StubCallbackSimple::IopAssign_constSimpleRef* StubopAssign_constSimpleRef::GetCallback() {
+    return callback;
+}
+
+void StubopAssign_constSimpleRef::SetCallback(StubCallbackSimple::IopAssign_constSimpleRef* value) {
+    callback = value;
+}
+
+unsigned StubopAssign_constSimpleRef::GetCallCounter() const {
+    return call_counter;
+}
+
+void StubopAssign_constSimpleRef::ResetCallCounter() {
+    call_counter = 0;
+}
+
+Simple* StubopAssign_constSimpleRef::GetParam_other() {
     return Param_other;
 }
 
-void StubInit(StubopAssign_const_Simple* value) {
+void StubInit(StubopAssign_constSimpleRef* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubopAssign_const_Simple);
+    char* end = d + sizeof(StubopAssign_constSimpleRef);
     for (; d != end; ++d) {
         *d = 0;
     }
@@ -165,7 +253,10 @@ StubStubData::StubStubData() {
     StubInit(&stub_func1);
     StubInit(&stub_func2_int);
     StubInit(&stub_func2_double);
-    StubInit(&stub_opAssign_const_Simple);
+    StubInit(&stub_func2_doublePtr);
+    StubInit(&stub_func3_long_long);
+    StubInit(&stub_func3_longlong);
+    StubInit(&stub_opAssign_constSimpleRef);
     StubInit(&stub_func3);
     StubInit(&stub_StubDtor);
 }
@@ -185,8 +276,20 @@ StubInternalSimple::Stubfunc2_double& StubStubData::func2_double() {
     return stub_func2_double;
 }
 
-StubInternalSimple::StubopAssign_const_Simple& StubStubData::opAssign_const_Simple() {
-    return stub_opAssign_const_Simple;
+StubInternalSimple::Stubfunc2_doublePtr& StubStubData::func2_doublePtr() {
+    return stub_func2_doublePtr;
+}
+
+StubInternalSimple::Stubfunc3_long_long& StubStubData::func3_long_long() {
+    return stub_func3_long_long;
+}
+
+StubInternalSimple::Stubfunc3_longlong& StubStubData::func3_longlong() {
+    return stub_func3_longlong;
+}
+
+StubInternalSimple::StubopAssign_constSimpleRef& StubStubData::opAssign_constSimpleRef() {
+    return stub_opAssign_constSimpleRef;
 }
 
 StubInternalSimple::Stubfunc3& StubStubData::func3() {
@@ -228,12 +331,40 @@ void StubSimple::func2(double x) {
     }
 }
 
-void StubSimple::operator=(const Simple & other) {
-    Stub_data.opAssign_const_Simple().call_counter++;
-    Stub_data.opAssign_const_Simple().Param_other = const_cast<Simple*>(&other);
+void StubSimple::func2(double * x) {
+    Stub_data.func2_doublePtr().call_counter++;
+    Stub_data.func2_doublePtr().Param_x = x;
 
-    if (Stub_data.opAssign_const_Simple().callback != 0) {
-        Stub_data.opAssign_const_Simple().callback->opAssign_const_Simple(other);
+    if (Stub_data.func2_doublePtr().callback != 0) {
+        Stub_data.func2_doublePtr().callback->func2_doublePtr(x);
+    }
+}
+
+void StubSimple::func3(long x, long y) {
+    Stub_data.func3_long_long().call_counter++;
+    Stub_data.func3_long_long().Param_x = x;
+    Stub_data.func3_long_long().Param_y = y;
+
+    if (Stub_data.func3_long_long().callback != 0) {
+        Stub_data.func3_long_long().callback->func3_long_long(x, y);
+    }
+}
+
+void StubSimple::func3(long long x) {
+    Stub_data.func3_longlong().call_counter++;
+    Stub_data.func3_longlong().Param_x = x;
+
+    if (Stub_data.func3_longlong().callback != 0) {
+        Stub_data.func3_longlong().callback->func3_longlong(x);
+    }
+}
+
+void StubSimple::operator=(const Simple & other) {
+    Stub_data.opAssign_constSimpleRef().call_counter++;
+    Stub_data.opAssign_constSimpleRef().Param_other = const_cast<Simple*>(&other);
+
+    if (Stub_data.opAssign_constSimpleRef().callback != 0) {
+        Stub_data.opAssign_constSimpleRef().callback->opAssign_constSimpleRef(other);
     }
 }
 

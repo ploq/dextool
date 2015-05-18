@@ -85,145 +85,145 @@ void StubInit(Stubfunc6_some_pointer* value) {
     }
 }
 
-StubCallbackSimple::Ifunc7_int_char* Stubfunc7_int_char::GetCallback() {
+StubCallbackSimple::Ifunc7_intRef_charPtr* Stubfunc7_intRef_charPtr::GetCallback() {
     return callback;
 }
 
-void Stubfunc7_int_char::SetCallback(StubCallbackSimple::Ifunc7_int_char* value) {
+void Stubfunc7_intRef_charPtr::SetCallback(StubCallbackSimple::Ifunc7_intRef_charPtr* value) {
     callback = value;
 }
 
-unsigned Stubfunc7_int_char::GetCallCounter() const {
+unsigned Stubfunc7_intRef_charPtr::GetCallCounter() const {
     return call_counter;
 }
 
-void Stubfunc7_int_char::ResetCallCounter() {
+void Stubfunc7_intRef_charPtr::ResetCallCounter() {
     call_counter = 0;
 }
 
-int* Stubfunc7_int_char::GetParam_y() {
+int* Stubfunc7_intRef_charPtr::GetParam_y() {
     return Param_y;
 }
 
-char* Stubfunc7_int_char::GetParam_yy() {
+char* Stubfunc7_intRef_charPtr::GetParam_yy() {
     return Param_yy;
 }
 
-float& Stubfunc7_int_char::SetReturn() {
+float& Stubfunc7_intRef_charPtr::SetReturn() {
     return stub_return;
 }
 
-void StubInit(Stubfunc7_int_char* value) {
+void StubInit(Stubfunc7_intRef_charPtr* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(Stubfunc7_int_char);
+    char* end = d + sizeof(Stubfunc7_intRef_charPtr);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-StubCallbackSimple::Ifunc3_int_const_int* Stubfunc3_int_const_int::GetCallback() {
+StubCallbackSimple::Ifunc3_int_constint* Stubfunc3_int_constint::GetCallback() {
     return callback;
 }
 
-void Stubfunc3_int_const_int::SetCallback(StubCallbackSimple::Ifunc3_int_const_int* value) {
+void Stubfunc3_int_constint::SetCallback(StubCallbackSimple::Ifunc3_int_constint* value) {
     callback = value;
 }
 
-unsigned Stubfunc3_int_const_int::GetCallCounter() const {
+unsigned Stubfunc3_int_constint::GetCallCounter() const {
     return call_counter;
 }
 
-void Stubfunc3_int_const_int::ResetCallCounter() {
+void Stubfunc3_int_constint::ResetCallCounter() {
     call_counter = 0;
 }
 
-int Stubfunc3_int_const_int::GetParam_x() {
+int Stubfunc3_int_constint::GetParam_x() {
     return Param_x;
 }
 
-int Stubfunc3_int_const_int::GetParam_xx() {
+int Stubfunc3_int_constint::GetParam_xx() {
     return Param_xx;
 }
 
-double& Stubfunc3_int_const_int::SetReturn() {
+double& Stubfunc3_int_constint::SetReturn() {
     return stub_return;
 }
 
-void StubInit(Stubfunc3_int_const_int* value) {
+void StubInit(Stubfunc3_int_constint* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(Stubfunc3_int_const_int);
+    char* end = d + sizeof(Stubfunc3_int_constint);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-StubCallbackSimple::Ifunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp* Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp::GetCallback() {
+StubCallbackSimple::Ifunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr* Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr::GetCallback() {
     return callback;
 }
 
-void Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp::SetCallback(StubCallbackSimple::Ifunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp* value) {
+void Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr::SetCallback(StubCallbackSimple::Ifunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr* value) {
     callback = value;
 }
 
-unsigned Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp::GetCallCounter() const {
+unsigned Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr::GetCallCounter() const {
     return call_counter;
 }
 
-void Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp::ResetCallCounter() {
+void Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr::ResetCallCounter() {
     call_counter = 0;
 }
 
-MadeUp Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp::GetParam_z() {
+MadeUp Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr::GetParam_z() {
     return Param_z;
 }
 
-MadeUp Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp::GetParam_zz() {
+MadeUp Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr::GetParam_zz() {
     return Param_zz;
 }
 
-MadeUp* Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp::GetParam_zzz() {
+MadeUp* Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr::GetParam_zzz() {
     return Param_zzz;
 }
 
-MadeUp** Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp::GetParam_zzzz() {
+MadeUp** Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr::GetParam_zzzz() {
     return Param_zzzz;
 }
 
-void *& Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp::SetReturn() {
+void *& Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr::SetReturn() {
     return stub_return;
 }
 
-void StubInit(Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp* value) {
+void StubInit(Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp);
+    char* end = d + sizeof(Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr);
     for (; d != end; ++d) {
         *d = 0;
     }
 }
 
-StubCallbackSimple::IopAssign_const_Simple* StubopAssign_const_Simple::GetCallback() {
+StubCallbackSimple::IopAssign_constSimpleRef* StubopAssign_constSimpleRef::GetCallback() {
     return callback;
 }
 
-void StubopAssign_const_Simple::SetCallback(StubCallbackSimple::IopAssign_const_Simple* value) {
+void StubopAssign_constSimpleRef::SetCallback(StubCallbackSimple::IopAssign_constSimpleRef* value) {
     callback = value;
 }
 
-unsigned StubopAssign_const_Simple::GetCallCounter() const {
+unsigned StubopAssign_constSimpleRef::GetCallCounter() const {
     return call_counter;
 }
 
-void StubopAssign_const_Simple::ResetCallCounter() {
+void StubopAssign_constSimpleRef::ResetCallCounter() {
     call_counter = 0;
 }
 
-Simple* StubopAssign_const_Simple::GetParam_other() {
+Simple* StubopAssign_constSimpleRef::GetParam_other() {
     return Param_other;
 }
 
-void StubInit(StubopAssign_const_Simple* value) {
+void StubInit(StubopAssign_constSimpleRef* value) {
     char* d = reinterpret_cast<char*>(value);
-    char* end = d + sizeof(StubopAssign_const_Simple);
+    char* end = d + sizeof(StubopAssign_constSimpleRef);
     for (; d != end; ++d) {
         *d = 0;
     }
@@ -257,10 +257,10 @@ StubStubData::StubStubData() {
     StubInit(&stub_func1);
     StubInit(&stub_func2);
     StubInit(&stub_func6_some_pointer);
-    StubInit(&stub_func7_int_char);
-    StubInit(&stub_func3_int_const_int);
-    StubInit(&stub_func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp);
-    StubInit(&stub_opAssign_const_Simple);
+    StubInit(&stub_func7_intRef_charPtr);
+    StubInit(&stub_func3_int_constint);
+    StubInit(&stub_func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr);
+    StubInit(&stub_opAssign_constSimpleRef);
     StubInit(&stub_StubDtor);
 }
 
@@ -279,20 +279,20 @@ StubInternalSimple::Stubfunc6_some_pointer& StubStubData::func6_some_pointer() {
     return stub_func6_some_pointer;
 }
 
-StubInternalSimple::Stubfunc7_int_char& StubStubData::func7_int_char() {
-    return stub_func7_int_char;
+StubInternalSimple::Stubfunc7_intRef_charPtr& StubStubData::func7_intRef_charPtr() {
+    return stub_func7_intRef_charPtr;
 }
 
-StubInternalSimple::Stubfunc3_int_const_int& StubStubData::func3_int_const_int() {
-    return stub_func3_int_const_int;
+StubInternalSimple::Stubfunc3_int_constint& StubStubData::func3_int_constint() {
+    return stub_func3_int_constint;
 }
 
-StubInternalSimple::Stubfunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp& StubStubData::func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp() {
-    return stub_func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp;
+StubInternalSimple::Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr& StubStubData::func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr() {
+    return stub_func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr;
 }
 
-StubInternalSimple::StubopAssign_const_Simple& StubStubData::opAssign_const_Simple() {
-    return stub_opAssign_const_Simple;
+StubInternalSimple::StubopAssign_constSimpleRef& StubStubData::opAssign_constSimpleRef() {
+    return stub_opAssign_constSimpleRef;
 }
 
 StubInternalSimple::StubStubDtor& StubStubData::StubDtor() {
@@ -333,52 +333,52 @@ char * StubSimple::func6(some_pointer w) {
 }
 
 float StubSimple::func7(int & y, char * yy) {
-    Stub_data.func7_int_char().call_counter++;
-    Stub_data.func7_int_char().Param_y = &y;
-    Stub_data.func7_int_char().Param_yy = yy;
+    Stub_data.func7_intRef_charPtr().call_counter++;
+    Stub_data.func7_intRef_charPtr().Param_y = &y;
+    Stub_data.func7_intRef_charPtr().Param_yy = yy;
 
-    if (Stub_data.func7_int_char().callback != 0) {
-        return Stub_data.func7_int_char().callback->func7_int_char(y, yy);
+    if (Stub_data.func7_intRef_charPtr().callback != 0) {
+        return Stub_data.func7_intRef_charPtr().callback->func7_intRef_charPtr(y, yy);
     }
     else {
-        return Stub_data.func7_int_char().stub_return;
+        return Stub_data.func7_intRef_charPtr().stub_return;
     }
 }
 
 const double StubSimple::func3(int x, const int xx) {
-    Stub_data.func3_int_const_int().call_counter++;
-    Stub_data.func3_int_const_int().Param_x = x;
-    Stub_data.func3_int_const_int().Param_xx = xx;
+    Stub_data.func3_int_constint().call_counter++;
+    Stub_data.func3_int_constint().Param_x = x;
+    Stub_data.func3_int_constint().Param_xx = xx;
 
-    if (Stub_data.func3_int_const_int().callback != 0) {
-        return Stub_data.func3_int_const_int().callback->func3_int_const_int(x, xx);
+    if (Stub_data.func3_int_constint().callback != 0) {
+        return Stub_data.func3_int_constint().callback->func3_int_constint(x, xx);
     }
     else {
-        return Stub_data.func3_int_const_int().stub_return;
+        return Stub_data.func3_int_constint().stub_return;
     }
 }
 
 const void *const StubSimple::func4(MadeUp z, const MadeUp zz, const MadeUp & zzz, const MadeUp **const zzzz) {
-    Stub_data.func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp().call_counter++;
-    Stub_data.func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp().Param_z = z;
-    Stub_data.func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp().Param_zz = zz;
-    Stub_data.func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp().Param_zzz = const_cast<MadeUp*>(&zzz);
-    Stub_data.func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp().Param_zzzz = const_cast<MadeUp**>(zzzz);
+    Stub_data.func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr().call_counter++;
+    Stub_data.func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr().Param_z = z;
+    Stub_data.func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr().Param_zz = zz;
+    Stub_data.func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr().Param_zzz = const_cast<MadeUp*>(&zzz);
+    Stub_data.func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr().Param_zzzz = const_cast<MadeUp**>(zzzz);
 
-    if (Stub_data.func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp().callback != 0) {
-        return Stub_data.func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp().callback->func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp(z, zz, zzz, zzzz);
+    if (Stub_data.func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr().callback != 0) {
+        return Stub_data.func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr().callback->func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr(z, zz, zzz, zzzz);
     }
     else {
-        return Stub_data.func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp().stub_return;
+        return Stub_data.func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr().stub_return;
     }
 }
 
 void StubSimple::operator=(const Simple & other) {
-    Stub_data.opAssign_const_Simple().call_counter++;
-    Stub_data.opAssign_const_Simple().Param_other = const_cast<Simple*>(&other);
+    Stub_data.opAssign_constSimpleRef().call_counter++;
+    Stub_data.opAssign_constSimpleRef().Param_other = const_cast<Simple*>(&other);
 
-    if (Stub_data.opAssign_const_Simple().callback != 0) {
-        Stub_data.opAssign_const_Simple().callback->opAssign_const_Simple(other);
+    if (Stub_data.opAssign_constSimpleRef().callback != 0) {
+        Stub_data.opAssign_constSimpleRef().callback->opAssign_constSimpleRef(other);
     }
 }
 

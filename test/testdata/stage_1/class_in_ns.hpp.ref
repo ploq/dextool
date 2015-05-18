@@ -7,15 +7,15 @@ namespace bar {
 class StubSmurf;
 
 namespace StubCallbackSmurf {
-struct IopAssign_const_Smurf { virtual foo::bar::Smurf & opAssign_const_Smurf(const foo::bar::Smurf & other) = 0; };
+struct IopAssign_constSmurfRef { virtual foo::bar::Smurf & opAssign_constSmurfRef(const foo::bar::Smurf & other) = 0; };
 struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSmurf
 
 namespace StubInternalSmurf {
-class StubopAssign_const_Smurf {
+class StubopAssign_constSmurfRef {
 public:
-    StubCallbackSmurf::IopAssign_const_Smurf* GetCallback();
-    void SetCallback(StubCallbackSmurf::IopAssign_const_Smurf* value);
+    StubCallbackSmurf::IopAssign_constSmurfRef* GetCallback();
+    void SetCallback(StubCallbackSmurf::IopAssign_constSmurfRef* value);
     unsigned GetCallCounter() const;
     void ResetCallCounter();
     Smurf* GetParam_other();
@@ -23,12 +23,12 @@ public:
 private:
     friend class ::foo::bar::StubSmurf;
 
-    StubCallbackSmurf::IopAssign_const_Smurf* callback;
+    StubCallbackSmurf::IopAssign_constSmurfRef* callback;
     unsigned call_counter;
     Smurf* Param_other;
     foo::bar::Smurf * stub_return;
 };
-void StubInit(StubopAssign_const_Smurf* value);
+void StubInit(StubopAssign_constSmurfRef* value);
 
 class StubStubDtor {
 public:
@@ -49,11 +49,11 @@ public:
     StubStubData();
     ~StubStubData();
 
-    StubInternalSmurf::StubopAssign_const_Smurf& opAssign_const_Smurf();
+    StubInternalSmurf::StubopAssign_constSmurfRef& opAssign_constSmurfRef();
     StubInternalSmurf::StubStubDtor& StubDtor();
 
 private:
-    StubInternalSmurf::StubopAssign_const_Smurf stub_opAssign_const_Smurf;
+    StubInternalSmurf::StubopAssign_constSmurfRef stub_opAssign_constSmurfRef;
     StubInternalSmurf::StubStubDtor stub_StubDtor;
 };
 } //NS:StubInternalSmurf

@@ -104,13 +104,38 @@ auto toString(const TypeName[] vars) pure @safe nothrow {
 }
 
 /// Convert a vector of TypeKindVariable to an underscore separated string of types.
+///TODO cleanup the implementation. Ugly...
 auto toStringOfType(const TypeKindVariable[] vars) pure @safe nothrow {
     import std.algorithm : map;
-    import std.array : join;
+    import std.array : join, appender;
     import std.string : replace;
+    import std.range : retro;
 
-    return vars.map!(a => "_" ~ (a.type.isConst ? "const_" : "") ~ a.type.name).join("").replace(" ",
-        "_");
+    static auto ifConst(T)(T a) {
+        return a.type.isConst ? "const" : "";
+    }
+
+    // convert *& to string representation
+    static string helper(T)(T a) {
+        auto app = appender!string();
+        foreach (l; a.type.toString) {
+            switch (l) {
+            case '&':
+                app.put("Ref");
+                break;
+            case '*':
+                app.put("Ptr");
+                break;
+            default:
+            }
+        }
+
+        return app.data;
+    }
+
+    string rval = vars.map!(a => "_" ~ ifConst(a) ~ a.type.name.replace(" ", "") ~ helper(a)).join(
+        "").replace(" ", "_");
+    return rval;
 }
 
 /// Convert a vector of TypeKindVariable to a comma separated string of parameters.

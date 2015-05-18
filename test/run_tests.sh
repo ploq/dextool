@@ -90,6 +90,8 @@ for sourcef in testdata/stage_1/*.hpp; do
     esac
 
     case "$sourcef" in
+        *class_interface*)
+            test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp "-Wpedantic" ;;
         *class_inherit*)
             test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp "-Wpedantic" ;;
         *class_in_ns*)

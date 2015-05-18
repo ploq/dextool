@@ -8,7 +8,10 @@ namespace StubCallbackSimple {
 struct Ifunc1 { virtual int func1() = 0; };
 struct Ifunc2_int { virtual void func2_int(int x) = 0; };
 struct Ifunc2_double { virtual void func2_double(double x) = 0; };
-struct IopAssign_const_Simple { virtual void opAssign_const_Simple(const Simple & other) = 0; };
+struct Ifunc2_doublePtr { virtual void func2_doublePtr(double * x) = 0; };
+struct Ifunc3_long_long { virtual void func3_long_long(long x, long y) = 0; };
+struct Ifunc3_longlong { virtual void func3_longlong(long long x) = 0; };
+struct IopAssign_constSimpleRef { virtual void opAssign_constSimpleRef(const Simple & other) = 0; };
 struct Ifunc3 { virtual void func3() = 0; };
 struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSimple
@@ -62,21 +65,71 @@ private:
 };
 void StubInit(Stubfunc2_double* value);
 
-class StubopAssign_const_Simple {
+class Stubfunc2_doublePtr {
 public:
-    StubCallbackSimple::IopAssign_const_Simple* GetCallback();
-    void SetCallback(StubCallbackSimple::IopAssign_const_Simple* value);
+    StubCallbackSimple::Ifunc2_doublePtr* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc2_doublePtr* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    double* GetParam_x();
+private:
+    friend class ::StubSimple;
+
+    StubCallbackSimple::Ifunc2_doublePtr* callback;
+    unsigned call_counter;
+    double* Param_x;
+};
+void StubInit(Stubfunc2_doublePtr* value);
+
+class Stubfunc3_long_long {
+public:
+    StubCallbackSimple::Ifunc3_long_long* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc3_long_long* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    long GetParam_x();
+    long GetParam_y();
+private:
+    friend class ::StubSimple;
+
+    StubCallbackSimple::Ifunc3_long_long* callback;
+    unsigned call_counter;
+    long Param_x;
+    long Param_y;
+};
+void StubInit(Stubfunc3_long_long* value);
+
+class Stubfunc3_longlong {
+public:
+    StubCallbackSimple::Ifunc3_longlong* GetCallback();
+    void SetCallback(StubCallbackSimple::Ifunc3_longlong* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+    long long GetParam_x();
+private:
+    friend class ::StubSimple;
+
+    StubCallbackSimple::Ifunc3_longlong* callback;
+    unsigned call_counter;
+    long long Param_x;
+};
+void StubInit(Stubfunc3_longlong* value);
+
+class StubopAssign_constSimpleRef {
+public:
+    StubCallbackSimple::IopAssign_constSimpleRef* GetCallback();
+    void SetCallback(StubCallbackSimple::IopAssign_constSimpleRef* value);
     unsigned GetCallCounter() const;
     void ResetCallCounter();
     Simple* GetParam_other();
 private:
     friend class ::StubSimple;
 
-    StubCallbackSimple::IopAssign_const_Simple* callback;
+    StubCallbackSimple::IopAssign_constSimpleRef* callback;
     unsigned call_counter;
     Simple* Param_other;
 };
-void StubInit(StubopAssign_const_Simple* value);
+void StubInit(StubopAssign_constSimpleRef* value);
 
 class Stubfunc3 {
 public:
@@ -114,7 +167,10 @@ public:
     StubInternalSimple::Stubfunc1& func1();
     StubInternalSimple::Stubfunc2_int& func2_int();
     StubInternalSimple::Stubfunc2_double& func2_double();
-    StubInternalSimple::StubopAssign_const_Simple& opAssign_const_Simple();
+    StubInternalSimple::Stubfunc2_doublePtr& func2_doublePtr();
+    StubInternalSimple::Stubfunc3_long_long& func3_long_long();
+    StubInternalSimple::Stubfunc3_longlong& func3_longlong();
+    StubInternalSimple::StubopAssign_constSimpleRef& opAssign_constSimpleRef();
     StubInternalSimple::Stubfunc3& func3();
     StubInternalSimple::StubStubDtor& StubDtor();
 
@@ -122,7 +178,10 @@ private:
     StubInternalSimple::Stubfunc1 stub_func1;
     StubInternalSimple::Stubfunc2_int stub_func2_int;
     StubInternalSimple::Stubfunc2_double stub_func2_double;
-    StubInternalSimple::StubopAssign_const_Simple stub_opAssign_const_Simple;
+    StubInternalSimple::Stubfunc2_doublePtr stub_func2_doublePtr;
+    StubInternalSimple::Stubfunc3_long_long stub_func3_long_long;
+    StubInternalSimple::Stubfunc3_longlong stub_func3_longlong;
+    StubInternalSimple::StubopAssign_constSimpleRef stub_opAssign_constSimpleRef;
     StubInternalSimple::Stubfunc3 stub_func3;
     StubInternalSimple::StubStubDtor stub_StubDtor;
 };
@@ -133,6 +192,9 @@ public:
     virtual int func1();
     virtual void func2(int x);
     virtual void func2(double x);
+    virtual void func2(double * x);
+    virtual void func3(long x, long y);
+    virtual void func3(long long x);
     virtual void operator=(const Simple & other);
 private:
     virtual void func3();
