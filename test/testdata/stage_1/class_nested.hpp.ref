@@ -5,8 +5,7 @@
 class StubOuterClass;
 
 namespace StubCallbackOuterClass {
-struct IStubDtor { virtual void StubDtor() = 0;
-};
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackOuterClass
 
 namespace StubInternalOuterClass {
@@ -51,8 +50,7 @@ private:
 class StubInnerClass;
 
 namespace StubCallbackInnerClass {
-struct IStubDtor { virtual void StubDtor() = 0;
-};
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackInnerClass
 
 namespace StubInternalInnerClass {

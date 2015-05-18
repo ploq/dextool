@@ -7,10 +7,8 @@ namespace bar {
 class StubSmurf;
 
 namespace StubCallbackSmurf {
-struct IopAssign_const_Smurf { virtual foo::bar::Smurf & opAssign_const_Smurf(const foo::bar::Smurf & other) = 0;
-};
-struct IStubDtor { virtual void StubDtor() = 0;
-};
+struct IopAssign_const_Smurf { virtual foo::bar::Smurf & opAssign_const_Smurf(const foo::bar::Smurf & other) = 0; };
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSmurf
 
 namespace StubInternalSmurf {

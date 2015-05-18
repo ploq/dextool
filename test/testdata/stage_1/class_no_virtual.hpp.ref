@@ -5,22 +5,14 @@
 class StubSimple;
 
 namespace StubCallbackSimple {
-struct Ifunc1 { virtual void func1() = 0;
-};
-struct Ifunc2 { virtual int func2() = 0;
-};
-struct Ifunc6_some_pointer { virtual char * func6_some_pointer(some_pointer w) = 0;
-};
-struct Ifunc7_int_char { virtual float func7_int_char(int & y, char * yy) = 0;
-};
-struct Ifunc3_int_const_int { virtual const double func3_int_const_int(int x, const int xx) = 0;
-};
-struct Ifunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp { virtual const void *const func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp(MadeUp z, const MadeUp zz, const MadeUp & zzz, const MadeUp **const zzzz) = 0;
-};
-struct IopAssign_const_Simple { virtual void opAssign_const_Simple(const Simple & other) = 0;
-};
-struct IStubDtor { virtual void StubDtor() = 0;
-};
+struct Ifunc1 { virtual void func1() = 0; };
+struct Ifunc2 { virtual int func2() = 0; };
+struct Ifunc6_some_pointer { virtual char * func6_some_pointer(some_pointer w) = 0; };
+struct Ifunc7_int_char { virtual float func7_int_char(int & y, char * yy) = 0; };
+struct Ifunc3_int_const_int { virtual const double func3_int_const_int(int x, const int xx) = 0; };
+struct Ifunc4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp { virtual const void *const func4_MadeUp_const_MadeUp_const_MadeUp_const_MadeUp(MadeUp z, const MadeUp zz, const MadeUp & zzz, const MadeUp **const zzzz) = 0; };
+struct IopAssign_const_Simple { virtual void opAssign_const_Simple(const Simple & other) = 0; };
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSimple
 
 namespace StubInternalSimple {

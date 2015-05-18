@@ -5,10 +5,8 @@
 class StubSimple;
 
 namespace StubCallbackSimple {
-struct Ifunc1 { virtual void func1() = 0;
-};
-struct IStubDtor { virtual void StubDtor() = 0;
-};
+struct Ifunc1 { virtual void func1() = 0; };
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSimple
 
 namespace StubInternalSimple {

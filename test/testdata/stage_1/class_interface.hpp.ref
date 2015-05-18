@@ -5,18 +5,12 @@
 class StubSimple;
 
 namespace StubCallbackSimple {
-struct Ifunc1 { virtual int func1() = 0;
-};
-struct Ifunc2_int { virtual void func2_int(int x) = 0;
-};
-struct Ifunc2_double { virtual void func2_double(double x) = 0;
-};
-struct IopAssign_const_Simple { virtual void opAssign_const_Simple(const Simple & other) = 0;
-};
-struct Ifunc3 { virtual void func3() = 0;
-};
-struct IStubDtor { virtual void StubDtor() = 0;
-};
+struct Ifunc1 { virtual int func1() = 0; };
+struct Ifunc2_int { virtual void func2_int(int x) = 0; };
+struct Ifunc2_double { virtual void func2_double(double x) = 0; };
+struct IopAssign_const_Simple { virtual void opAssign_const_Simple(const Simple & other) = 0; };
+struct Ifunc3 { virtual void func3() = 0; };
+struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSimple
 
 namespace StubInternalSimple {

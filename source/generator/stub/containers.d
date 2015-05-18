@@ -169,6 +169,19 @@ struct VariableContainer {
         hdr.sep;
     }
 
+    /** Render the interface used to access test functionality for a group.
+     * A group is a function.
+     *
+     * Generated functions depend on the type mangling.
+     * They can be all or some of:
+     *  GetCallback
+     *  SetCallback
+     *  GetCallCounter
+     *  Reset
+     *  SetReturn
+     * Variables are:
+     *  pointer to a namespace::Isomefunc*
+     */
     private void renderGetSetHdr(T0, T1)(InternalType it,
         const CppMethodName get_method, const CppMethodName set_method, ref T0 hdr_pub,
         T1 hdr_priv) const {
@@ -193,6 +206,7 @@ struct VariableContainer {
         hdr_priv.stmt(format("%s %s", tn.type.str, tn.name.str));
     }
 
+    /// ditto
     private void renderGetSetImpl(T0)(InternalType it, const StubNs data_ns,
         const CppClassName stub_data_name, const CppMethodName get_method,
         const CppMethodName set_method, ref T0 impl) const {
@@ -239,10 +253,20 @@ struct VariableContainer {
         }
     }
 
+    /** Render function and variable for a group.
+     * Functions are:
+     *  ns_internal::StubFunc& func()
+     * Variables are:
+     *  ns_internal::StubFunc varname
+     *
+     * ns_internal is dependent on the stub prefix and method the group belong to.
+     * varname is whatever was put in the container.
+     */
     private void renderDataFunc(T0, T1, T2)(CppMethodName group, ref T0 hdr_pub,
         ref T1 hdr_priv, ref T2 impl) const {
         import std.algorithm : find;
 
+        //TODO refactor container to not need this check. Braindead...
         auto internal = vars.find!(a => a.mangling == NameMangling.Callback && a.group == group);
         if (internal.length == 0) {
             logger.errorf("No callback variable for group '%s'", group.str);
@@ -381,9 +405,14 @@ struct CallbackContainer {
         return items.length;
     }
 
-    /** Generate C++ code in the provided module for all callbacks.
+    /** Generate the C++ interface for the callback.
+     * Example:
+     * ---
+     * struct Ifunc1 { virtual int func1() = 0; };
+     * ---
+     *
      * Params:
-     *  hdr = module for generated declaration code.
+     *  hdr = code module to inject the interface declaration in.
      */
     void renderInterfaces(ref CppModule hdr) {
         if (length == 0)
@@ -394,8 +423,10 @@ struct CallbackContainer {
         ns_hdr.suppressIndent(1);
         foreach (c; items) {
             auto s = ns_hdr.struct_(cprefix.str ~ c.name.str)[$.begin = " { "];
-            auto m = s.method(true, c.return_type.str, c.name.str, false, c.params.toString);
-            m[$.begin = "", $.end = " = 0;"];
+            // can't use convenient method function because it inserts a line break before };
+            auto m = s.stmt(format("virtual %s %s(%s)", c.return_type.str,
+                c.name.str, c.params.toString), false);
+            m[$.begin = "", $.end = " = 0; "];
             m.suppressThisIndent(1);
         }
 
@@ -438,8 +469,7 @@ unittest {
 
     auto rval = m.render;
     auto exp = "namespace Foo {
-struct Stubsmurf { virtual void smurf() = 0;
-};
+struct Stubsmurf { virtual void smurf() = 0; };
 } //NS:Foo
 
 ";
