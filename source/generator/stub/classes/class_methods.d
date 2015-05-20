@@ -23,6 +23,8 @@ import std.typecons : TypedefType, NullableRef, Nullable;
 import clang.c.index;
 import clang.Cursor;
 
+import logger = std.experimental.logger;
+
 import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
 import generator.stub.containers : CallbackContainer, VariableContainer;
 import generator.stub.misc : parmDeclToTypeName;
@@ -30,18 +32,23 @@ import generator.stub.types;
 import generator.stub.classes.access : consumeAccessSpecificer;
 import generator.stub.classes.functionx;
 
+interface MethodController {
+    bool doVirtualMethod();
+    bool doMethod();
+
+    StubPrefix getMethodPrefix();
+}
+
 /** Translate class methods to stub implementation.
  */
 struct MethodContext {
     VisitNodeModule!CppHdrImpl visitor_stack;
     alias visitor_stack this;
 
-    this(StubPrefix prefix, CppClassName class_name,
-        CppAccessSpecifier access_spec, OnlyStubVirtual only_virt) {
-        this.prefix = prefix;
+    this(MethodController ctrl, CppClassName class_name, CppAccessSpecifier access_spec) {
+        this.ctrl = ctrl;
         this.name = class_name;
         this.access_spec = access_spec;
-        this.only_stub_virtual = only_virt;
     }
 
     void translate(ref Cursor cursor, ref VariableContainer vars,
@@ -61,21 +68,38 @@ struct MethodContext {
         case CXCursor_CXXMethod:
             if (callbacks.exists(CppMethodName(c.spelling), c.parmDeclToTypeName))
                 break;
-            //TODO ugly move check to inside function Translator or something...
-            if (c.func.isVirtual || cast(bool) only_stub_virtual == false) {
+
+            if (c.func.isVirtual && ctrl.doVirtualMethod) {
                 push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr),
                     current.impl));
+                functionTranslator(c, ctrl.getMethodPrefix, name, vars,
+                    callbacks, current.hdr, current.impl);
             }
-            functionTranslator(c, prefix, name, only_stub_virtual, vars,
-                callbacks, current.hdr, current.impl);
+            else if (!c.func.isVirtual && ctrl.doMethod) {
+                auto loc = c.location;
+                logger.warningf(
+                    "%s:%d:%d:%s: Stubbing NONE virtual function (usually bad... Be sure you know what you are doing)",
+                    loc.file.name, loc.line, loc.column, c.spelling);
+                logger.trace(clang.Cursor.abilities(c.func));
+
+                push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr),
+                    current.impl));
+                functionTranslator(c, ctrl.getMethodPrefix, name, vars,
+                    callbacks, current.hdr, current.impl);
+            }
+            else if (!c.func.isVirtual) {
+                auto loc = c.location;
+                logger.warningf("%s:%d:%d:%s: Skipping, not a virtual function",
+                    loc.file.name, loc.line, loc.column, c.spelling);
+                logger.trace(clang.Cursor.abilities(c.func));
+            }
             descend = false;
             break;
         case CXCursor_CXXAccessSpecifier:
             access_spec = CppAccessSpecifier(c.access.accessSpecifier);
             break;
         case CXCursor_CXXBaseSpecifier:
-            inheritMethodTranslator(c, prefix, name, only_stub_virtual, vars,
-                callbacks, current.get);
+            inheritMethodTranslator(c, ctrl, name, vars, callbacks, current.get);
             descend = false;
             break;
         default:
@@ -86,11 +110,10 @@ struct MethodContext {
     }
 
 private:
+    MethodController ctrl;
     CppClassName name;
-    StubPrefix prefix;
-    OnlyStubVirtual only_stub_virtual;
 
-    //TODO chhange to RefCounted
+    //TODO change to RefCounted
     NullableRef!VariableContainer vars;
     NullableRef!CallbackContainer callbacks;
 
@@ -103,11 +126,11 @@ private:
  *
  * Thanks to how method translatorn is implemented it is recursive.
  * But this function, inheritMethodTranslator, is not. It traverses the leafs
- * and nothhing more.
+ * and nothing more.
  */
-void inheritMethodTranslator(ref Cursor cursor, const StubPrefix prefix,
-    const CppClassName name, const OnlyStubVirtual only_virt,
-    ref VariableContainer vars, ref CallbackContainer callbacks, ref CppHdrImpl hdr_impl) {
+void inheritMethodTranslator(ref Cursor cursor, MethodController ctrl,
+    const CppClassName name, ref VariableContainer vars,
+    ref CallbackContainer callbacks, ref CppHdrImpl hdr_impl) {
     //TODO ugly hack. dunno what it should be so for now forcing to public.
     Nullable!CppAccessSpecifier access_spec;
     access_spec = CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXPublic);
@@ -122,8 +145,7 @@ void inheritMethodTranslator(ref Cursor cursor, const StubPrefix prefix,
         switch (parent.kind) with (CXCursorKind) {
         case CXCursor_TypeRef:
             logNode(p, 1);
-            MethodContext(prefix, name, access_spec, only_virt).translate(p,
-                vars, callbacks, hdr_impl);
+            MethodContext(ctrl, name, access_spec).translate(p, vars, callbacks, hdr_impl);
             break;
         default:
         }

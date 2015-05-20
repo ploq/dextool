@@ -18,6 +18,8 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.stub.classes.simplecontext;
 
+public import generator.stub.classes.class_methods : MethodController;
+
 import std.algorithm : among, map;
 import std.ascii : newline;
 
@@ -36,6 +38,12 @@ import generator.stub.types;
 
 import generator.stub.classes.class_methods : MethodContext;
 
+interface ClassController {
+    StubPrefix getClassPrefix();
+
+    MethodController getMethod();
+}
+
 /** Translate a ClassDecl to a stub implementation.
  *
  * The generate stub implementation have an interface that the user can control
@@ -52,12 +60,12 @@ struct ClassContext {
      *  prefix = prefix to use for the name of the stub class.
      *  name = name of the c++ class being stubbed.
      */
-    this(const StubPrefix prefix, const OnlyStubVirtual only_virt,
-        const CppClassName name, const CppNesting nesting, const CppNsStack ns_nesting) {
+    this(ClassController ctrl, const CppClassName name, const CppNesting nesting,
+        const CppNsStack ns_nesting) {
         import std.array : join;
 
-        this.prefix = prefix;
-        this.only_virtual = only_virt;
+        this.ctrl = ctrl;
+        this.prefix = ctrl.getClassPrefix;
         this.name = name;
 
         this.data_ns = StubNs(prefix ~ "Internal" ~ name);
@@ -125,10 +133,10 @@ struct ClassContext {
             case false:
                 this.classdecl_used = true;
                 ///TODO change to using the name mangling function.
-                auto stubname = CppClassName(cast(string) prefix ~ name);
+                auto stubname = CppClassName(prefix.str ~ name);
                 push(classTranslator(prefix, class_nesting, name, current.get));
                 class_code = current.get;
-                MethodContext(prefix, stubname, access_spec, only_virtual).translate(c,
+                MethodContext(ctrl.getMethod, stubname, access_spec).translate(c,
                     vars, callbacks, current.get);
                 break;
             }
@@ -155,11 +163,11 @@ struct ClassContext {
 private:
     bool classdecl_used;
     CppHdrImpl class_code; // top of the new class created.
+    ClassController ctrl;
     immutable StubPrefix prefix;
     immutable CppClassName name;
     immutable CppClassNesting class_nesting;
     immutable CppNsNesting ns_nesting;
-    immutable OnlyStubVirtual only_virtual;
 
     VariableContainer vars;
     CallbackContainer callbacks;

@@ -18,6 +18,7 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.stub.context;
 
+import std.algorithm : among, map;
 import std.array : join;
 import std.conv : to;
 import std.typecons : TypedefType;
@@ -32,27 +33,32 @@ import dsrcgen.cpp;
 import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
 import generator.stub.types;
 import generator.stub.stub : namespaceTranslator;
-import generator.stub.classes.simplecontext;
+import generator.stub.classes.simplecontext : ClassContext, ClassController;
+
+interface StubController {
+    /// Process AST node belonging to filename.
+    bool doFile(string filename);
+
+    /// Process AST node that is a class.
+    bool doClass();
+
+    /// File to include in the generated header.
+    HdrFilename getIncludeFile();
+
+    ClassController getClass();
+}
 
 struct StubContext {
     /**
      * Params:
      *  prefix = prefix to use for the name of the stub class.
      */
-    this(StubPrefix prefix, HdrFilename filename) {
-        this.filename = filename;
+    this(StubController ctrl) {
+        this.ctrl = ctrl;
         this.hdr = new CppModule;
         this.impl = new CppModule;
 
-        ctx = ImplStubContext(prefix, hdr, impl);
-    }
-
-    void onlyTranslateFile(HdrFilename filename) {
-        ctx.onlyTranslateFile(filename);
-    }
-
-    void onlyStubVirtual() {
-        ctx.onlyStubVirtual;
+        ctx = ImplStubContext(ctrl, hdr, impl);
     }
 
     void translate(Cursor c) {
@@ -63,14 +69,14 @@ struct StubContext {
      * Params:
      *  filename = intended output filename, used for ifdef guard.
      */
-    string output_header(HdrFilename out_filename) {
+    string output_header(HdrFilename filename) {
         import std.string : translate;
 
         dchar[dchar] table = ['.' : '_', '-' : '_'];
 
         ///TODO add user defined header.
-        auto o = CppHModule(translate(cast(string) out_filename, table));
-        o.content.include(cast(string) filename);
+        auto o = CppHModule(translate(filename.str, table));
+        o.content.include(ctrl.getIncludeFile.str);
         o.content.sep(2);
         o.content.append(this.hdr);
 
@@ -81,7 +87,7 @@ struct StubContext {
         ///TODO add user defined header.
         auto o = new CppModule;
         o.suppressIndent(1);
-        o.include(cast(string) filename);
+        o.include(filename.str);
         o.sep(2);
         o.append(impl);
 
@@ -93,7 +99,7 @@ private:
     CppModule impl;
 
     ImplStubContext ctx;
-    HdrFilename filename;
+    StubController ctrl;
 }
 
 private:
@@ -107,22 +113,13 @@ struct ImplStubContext {
      *  hdr = C++ code for a header for the stub
      *  impl = C++ code for the implementation of the stub
      */
-    this(StubPrefix prefix, CppModule hdr, CppModule impl) {
-        this.prefix = prefix;
+    this(StubController ctrl, CppModule hdr, CppModule impl) {
+        this.ctrl = ctrl;
         this.hdr = hdr;
         this.impl = impl;
 
         hdr_impl.push(0, CppHdrImpl(hdr, impl));
         access_spec.push(0, CppAccessSpecifier(CX_CXXAccessSpecifier.CX_CXXInvalidAccessSpecifier));
-    }
-
-    void onlyTranslateFile(HdrFilename filename) {
-        only_infile = true;
-        this.filename = filename;
-    }
-
-    void onlyStubVirtual() {
-        this.only_stub_virtual = OnlyStubVirtual(true);
     }
 
     void incr() {
@@ -142,9 +139,9 @@ struct ImplStubContext {
         bool decend = true;
 
         auto file = c.location.file;
-        if (only_infile && file.isValid && !(file.name == cast(string) filename)) {
+        if (file.isValid && !ctrl.doFile(file.name)) {
             logger.info("Skipping " ~ file.name);
-            logger.trace(clang.SourceLocation.toString(c.location), "|", filename);
+            logger.trace(clang.SourceLocation.toString(c.location));
             return false;
         }
 
@@ -164,8 +161,7 @@ struct ImplStubContext {
                     // therefor pushing current ns/class/struct to the stack
                     // for cases it is needed after processing current cursor.
                     auto name = CppClassName(c.spelling);
-                    (ClassContext(prefix, only_stub_virtual, name,
-                        class_nesting.values, ns_nesting.values)).translate(c,
+                    (ClassContext(ctrl.getClass, name, class_nesting.values, ns_nesting.values)).translate(c,
                         hdr_impl.top.hdr, hdr_impl.top.impl);
                     class_nesting.push(level, CppClassStructNsName(c.spelling));
                 }
@@ -196,11 +192,8 @@ struct ImplStubContext {
 private:
     int level;
 
-    bool only_infile;
-    OnlyStubVirtual only_stub_virtual;
-    HdrFilename filename;
+    StubController ctrl;
 
-    StubPrefix prefix;
     CppModule hdr;
     CppModule impl;
     IdStack!(int, CppHdrImpl) hdr_impl;

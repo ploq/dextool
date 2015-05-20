@@ -49,24 +49,8 @@ version (unittest) {
 }
 
 void functionTranslator(Cursor c, const StubPrefix prefix,
-    const CppClassName class_name, const OnlyStubVirtual only_stub_virtual,
-    ref VariableContainer vars, ref CallbackContainer callbacks, ref CppModule hdr,
-    ref CppModule impl) {
-
-    if (cast(bool) only_stub_virtual == false) {
-        auto loc = c.location;
-        logger.warningf(
-            "%s:%d:%d:%s: Stubbing NONE virtual function (usually bad... Be sure you know what you are doing)",
-            loc.file.name, loc.line, loc.column, c.spelling);
-        logger.trace(clang.Cursor.abilities(c.func));
-    }
-    else if (!c.func.isVirtual) {
-        auto loc = c.location;
-        logger.warningf("%s:%d:%d:%s: Skipping, not a virtual function",
-            loc.file.name, loc.line, loc.column, c.spelling);
-        logger.trace(clang.Cursor.abilities(c.func));
-        return;
-    }
+    const CppClassName class_name, ref VariableContainer vars,
+    ref CallbackContainer callbacks, ref CppModule hdr, ref CppModule impl) {
 
     TypeKindVariable[] params;
     TypeKind return_type;

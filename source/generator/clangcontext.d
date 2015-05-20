@@ -52,7 +52,7 @@ version (unittest) {
 public:
 
 /// Holds the context of the file.
-class Context {
+class ClangContext {
     /** Initialize context from file
      * Params:
      *  input_file_ = filename of code to parse
@@ -104,14 +104,14 @@ private:
 }
 
 /// No errors occured during translation.
-bool isValid(Context context) {
+bool isValid(ClangContext context) {
     return context.translation_unit.isValid;
 }
 
 /** Query context for if diagnostic errors where detected during parsing.
  * Return: True if errors where found.
  */
-bool hasParseErrors(Context context) {
+bool hasParseErrors(ClangContext context) {
     if (!context.isValid)
         return true;
 
@@ -139,7 +139,7 @@ bool hasParseErrors(Context context) {
 }
 
 /// Log diagnostic error messages to std.logger.
-void logDiagnostic(Context context) {
+void logDiagnostic(ClangContext context) {
     if (!context.isValid)
         return;
 

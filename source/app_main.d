@@ -32,6 +32,11 @@ import argvalue; // from docopt
 import tested;
 import dsrcgen.cpp;
 
+import generator.stub.context : StubController;
+import generator.stub.classes.simplecontext : ClassController;
+import generator.stub.classes.class_methods : MethodController;
+import generator.stub.types;
+
 static string doc = "
 usage:
   gen-test-double stub [options] FILE [--] [CFLAGS...]
@@ -114,6 +119,76 @@ class SimpleLogger : logger.Logger {
     }
 }
 
+/** Stubbning of classes generating simple C++ code.
+ *
+ * Possible to control:
+ *  - Limit stubbning to a file.
+ *  - Only stub virtual functions.
+ *  - Stub all functions.
+ */
+class StubVariant1 : StubController, ClassController, MethodController {
+    HdrFilename incl_file;
+    FileScopeType file_scope;
+    FuncScopeType func_scope;
+    StubPrefix prefix;
+
+    this(StubPrefix prefix, HdrFilename incl_file, FileScopeType file_scope,
+        FuncScopeType func_scope) {
+        this.prefix = prefix;
+        this.incl_file = incl_file;
+        this.file_scope = file_scope;
+        this.func_scope = func_scope;
+    }
+
+    /// Restrict stubbing to the file that is to be included.
+    bool doFile(string filename) {
+        final switch (file_scope) with (FileScopeType) {
+        case Invalid:
+            logger.trace("file scope is invalid");
+            return false;
+        case All:
+            return true;
+        case Single:
+            logger.trace(cast(string) incl_file, "|", filename);
+            return cast(string) incl_file == filename;
+        }
+    }
+
+    bool doClass() {
+        return true;
+    }
+
+    HdrFilename getIncludeFile() {
+        import std.path : baseName;
+
+        return HdrFilename((cast(string) incl_file).baseName);
+    }
+
+    ClassController getClass() {
+        return this;
+    }
+
+    StubPrefix getClassPrefix() {
+        return prefix;
+    }
+
+    MethodController getMethod() {
+        return this;
+    }
+
+    bool doVirtualMethod() {
+        return func_scope == FuncScopeType.Virtual || func_scope == FuncScopeType.All;
+    }
+
+    bool doMethod() {
+        return func_scope == FuncScopeType.All;
+    }
+
+    StubPrefix getMethodPrefix() {
+        return prefix;
+    }
+}
+
 shared static this() {
     version (unittest) {
         import core.runtime;
@@ -146,7 +221,6 @@ ExitStatusType gen_stub(const string infile, const string outdir,
     import std.exception;
     import std.path : baseName, buildPath, stripExtension;
     import generator.clangcontext;
-    import generator.stub.types;
     import generator.stub.context;
 
     auto hdr_ext = ".hpp";
@@ -166,17 +240,14 @@ ExitStatusType gen_stub(const string infile, const string outdir,
     }
 
     logger.infof("Generating stub from '%s'", infile);
+    auto ctrl = new StubVariant1(prefix, HdrFilename(infile), file_scope, func_scope);
 
-    auto file_ctx = new Context(infile, cflags);
+    auto file_ctx = new ClangContext(infile, cflags);
     file_ctx.logDiagnostic;
     if (file_ctx.hasParseErrors)
         return ExitStatusType.Errors;
 
-    auto ctx = StubContext(prefix, HdrFilename(infile.baseName));
-    if (file_scope == FileScopeType.Single)
-        ctx.onlyTranslateFile(HdrFilename(infile));
-    if (func_scope == FuncScopeType.Virtual)
-        ctx.onlyStubVirtual;
+    auto ctx = StubContext(ctrl);
     ctx.translate(file_ctx.cursor);
 
     auto outfile_hdr = try_open_file(hdr_out_filename, "w");
