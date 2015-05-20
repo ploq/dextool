@@ -16,7 +16,7 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-module generator.stub.translator.class_methods;
+module generator.stub.classes.class_methods;
 
 private:
 
@@ -26,15 +26,15 @@ import clang.c.index;
 import clang.Cursor;
 
 import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
-import generator.stub.types;
+import generator.stub.classes.functionx;
 import generator.stub.containers : CallbackContainer, VariableContainer;
-import generator.stub.stub : consumeAccessSpecificer;
-import generator.stub.translator.functionx;
 import generator.stub.misc : parmDeclToTypeName;
+import generator.stub.stub : consumeAccessSpecificer;
+import generator.stub.types;
 
 /** Translate class methods to stub implementation.
  */
-public struct MethodTranslateContext {
+public struct MethodContext {
     VisitNodeModule!CppHdrImpl visitor_stack;
     alias visitor_stack this;
 
@@ -52,7 +52,7 @@ public struct MethodTranslateContext {
         this.callbacks.bind(&callbacks);
 
         push(hdr_impl);
-        visitAst!MethodTranslateContext(cursor, this);
+        visitAst!MethodContext(cursor, this);
     }
 
     bool apply(Cursor c) {
@@ -122,7 +122,7 @@ void inheritMethodTranslator(ref Cursor cursor, const StubPrefix prefix,
         switch (parent.kind) with (CXCursorKind) {
         case CXCursor_TypeRef:
             logNode(p, 1);
-            MethodTranslateContext(prefix, name, access_spec, only_virt).translate(p,
+            MethodContext(prefix, name, access_spec, only_virt).translate(p,
                 vars, callbacks, hdr_impl);
             break;
         default:

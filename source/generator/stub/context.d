@@ -34,7 +34,7 @@ import dsrcgen.cpp;
 import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
 import generator.stub.types;
 import generator.stub.stub : namespaceTranslator;
-import generator.stub.translator.classes;
+import generator.stub.classes.simplecontext;
 
 public class StubContext {
     /**
@@ -164,7 +164,7 @@ struct ImplStubContext {
                     // therefor pushing current ns/class/struct to the stack
                     // for cases it is needed after processing current cursor.
                     auto name = CppClassName(c.spelling);
-                    (ClassTranslateContext(prefix, only_stub_virtual, name,
+                    (ClassContext(prefix, only_stub_virtual, name,
                         class_nesting.values, ns_nesting.values)).translate(c,
                         hdr_impl.top.hdr, hdr_impl.top.impl);
                     class_nesting.push(level, CppClassStructNsName(c.spelling));

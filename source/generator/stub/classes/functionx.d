@@ -16,7 +16,7 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-module generator.stub.translator.functionx;
+module generator.stub.classes.functionx;
 
 import std.algorithm : map, startsWith;
 import std.array : array;
@@ -41,9 +41,8 @@ version (unittest) {
     shared static this() {
         import std.exception;
 
-        //runUnitTests!app(new JsonTestResultWriter("results.json"));
         enforce(
-            runUnitTests!(generator.stub.translator.functionx)(new ConsoleTestResultWriter),
+            runUnitTests!(generator.stub.classes.functionx)(new ConsoleTestResultWriter),
             "Unit tests failed.");
     }
 }

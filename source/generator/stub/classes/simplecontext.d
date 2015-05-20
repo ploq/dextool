@@ -16,7 +16,7 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-module generator.stub.translator.classes;
+module generator.stub.classes.simplecontext;
 
 private:
 import std.algorithm : among, map;
@@ -34,14 +34,14 @@ import generator.stub.misc;
 import generator.stub.stub : accessSpecifierTranslator, consumeAccessSpecificer;
 import generator.stub.types;
 
-import generator.stub.translator.class_methods : MethodTranslateContext;
+import generator.stub.classes.class_methods : MethodContext;
 
 /** Translate a ClassDecl to a stub implementation.
  *
  * The generate stub implementation have an interface that the user can control
  * the data flow from stub -> SUT.
  */
-public struct ClassTranslateContext {
+public struct ClassContext {
     VisitNodeModule!CppHdrImpl visitor_stack;
     alias visitor_stack this;
 
@@ -75,10 +75,10 @@ public struct ClassTranslateContext {
     }
 
     void translate(ref Cursor cursor, ref CppModule hdr, ref CppModule impl) {
-        void doTraversal(ref ClassTranslateContext ctx, CppHdrImpl top) {
+        void doTraversal(ref ClassContext ctx, CppHdrImpl top) {
             ctx.push(top);
             auto c = Cursor(cursor);
-            visitAst!ClassTranslateContext(c, this);
+            visitAst!ClassContext(c, this);
         }
 
         auto top = CppHdrImpl(hdr, impl);
@@ -128,7 +128,7 @@ public struct ClassTranslateContext {
                 auto stubname = CppClassName(cast(string) prefix ~ name);
                 push(classTranslator(prefix, class_nesting, name, current.get));
                 class_code = current.get;
-                MethodTranslateContext(prefix, stubname, access_spec, only_virtual).translate(c,
+                MethodContext(prefix, stubname, access_spec, only_virtual).translate(c,
                     vars, callbacks, current.get);
                 break;
             }
