@@ -18,23 +18,21 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.stub.classes.class_methods;
 
-private:
-
 import std.typecons : TypedefType, NullableRef, Nullable;
 
 import clang.c.index;
 import clang.Cursor;
 
 import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
-import generator.stub.classes.functionx;
 import generator.stub.containers : CallbackContainer, VariableContainer;
 import generator.stub.misc : parmDeclToTypeName;
-import generator.stub.stub : consumeAccessSpecificer;
 import generator.stub.types;
+import generator.stub.classes.access : consumeAccessSpecificer;
+import generator.stub.classes.functionx;
 
 /** Translate class methods to stub implementation.
  */
-public struct MethodContext {
+struct MethodContext {
     VisitNodeModule!CppHdrImpl visitor_stack;
     alias visitor_stack this;
 
@@ -98,6 +96,8 @@ private:
 
     CppAccessSpecifier access_spec;
 }
+
+private:
 
 /** Traverse all inherited classes and call method translator on them.
  *

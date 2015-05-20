@@ -29,9 +29,9 @@ import logger = std.experimental.logger;
 
 import dsrcgen.cpp;
 
-import generator.stub.types;
-import generator.stub.misc;
+import generator.stub.convert : toString;
 import generator.stub.mangling;
+import generator.stub.types;
 
 import tested;
 

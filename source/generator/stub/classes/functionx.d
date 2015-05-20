@@ -28,12 +28,13 @@ import clang.Cursor;
 
 import dsrcgen.cpp;
 
-import translator.Type : TypeKind;
+import translator.Type : TypeKind, translateType;
 
-import generator.stub.types;
+import generator.stub.convert : toParamString, toStringOfName;
 import generator.stub.containers;
 import generator.stub.mangling;
-import generator.stub.misc;
+import generator.stub.misc : paramDeclToTypeKindVariable;
+import generator.stub.types;
 
 import tested;
 
@@ -131,6 +132,8 @@ void doHeader(bool is_virtual, bool is_const, const TypeKindVariable[] params,
 }
 
 auto castAndStoreValue(const TypeKindVariable v) @safe {
+    import generator.stub.misc : getPointerStars;
+
     string get_ptr = v.type.isRef ? "&" : "";
     bool do_const_cast = v.type.isConst && (v.type.isRef || v.type.isPointer);
 

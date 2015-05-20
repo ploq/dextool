@@ -18,8 +18,6 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.stub.mangling;
 
-private:
-
 import std.algorithm : canFind;
 import std.array : join;
 import std.conv : to;
@@ -33,7 +31,6 @@ import clang.Cursor;
 import translator.Type;
 
 import generator.stub.types;
-import generator.stub.misc : getPointerStars;
 
 public:
 
@@ -96,7 +93,7 @@ private auto mangleToVariable(const CppMethodName method) pure nothrow @safe {
 /// ---
 /// result is: Foo_int
 auto mangleToCallbackMethod(const CppMethodName method, TypeKindVariable[] params) pure @safe {
-    import generator.stub.misc : toStringOfType;
+    import generator.stub.convert : toStringOfType;
 
     Nullable!CppMethodName rval;
     // same mangle schema but different return types so resuing but in a safe
@@ -149,6 +146,8 @@ auto mangleToStubStructType(const StubPrefix prefix, CppMethodName method, CppCl
 }
 
 auto mangleToStubStructMemberType(const TypeKind tk) pure @safe {
+    import generator.stub.misc : getPointerStars;
+
     string ptr = tk.getPointerStars;
     ptr ~= tk.isRef ? "*" : "";
     return CppType(tk.name ~ ptr);
@@ -235,7 +234,7 @@ auto mangleToStubDataClassInternalVariable(const StubPrefix prefix, const CppMet
 auto mangleToStubDataGetter(const CppMethodName method, const TypeKindVariable[] params) nothrow @safe {
     import std.algorithm : map;
     import std.array : join;
-    import generator.stub.misc : toStringOfType;
+    import generator.stub.convert : toStringOfType;
 
     string getter = method.str;
 

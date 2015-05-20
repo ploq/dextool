@@ -18,7 +18,6 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.stub.classes.simplecontext;
 
-private:
 import std.algorithm : among, map;
 import std.ascii : newline;
 
@@ -27,11 +26,12 @@ import clang.Cursor;
 
 import dsrcgen.cpp;
 
+import generator.stub.classes.access;
 import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
+import generator.stub.convert : toString;
 import generator.stub.containers : VariableContainer, CallbackContainer;
 import generator.stub.mangling;
-import generator.stub.misc;
-import generator.stub.stub : accessSpecifierTranslator, consumeAccessSpecificer;
+import generator.stub.misc : parmDeclToTypeName;
 import generator.stub.types;
 
 import generator.stub.classes.class_methods : MethodContext;

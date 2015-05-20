@@ -174,8 +174,7 @@ struct ImplStubContext {
                 //case CXCursor_StructDecl
                 //case CXCursor_FunctionDecl
             case CXCursor_Namespace:
-                hdr_impl.push(level,
-                    namespaceTranslator(CppClassStructNsName(c.spelling), hdr_impl.top.get));
+                hdr_impl.push(level, namespaceTranslator(CppNs(c.spelling), hdr_impl.top.get));
                 class_nesting.push(level, CppClassStructNsName(c.spelling));
                 ns_nesting.push(level, CppNs(c.spelling));
                 break;
