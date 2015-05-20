@@ -41,7 +41,7 @@ import generator.stub.classes.class_methods : MethodContext;
  * The generate stub implementation have an interface that the user can control
  * the data flow from stub -> SUT.
  */
-public struct ClassContext {
+struct ClassContext {
     VisitNodeModule!CppHdrImpl visitor_stack;
     alias visitor_stack this;
 

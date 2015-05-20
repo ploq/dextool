@@ -18,8 +18,6 @@
 /// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 module generator.stub.context;
 
-private:
-
 import std.array : join;
 import std.conv : to;
 import std.typecons : TypedefType;
@@ -36,7 +34,7 @@ import generator.stub.types;
 import generator.stub.stub : namespaceTranslator;
 import generator.stub.classes.simplecontext;
 
-public class StubContext {
+struct StubContext {
     /**
      * Params:
      *  prefix = prefix to use for the name of the stub class.
@@ -97,6 +95,8 @@ private:
     ImplStubContext ctx;
     HdrFilename filename;
 }
+
+private:
 
 /// Traverse the AST and generate a stub by filling the CppModules with data.
 struct ImplStubContext {

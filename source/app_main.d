@@ -145,7 +145,9 @@ ExitStatusType gen_stub(const string infile, const string outdir,
     const ref string[] cflags, FileScopeType file_scope, FuncScopeType func_scope) {
     import std.exception;
     import std.path : baseName, buildPath, stripExtension;
-    import generator;
+    import generator.clangcontext;
+    import generator.stub.types;
+    import generator.stub.context;
 
     auto hdr_ext = ".hpp";
     auto impl_ext = ".cpp";
@@ -170,7 +172,7 @@ ExitStatusType gen_stub(const string infile, const string outdir,
     if (file_ctx.hasParseErrors)
         return ExitStatusType.Errors;
 
-    auto ctx = new StubContext(prefix, HdrFilename(infile.baseName));
+    auto ctx = StubContext(prefix, HdrFilename(infile.baseName));
     if (file_scope == FileScopeType.Single)
         ctx.onlyTranslateFile(HdrFilename(infile));
     if (func_scope == FuncScopeType.Virtual)
