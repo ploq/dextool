@@ -33,8 +33,9 @@ function test_compl_code() {
     flags=$5
 
     echo -e "${C_YELLOW}=== Compile $impl  ===${C_NONE}"
-    echo "g++ -std=c++03 -Wpedantic -Werror -o $outdir/binary -I$outdir $inclpath $impl $main"
-    g++ -std=c++03 $flags -o "$outdir"/binary -I"$outdir" $inclpath "$impl" "$main"
+    tmp="g++ -std=c++03 $flags -o $outdir/binary -I$outdir $inclpath $impl $main"
+    echo "$tmp"
+    eval "$tmp"
     "$outdir"/binary
 }
 
@@ -48,21 +49,35 @@ function test_gen_code() {
         cflags="-- $5"
     fi
 
-    inhdr_base=$(basename ${inhdr})
+    echo -e "${C_YELLOW}=== $inhdr  ===${C_NONE}"
+    tmp="../build/gen-test-double stub $pre_args -d $outdir $inhdr $cflags $post_args"
+    echo "$tmp"
+    eval "$tmp"
+}
 
+function test_compare_code() {
+    outdir=$1
+    inhdr=$2
+
+    inhdr_base=$(basename ${inhdr})
     expect_hdr="$(dirname ${inhdr})/"${inhdr_base}".ref"
     expect_impl="$(dirname ${inhdr})"/${inhdr_base%.hpp}".cpp.ref"
+
+    if [[ -n "$3" ]]; then
+        expect_hdr="$3"
+    fi
+    if [[ -n "$4" ]]; then
+        expect_impl="$4"
+    fi
+
     out_hdr="$outdir/stub_"$(basename ${inhdr})
     out_impl="$outdir/stub_"${inhdr_base%.hpp}".cpp"
 
-    echo -e "${C_YELLOW}=== $inhdr  ===${C_NONE}"
-    echo -e "\t${expect_hdr} ${expect_impl}" "\t$PWD/${out_hdr}"
-
-    eval "../build/gen-test-double stub $pre_args -d $outdir $inhdr $cflags $post_args"
-
     diff -u "${expect_hdr}" "${out_hdr}"
+    echo -e "Comparing result: ${expect_hdr}\t$PWD/${out_hdr}"
     if [[ -e "${expect_impl}" ]]; then
         diff -u "${expect_impl}" "${out_impl}"
+        echo -e "Comparing result: ${expect_impl}\t$PWD/${out_impl}"
     fi
 }
 
@@ -78,15 +93,19 @@ for sourcef in testdata/stage_1/*.hpp; do
 
     case "$sourcef" in
         *class_no_virtual*)
-            test_gen_code "$outdir" "$sourcef" "--debug --func-scope=all" ;;
+            test_gen_code "$outdir" "$sourcef" "--func-scope=all" ;;
         # **)
         #     test_gen_code "$outdir" "$sourcef" "--debug" ;;
         # **)
         #     test_gen_code "$outdir" "$sourcef" "--debug" "|& grep -i $grepper"
         # ;;
         *)
-            test_gen_code "$outdir" "$sourcef"
-        ;;
+            test_gen_code "$outdir" "$sourcef" ;;
+    esac
+
+    case "$sourcef" in
+        *)
+            test_compare_code "$outdir" "$sourcef" ;;
     esac
 
     case "$sourcef" in
@@ -97,8 +116,7 @@ for sourcef in testdata/stage_1/*.hpp; do
         *class_in_ns*)
             test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp "-Wpedantic" ;;
         *)
-            test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp "-Wpedantic -Werror "
-        ;;
+            test_compl_code "$outdir" "-Itestdata/stage_1" "$out_impl" main1.cpp "-Wpedantic -Werror" ;;
     esac
 
     set +e
@@ -108,14 +126,17 @@ done
 
 echo "Stage 2"
 test_gen_code "$outdir" "testdata/stage_2/case1/ifs1.hpp" "--file-scope=all"
+test_compare_code "$outdir" "testdata/stage_2/case1/ifs1.hpp"
 test_compl_code "$outdir" "-Itestdata/stage_2/case1" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
-# Test compilator parameter with extra include path result in a correct stub.
+echo "Test compilator parameter with extra include path result in a correct stub"
 test_gen_code "$outdir" "testdata/stage_2/case2/ifs1.hpp" "--file-scope=all" "" "-Itestdata/stage_2/case2/sub"
+test_compare_code "$outdir" "testdata/stage_2/case2/ifs1.hpp"
 test_compl_code "$outdir" "-Itestdata/stage_2/case2 -Itestdata/stage_2/case2/sub" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
-# Test limiting of stubbing to the supplied file.
+echo "Test limiting of stubbing to the supplied file"
 test_gen_code "$outdir" "testdata/stage_2/case3/ifs1.hpp" "" "" "-Itestdata/stage_2/case3/sub"
+test_compare_code "$outdir" "testdata/stage_2/case3/ifs1.hpp"
 test_compl_code "$outdir" "-Itestdata/stage_2/case3 -Itestdata/stage_2/case3/sub" "$outdir/stub_ifs1.cpp" "testdata/stage_2/main.cpp"
 
 echo "Stage 3"
