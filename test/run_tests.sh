@@ -73,11 +73,11 @@ function test_compare_code() {
     out_hdr="$outdir/stub_"$(basename ${inhdr})
     out_impl="$outdir/stub_"${inhdr_base%.hpp}".cpp"
 
-    diff -u "${expect_hdr}" "${out_hdr}"
     echo -e "Comparing result: ${expect_hdr}\t$PWD/${out_hdr}"
+    diff -u "${expect_hdr}" "${out_hdr}"
     if [[ -e "${expect_impl}" ]]; then
-        diff -u "${expect_impl}" "${out_impl}"
         echo -e "Comparing result: ${expect_impl}\t$PWD/${out_impl}"
+        diff -u "${expect_impl}" "${out_impl}"
     fi
 }
 

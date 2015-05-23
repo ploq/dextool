@@ -12,6 +12,8 @@ struct Ifunc7_intRef_charPtr { virtual float func7_intRef_charPtr(int & y, char 
 struct Ifunc3_int_constint { virtual const double func3_int_constint(int x, const int xx) = 0; };
 struct Ifunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr { virtual const void *const func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr(MadeUp z, const MadeUp zz, const MadeUp & zzz, const MadeUp **const zzzz) = 0; };
 struct IopAssign_constSimpleRef { virtual void opAssign_constSimpleRef(const Simple & other) = 0; };
+struct Iprot { virtual void prot() = 0; };
+struct Ipriv { virtual void priv() = 0; };
 struct IStubDtor { virtual void StubDtor() = 0; };
 } //NS:StubCallbackSimple
 
@@ -144,6 +146,34 @@ private:
 };
 void StubInit(StubopAssign_constSimpleRef* value);
 
+class Stubprot {
+public:
+    StubCallbackSimple::Iprot* GetCallback();
+    void SetCallback(StubCallbackSimple::Iprot* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+private:
+    friend class ::StubSimple;
+
+    StubCallbackSimple::Iprot* callback;
+    unsigned call_counter;
+};
+void StubInit(Stubprot* value);
+
+class Stubpriv {
+public:
+    StubCallbackSimple::Ipriv* GetCallback();
+    void SetCallback(StubCallbackSimple::Ipriv* value);
+    unsigned GetCallCounter() const;
+    void ResetCallCounter();
+private:
+    friend class ::StubSimple;
+
+    StubCallbackSimple::Ipriv* callback;
+    unsigned call_counter;
+};
+void StubInit(Stubpriv* value);
+
 class StubStubDtor {
 public:
     StubCallbackSimple::IStubDtor* GetCallback();
@@ -170,6 +200,8 @@ public:
     StubInternalSimple::Stubfunc3_int_constint& func3_int_constint();
     StubInternalSimple::Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr& func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr();
     StubInternalSimple::StubopAssign_constSimpleRef& opAssign_constSimpleRef();
+    StubInternalSimple::Stubprot& prot();
+    StubInternalSimple::Stubpriv& priv();
     StubInternalSimple::StubStubDtor& StubDtor();
 
 private:
@@ -180,6 +212,8 @@ private:
     StubInternalSimple::Stubfunc3_int_constint stub_func3_int_constint;
     StubInternalSimple::Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr stub_func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr;
     StubInternalSimple::StubopAssign_constSimpleRef stub_opAssign_constSimpleRef;
+    StubInternalSimple::Stubprot stub_prot;
+    StubInternalSimple::Stubpriv stub_priv;
     StubInternalSimple::StubStubDtor stub_StubDtor;
 };
 } //NS:StubInternalSimple
@@ -193,6 +227,10 @@ public:
     const double func3(int x, const int xx);
     const void *const func4(MadeUp z, const MadeUp zz, const MadeUp & zzz, const MadeUp **const zzzz);
     void operator=(const Simple & other);
+protected:
+    void prot();
+private:
+    void priv();
 public:
     StubSimple();
     StubSimple(char foo);

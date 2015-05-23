@@ -229,6 +229,54 @@ void StubInit(StubopAssign_constSimpleRef* value) {
     }
 }
 
+StubCallbackSimple::Iprot* Stubprot::GetCallback() {
+    return callback;
+}
+
+void Stubprot::SetCallback(StubCallbackSimple::Iprot* value) {
+    callback = value;
+}
+
+unsigned Stubprot::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubprot::ResetCallCounter() {
+    call_counter = 0;
+}
+
+void StubInit(Stubprot* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(Stubprot);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
+StubCallbackSimple::Ipriv* Stubpriv::GetCallback() {
+    return callback;
+}
+
+void Stubpriv::SetCallback(StubCallbackSimple::Ipriv* value) {
+    callback = value;
+}
+
+unsigned Stubpriv::GetCallCounter() const {
+    return call_counter;
+}
+
+void Stubpriv::ResetCallCounter() {
+    call_counter = 0;
+}
+
+void StubInit(Stubpriv* value) {
+    char* d = reinterpret_cast<char*>(value);
+    char* end = d + sizeof(Stubpriv);
+    for (; d != end; ++d) {
+        *d = 0;
+    }
+}
+
 StubCallbackSimple::IStubDtor* StubStubDtor::GetCallback() {
     return callback;
 }
@@ -261,6 +309,8 @@ StubStubData::StubStubData() {
     StubInit(&stub_func3_int_constint);
     StubInit(&stub_func4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPtr);
     StubInit(&stub_opAssign_constSimpleRef);
+    StubInit(&stub_prot);
+    StubInit(&stub_priv);
     StubInit(&stub_StubDtor);
 }
 
@@ -293,6 +343,14 @@ StubInternalSimple::Stubfunc4_MadeUp_constMadeUp_constMadeUpRef_constMadeUpPtrPt
 
 StubInternalSimple::StubopAssign_constSimpleRef& StubStubData::opAssign_constSimpleRef() {
     return stub_opAssign_constSimpleRef;
+}
+
+StubInternalSimple::Stubprot& StubStubData::prot() {
+    return stub_prot;
+}
+
+StubInternalSimple::Stubpriv& StubStubData::priv() {
+    return stub_priv;
 }
 
 StubInternalSimple::StubStubDtor& StubStubData::StubDtor() {
@@ -379,6 +437,22 @@ void StubSimple::operator=(const Simple & other) {
 
     if (Stub_data.opAssign_constSimpleRef().callback != 0) {
         Stub_data.opAssign_constSimpleRef().callback->opAssign_constSimpleRef(other);
+    }
+}
+
+void StubSimple::prot() {
+    Stub_data.prot().call_counter++;
+
+    if (Stub_data.prot().callback != 0) {
+        Stub_data.prot().callback->prot();
+    }
+}
+
+void StubSimple::priv() {
+    Stub_data.priv().call_counter++;
+
+    if (Stub_data.priv().callback != 0) {
+        Stub_data.priv().callback->priv();
     }
 }
 
