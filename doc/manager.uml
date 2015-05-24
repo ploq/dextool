@@ -5,8 +5,9 @@ ns is namespace global data
 is stored in
 ..public..
     + renderClass(hdr, impl)
-    + renderRegister(ns, impl)
-    + renderUnRegister(ns, impl)
+    + renderRegisterFunc(hdr, impl)
+    + renderRegister(var, impl)
+    + renderUnRegister(var, impl)
 }
 
 class PoolObject {

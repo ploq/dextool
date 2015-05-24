@@ -16,6 +16,7 @@
  - ctor's. Problem is... a sensible name mangling.
    Hmm maybe have to use extern function pointers?
  - ctor's arguments must be stored.
+ - default ctor must always be implemented.
 
 # Quality of Life
  - Date in the header when it was generated.

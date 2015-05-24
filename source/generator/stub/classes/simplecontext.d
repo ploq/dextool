@@ -22,6 +22,7 @@ public import generator.stub.classes.class_methods : MethodController;
 
 import std.algorithm : among, map;
 import std.ascii : newline;
+import std.typecons : BlackHole;
 
 import clang.c.index;
 import clang.Cursor;
@@ -32,6 +33,7 @@ import generator.stub.classes.access;
 import generator.analyzer : visitAst, IdStack, logNode, VisitNodeModule;
 import generator.stub.convert : toString;
 import generator.stub.containers : VariableContainer, CallbackContainer;
+import generator.stub.manager;
 import generator.stub.mangling;
 import generator.stub.misc : parmDeclToTypeName;
 import generator.stub.types;
@@ -39,8 +41,9 @@ import generator.stub.types;
 import generator.stub.classes.class_methods : MethodContext;
 
 interface ClassController {
-    StubPrefix getClassPrefix();
+    bool useObjectPool();
 
+    StubPrefix getClassPrefix();
     MethodController getMethod();
 }
 
@@ -57,6 +60,7 @@ struct ClassContext {
 
     /** Context for stubbing a class with a specific prefix.
      * Params:
+     *  ctrl = control parameters for code generation.
      *  prefix = prefix to use for the name of the stub class.
      *  name = name of the c++ class being stubbed.
      */
@@ -80,41 +84,60 @@ struct ClassContext {
         this.callbacks = CallbackContainer(cb_ns, cp);
         this.class_nesting = CppClassNesting(nesting.map!(a => cast(string) a).join("::"));
         this.ns_nesting = CppNsNesting(ns_nesting.map!(a => cast(string) a).join("::"));
+
+        if (ctrl.useObjectPool) {
+            string stub_class_name = mangleToStubClassName(prefix, name).str;
+            manager = new Manager(prefix,
+                CppNsNesting(this.ns_nesting.str ~ "::" ~ data_ns.str),
+                PoolName(prefix.str ~ stub_class_name ~ "Manager"),
+                CppType(this.ns_nesting.str ~ "::" ~ stub_class_name));
+        }
+        else {
+            manager = new BlackHole!StubPool;
+        }
     }
 
-    void translate(ref Cursor cursor, ref CppModule hdr, ref CppModule impl) {
+    void translate(ref Cursor cursor, CppModule hdr, CppModule impl) {
         void doTraversal(ref ClassContext ctx, CppHdrImpl top) {
             ctx.push(top);
             auto c = Cursor(cursor);
             visitAst!ClassContext(c, this);
         }
 
-        auto top = CppHdrImpl(hdr, impl);
-        auto internal = CppHdrImpl(hdr.base, impl.base);
+        auto top = CppHdrImpl(hdr.base, impl.base);
+        top.hdr.suppressIndent(1);
+        top.impl.suppressIndent(1);
+
+        auto internal = CppHdrImpl(hdr.namespace(data_ns.str), impl.namespace(data_ns.str));
         internal.hdr.suppressIndent(1);
         internal.impl.suppressIndent(1);
+        hdr.sep(2);
+        impl.sep(2);
+
         auto stub = CppHdrImpl(hdr.base, impl.base);
         stub.hdr.suppressIndent(1);
         stub.impl.suppressIndent(1);
 
+        manager.renderClass(stub.hdr, stub.impl);
         doTraversal(this, stub);
 
         // forward declaration of stubbed class.
-        internal.hdr.stmt(E("class") ~ E(mangleToStubClassName(prefix, name).str));
-        internal.hdr.sep(2);
+        top.hdr.stmt(E("class") ~ E(mangleToStubClassName(prefix, name).str));
+        top.hdr.sep(2);
 
-        callbacks.renderInterfaces(internal.hdr);
-        doDataStruct(data_ns, ns_nesting, vars, internal.hdr, internal.impl);
+        callbacks.renderInterfaces(top.hdr);
+        doDataStruct(ns_nesting, vars, internal.hdr, internal.impl);
+        manager.renderRegisterFunc(internal.hdr, internal.impl);
         doDataStructInit(prefix, data_ns, CppClassName(prefix ~ name), vars,
             this.class_code.hdr, stub.impl);
-
         hdr.sep;
     }
 
     /** Traverse cursor and translate a subset of kinds.
-     * It defers translation of class methods to specialized translator for those.
-     * The reason is that a class can have multiple interfaces it inherit from
-     * and the generated stub must implement all of them.
+     *
+     * It defers translation of class methods to specialized translator for
+     * those.  The reason is that a class can have multiple interfaces it
+     * inherit from and the generated stub must implement all of them.
      */
     bool apply(Cursor c) {
         bool descend = true;
@@ -143,15 +166,17 @@ struct ClassContext {
             break;
         case CXCursor_Constructor:
             push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr), current.impl));
-            ctorTranslator(c, prefix, current.hdr, current.impl);
+            ctorTranslator(c, prefix, manager, current.hdr, current.impl);
             descend = false;
             break;
         case CXCursor_Destructor:
             push(CppHdrImpl(consumeAccessSpecificer(access_spec, current.hdr), current.impl));
-            dtorTranslator(c, prefix, vars, callbacks, current.hdr, current.impl);
+            dtorTranslator(c, prefix, vars, callbacks, manager, current.hdr, current.impl);
             descend = false;
             break;
         case CXCursor_CXXAccessSpecifier:
+            ///TODO change to using an internal type to remove dependency on
+            // Clangs access specifier type.
             access_spec = CppAccessSpecifier(c.access.accessSpecifier);
             break;
         default:
@@ -172,25 +197,20 @@ private:
     VariableContainer vars;
     CallbackContainer callbacks;
     CppAccessSpecifier access_spec;
+    StubPool manager;
 
     immutable StubNs data_ns;
 }
 
 private:
 
-void doDataStruct(const StubNs data_ns, const CppNsNesting ns_nesting,
-    ref VariableContainer vars, ref CppModule hdr, ref CppModule impl) {
+void doDataStruct(const CppNsNesting ns_nesting, ref VariableContainer vars,
+    ref CppModule ns_hdr, ref CppModule ns_impl) {
     if (vars.length == 0)
         return;
 
-    auto ns_hdr = hdr.namespace(data_ns.str);
-    ns_hdr.suppressIndent(1);
-    auto ns_impl = impl.namespace(data_ns.str);
-    ns_impl.suppressIndent(1);
-
     vars.render(ns_nesting, ns_hdr, ns_impl);
-    hdr.sep(2);
-    impl.sep(2);
+    ns_hdr.sep(2);
 }
 
 void doDataStructInit(const StubPrefix prefix, const StubNs data_ns,
@@ -233,7 +253,8 @@ CppHdrImpl classTranslator(StubPrefix prefix, CppClassNesting nesting,
     return CppHdrImpl(doHeader(hdr_impl.hdr), hdr_impl.impl);
 }
 
-void ctorTranslator(Cursor c, const StubPrefix prefix, ref CppModule hdr, ref CppModule impl) {
+void ctorTranslator(Cursor c, const StubPrefix prefix, StubPool manager,
+    CppModule hdr, CppModule impl) {
     void doHeader(CppClassName name, const ref TypeName[] params) {
         auto p = params.toString;
         auto node = hdr.ctor(name.str, p);
@@ -242,6 +263,7 @@ void ctorTranslator(Cursor c, const StubPrefix prefix, ref CppModule hdr, ref Cp
     void doImpl(const CppClassName name, const TypeName[] params) {
         auto p = params.toString;
         auto node = impl.ctor_body(name.str, p);
+        manager.renderRegister(CppVariable("this"), node);
         impl.sep(2);
     }
 
@@ -252,7 +274,7 @@ void ctorTranslator(Cursor c, const StubPrefix prefix, ref CppModule hdr, ref Cp
 }
 
 void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer vars,
-    ref CallbackContainer callbacks, ref CppModule hdr, ref CppModule impl) {
+    ref CallbackContainer callbacks, StubPool manager, CppModule hdr, CppModule impl) {
     import std.string : removechars;
 
     void doHeader(CppClassName name, CppMethodName callback_name, ref CppModule hdr) {
@@ -275,7 +297,9 @@ void dtorTranslator(Cursor c, const StubPrefix prefix, ref VariableContainer var
         auto callback = mangleToStubStructMember(prefix, NameMangling.Callback,
             CppVariable(callback_name.str));
 
-        with (impl.dtor_body(stub_name.str)) {
+        auto dtor_b = impl.dtor_body(stub_name.str);
+        with (dtor_b) {
+            manager.renderUnRegister(CppVariable("this"), dtor_b);
             stmt("%s.%s().%s++".format(data.str, getter.str, counter.str));
             sep(2);
             with (if_(E(data.str).e(getter.str)("").e(callback.str) ~ E("!= 0"))) {

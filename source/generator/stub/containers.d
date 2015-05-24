@@ -39,7 +39,6 @@ version (unittest) {
     shared static this() {
         import std.exception;
 
-        //runUnitTests!app(new JsonTestResultWriter("results.json"));
         enforce(runUnitTests!(generator.stub.containers)(new ConsoleTestResultWriter),
             "Unit tests failed.");
     }

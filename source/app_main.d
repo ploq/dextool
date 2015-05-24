@@ -168,6 +168,10 @@ class StubVariant1 : StubController, ClassController, MethodController {
         return this;
     }
 
+    bool useObjectPool() {
+        return true;
+    }
+
     StubPrefix getClassPrefix() {
         return prefix;
     }

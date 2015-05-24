@@ -43,8 +43,6 @@ alias CppNsStack = CppNs[];
 
 alias HdrFilename = Typedef!(string, string.init, "HeaderFilename");
 
-alias OnlyStubVirtual = Typedef!(bool, bool.init, "StubOnlyVirtual");
-
 package:
 //TODO use the following typedefs in CppHdrImpl to avoid confusing hdr and impl.
 alias CppModuleHdr = Typedef!(CppModule, CppModule.init, "CppHeader");
@@ -77,6 +75,8 @@ alias CountStruct = Typedef!(string, string.init, "CountStructInNs");
 alias CountContVariable = Typedef!(TypeName, TypeName.init, "CountContVariable");
 alias StaticStruct = Typedef!(string, string.init, "StaticStructInNs");
 alias StaticContVariable = Typedef!(TypeName, TypeName.init, "StaticContVariable");
+
+alias PoolName = Typedef!(string, string.init, "PoolName");
 
 // convenient function for converting Typedef's to string representation.
 string str(T)(T value) @property @safe pure nothrow if (is(T : T!TL, TL : string)) {
