@@ -56,7 +56,24 @@ private:
     StubInternalIfs2::Stubifs2_func1_int_char stub_ifs2_func1_int_char;
     StubInternalIfs2::StubStubDtor stub_StubDtor;
 };
+
+void StubStubManagerRegister(::StubIfs2* instance);
+void StubStubManagerUnRegister(::StubIfs2* instance);
 } //NS:StubInternalIfs2
+
+class StubStubIfs2Manager {
+public:
+    StubStubIfs2Manager();
+    ~StubStubIfs2Manager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    ::StubIfs2* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    ::StubIfs2* GetInstance(unsigned nth);
+};
 
 class StubIfs2 : public Ifs2 {
 public:
@@ -120,7 +137,24 @@ private:
     StubInternalIfs3::Stubdostuff stub_dostuff;
     StubInternalIfs3::StubStubDtor stub_StubDtor;
 };
+
+void StubStubManagerRegister(::StubIfs3* instance);
+void StubStubManagerUnRegister(::StubIfs3* instance);
 } //NS:StubInternalIfs3
+
+class StubStubIfs3Manager {
+public:
+    StubStubIfs3Manager();
+    ~StubStubIfs3Manager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    ::StubIfs3* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    ::StubIfs3* GetInstance(unsigned nth);
+};
 
 class StubIfs3 : public Ifs3 {
 public:
@@ -245,7 +279,24 @@ private:
     StubInternalIfs1::Stubget_ifc3 stub_get_ifc3;
     StubInternalIfs1::StubStubDtor stub_StubDtor;
 };
+
+void StubStubManagerRegister(::StubIfs1* instance);
+void StubStubManagerUnRegister(::StubIfs1* instance);
 } //NS:StubInternalIfs1
+
+class StubStubIfs1Manager {
+public:
+    StubStubIfs1Manager();
+    ~StubStubIfs1Manager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    ::StubIfs1* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    ::StubIfs1* GetInstance(unsigned nth);
+};
 
 class StubIfs1 : public Ifs1 {
 public:

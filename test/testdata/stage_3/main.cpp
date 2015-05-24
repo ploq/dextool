@@ -26,18 +26,41 @@
 
 void test_stack_instance() {
     start_test();
+    StubStubIfs1Manager m;
     StubIfs1 stub;
 }
 
 void test_heap_instance() {
     start_test();
+    StubStubIfs1Manager m;
     Ifs1* obj = new StubIfs1;
     delete obj;
+}
+
+void test_pool() {
+    start_test();
+    StubIfs1* stub;
+    StubStubIfs1Manager m;
+
+    msg("No instances created so a null pointer");
+    assert(m.GetInstance() == 0);
+
+    stub = new StubIfs1;
+    msg("A instances created so expecting something other than null");
+    assert(m.GetInstance() != 0);
+
+    StubIfs1* stub2 = new StubIfs1;
+    assert(m.GetInstance(0) == stub);
+    assert(m.GetInstance(1) == stub2);
+
+    delete stub2;
+    assert(m.GetInstance(1) == 0);
 }
 
 // --- White box testing of init functions ---
 void test_init_counters() {
     start_test();
+    StubStubIfs1Manager m;
     StubIfs1 stub;
 
     msg("Increment call counter");
@@ -51,6 +74,7 @@ void test_init_counters() {
 
 void test_init_static() {
     start_test();
+    StubStubIfs1Manager m;
     StubIfs1 stub;
 
     stub.GetStub().ifs2_func1_int_char().SetReturn() = 42;
@@ -70,6 +94,7 @@ void test_init_callback() {
 
 void test_call_counter() {
     start_test();
+    StubStubIfs1Manager m;
     StubIfs1 stub;
     Ifs1* obj = &stub;
 
@@ -88,6 +113,7 @@ void test_call_counter() {
 
 void test_call_counter_reset() {
     start_test();
+    StubStubIfs1Manager m;
     StubIfs1 stub;
     Ifs1* obj = &stub;
 
@@ -102,6 +128,7 @@ void test_call_counter_reset() {
 
 void test_static_return() {
     start_test();
+    StubStubIfs1Manager m;
     StubIfs1 stub;
     Ifs1* obj = &stub;
 
@@ -111,6 +138,7 @@ void test_static_return() {
 
 void test_static_param_stored() {
     start_test();
+    StubStubIfs1Manager m;
     StubIfs1 stub;
     Ifs1* obj = &stub;
 
@@ -147,6 +175,7 @@ public:
 
 void test_callback_simple() {
     start_test();
+    StubStubIfs1Manager m;
     TestCallback cb;
     StubIfs1 stub;
     Ifs1* obj = &stub;
@@ -165,6 +194,7 @@ void test_callback_simple() {
 
 void test_callback_params() {
     start_test();
+    StubStubIfs1Manager m;
     TestCallback cb;
     StubIfs1 stub;
     Ifs1* obj = &stub;
@@ -183,6 +213,7 @@ void test_callback_params() {
 
 void test_callback_return_obj() {
     start_test();
+    StubStubIfs1Manager m;
     TestCallback cb;
     StubIfs1 stub;
     Ifs1* obj = &stub;
@@ -206,6 +237,7 @@ int main(int argc, char** argv) {
 
     test_stack_instance();
     test_heap_instance();
+    test_pool();
     test_init_counters();
     test_init_static();
     test_init_callback();

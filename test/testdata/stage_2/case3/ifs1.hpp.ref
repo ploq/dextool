@@ -111,7 +111,24 @@ private:
     StubInternalIfs1::Stubget_ifc3 stub_get_ifc3;
     StubInternalIfs1::StubStubDtor stub_StubDtor;
 };
+
+void StubStubManagerRegister(::StubIfs1* instance);
+void StubStubManagerUnRegister(::StubIfs1* instance);
 } //NS:StubInternalIfs1
+
+class StubStubIfs1Manager {
+public:
+    StubStubIfs1Manager();
+    ~StubStubIfs1Manager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    ::StubIfs1* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    ::StubIfs1* GetInstance(unsigned nth);
+};
 
 class StubIfs1 : public Ifs1 {
 public:

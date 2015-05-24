@@ -50,7 +50,24 @@ private:
     StubInternalSimple::Stubfunc1 stub_func1;
     StubInternalSimple::StubStubDtor stub_StubDtor;
 };
+
+void StubStubManagerRegister(::StubSimple* instance);
+void StubStubManagerUnRegister(::StubSimple* instance);
 } //NS:StubInternalSimple
+
+class StubStubSimpleManager {
+public:
+    StubStubSimpleManager();
+    ~StubStubSimpleManager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    ::StubSimple* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    ::StubSimple* GetInstance(unsigned nth);
+};
 
 class StubSimple : public Simple {
 public:

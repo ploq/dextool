@@ -56,7 +56,24 @@ private:
     StubInternalSmurf::StubopAssign_constSmurfRef stub_opAssign_constSmurfRef;
     StubInternalSmurf::StubStubDtor stub_StubDtor;
 };
+
+void StubStubManagerRegister(foo::bar::StubSmurf* instance);
+void StubStubManagerUnRegister(foo::bar::StubSmurf* instance);
 } //NS:StubInternalSmurf
+
+class StubStubSmurfManager {
+public:
+    StubStubSmurfManager();
+    ~StubStubSmurfManager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    foo::bar::StubSmurf* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    foo::bar::StubSmurf* GetInstance(unsigned nth);
+};
 
 class StubSmurf : public foo::bar::Smurf {
 public:

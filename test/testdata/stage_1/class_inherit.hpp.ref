@@ -50,7 +50,24 @@ private:
     StubInternalFoo::Stubfunc2 stub_func2;
     StubInternalFoo::Stubfunc3 stub_func3;
 };
+
+void StubStubManagerRegister(::StubFoo* instance);
+void StubStubManagerUnRegister(::StubFoo* instance);
 } //NS:StubInternalFoo
+
+class StubStubFooManager {
+public:
+    StubStubFooManager();
+    ~StubStubFooManager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    ::StubFoo* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    ::StubFoo* GetInstance(unsigned nth);
+};
 
 class StubFoo : public Foo {
 public:
@@ -95,7 +112,24 @@ public:
 private:
     StubInternalBar::Stubfunc5 stub_func5;
 };
+
+void StubStubManagerRegister(BarSpace::StubBar* instance);
+void StubStubManagerUnRegister(BarSpace::StubBar* instance);
 } //NS:StubInternalBar
+
+class StubStubBarManager {
+public:
+    StubStubBarManager();
+    ~StubStubBarManager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    BarSpace::StubBar* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    BarSpace::StubBar* GetInstance(unsigned nth);
+};
 
 class StubBar : public BarSpace::Bar {
 public:
@@ -174,7 +208,24 @@ private:
     StubInternalWarp::Stubfunc3 stub_func3;
     StubInternalWarp::Stubfunc4 stub_func4;
 };
+
+void StubStubManagerRegister(::StubWarp* instance);
+void StubStubManagerUnRegister(::StubWarp* instance);
 } //NS:StubInternalWarp
+
+class StubStubWarpManager {
+public:
+    StubStubWarpManager();
+    ~StubStubWarpManager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    ::StubWarp* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    ::StubWarp* GetInstance(unsigned nth);
+};
 
 class StubWarp : public Warp {
 public:
@@ -288,7 +339,24 @@ private:
     StubInternalSmurf::Stubfunc4 stub_func4;
     StubInternalSmurf::StubStubDtor stub_StubDtor;
 };
+
+void StubStubManagerRegister(::StubSmurf* instance);
+void StubStubManagerUnRegister(::StubSmurf* instance);
 } //NS:StubInternalSmurf
+
+class StubStubSmurfManager {
+public:
+    StubStubSmurfManager();
+    ~StubStubSmurfManager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    ::StubSmurf* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    ::StubSmurf* GetInstance(unsigned nth);
+};
 
 class StubSmurf : public Smurf {
 public:
@@ -391,7 +459,24 @@ private:
     StubInternalDaddySmurf::Stubfunc4 stub_func4;
     StubInternalDaddySmurf::StubStubDtor stub_StubDtor;
 };
+
+void StubStubManagerRegister(::StubDaddySmurf* instance);
+void StubStubManagerUnRegister(::StubDaddySmurf* instance);
 } //NS:StubInternalDaddySmurf
+
+class StubStubDaddySmurfManager {
+public:
+    StubStubDaddySmurfManager();
+    ~StubStubDaddySmurfManager();
+
+    /// Get the first instance created.
+    /// @return Pointer to instance or null if none is created.
+    ::StubDaddySmurf* GetInstance();
+
+    /// Get the Nth instance created.
+    /// @return Pointer to instance or null if none was found.
+    ::StubDaddySmurf* GetInstance(unsigned nth);
+};
 
 class StubDaddySmurf : public DaddySmurf {
 public:

@@ -33,7 +33,7 @@ function test_compl_code() {
     flags=$5
 
     echo -e "${C_YELLOW}=== Compile $impl  ===${C_NONE}"
-    tmp="g++ -std=c++03 $flags -o $outdir/binary -I$outdir $inclpath $impl $main"
+    tmp="g++ -std=c++03 $flags -g -o $outdir/binary -I$outdir $inclpath $impl $main"
     echo "$tmp"
     eval "$tmp"
     "$outdir"/binary
