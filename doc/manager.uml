@@ -1,0 +1,25 @@
+@startuml
+
+interface StubPool {
+ns is namespace global data
+is stored in
+..public..
+    + renderClass(hdr, impl)
+    + renderRegister(ns, impl)
+    + renderUnRegister(ns, impl)
+}
+
+class PoolObject {
+    this(string type)
+}
+
+class PoolManager {
+    + this(PoolObject)
+    - PoolObject obj
+}
+PoolManager --|> StubPool
+
+class DummyManager
+DummyManager --|> StubPool
+
+@enduml
