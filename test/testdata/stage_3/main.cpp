@@ -39,22 +39,68 @@ void test_heap_instance() {
 
 void test_pool() {
     start_test();
-    StubIfs1* stub;
+    StubIfs1* stub0;
     StubStubIfs1Manager m;
 
     msg("No instances created so a null pointer");
     assert(m.GetInstance() == 0);
 
-    stub = new StubIfs1;
+    stub0 = new StubIfs1;
     msg("A instances created so expecting something other than null");
     assert(m.GetInstance() != 0);
+}
+
+void test_pool_delete() {
+    start_test();
+    StubStubIfs1Manager m;
+
+    StubIfs1* stub = new StubIfs1;
+    assert(m.GetInstance(0) == stub);
+    delete stub;
+    assert(m.GetInstance(0) == 0);
+}
+
+void test_pool_growth() {
+    start_test();
+    StubStubIfs1Manager m;
+
+    msg("Forcing a resize of object pool");
+    StubIfs1* stub0 = new StubIfs1;
+    StubIfs1* stub1 = new StubIfs1;
+    StubIfs1* stub2 = new StubIfs1;
+    StubIfs1* stub3 = new StubIfs1;
+    StubIfs1* stub4 = new StubIfs1;
+
+    assert(m.GetInstance(0) == stub0);
+    assert(m.GetInstance(1) == stub1);
+    assert(m.GetInstance(2) == stub2);
+    assert(m.GetInstance(3) == stub3);
+    assert(m.GetInstance(4) == stub4);
+}
+
+void test_pool_hole() {
+    start_test();
+    StubStubIfs1Manager m;
+
+    msg("Test a pool that have a hole and grow");
+    StubIfs1* stub0 = new StubIfs1;
+    StubIfs1* stub1 = new StubIfs1;
+    delete stub1;
 
     StubIfs1* stub2 = new StubIfs1;
-    assert(m.GetInstance(0) == stub);
-    assert(m.GetInstance(1) == stub2);
+    StubIfs1* stub3 = new StubIfs1;
+    StubIfs1* stub4 = new StubIfs1;
 
-    delete stub2;
+    assert(m.GetInstance(0) == stub0);
     assert(m.GetInstance(1) == 0);
+    assert(m.GetInstance(2) == stub2);
+    assert(m.GetInstance(3) == stub3);
+    assert(m.GetInstance(4) == stub4);
+
+    msg("Using stub to verify access of values via manager");
+    Ifs1* sut = stub3;
+    sut->run();
+    assert(m.GetInstance(3)->GetStub().run().GetCallCounter() == 1);
 }
 
 // --- White box testing of init functions ---
@@ -238,6 +284,9 @@ int main(int argc, char** argv) {
     test_stack_instance();
     test_heap_instance();
     test_pool();
+    test_pool_delete();
+    test_pool_growth();
+    test_pool_hole();
     test_init_counters();
     test_init_static();
     test_init_callback();
