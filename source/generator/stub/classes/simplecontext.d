@@ -61,8 +61,9 @@ struct ClassContext {
     /** Context for stubbing a class with a specific prefix.
      * Params:
      *  ctrl = control parameters for code generation.
-     *  prefix = prefix to use for the name of the stub class.
      *  name = name of the c++ class being stubbed.
+     *  nesting = nesting of ns+class where the stub is to be created.
+     *  ns_nesting = nesting of ns where the stub is to be created.
      */
     this(ClassController ctrl, const CppClassName name, const CppNesting nesting,
         const CppNsStack ns_nesting) {
