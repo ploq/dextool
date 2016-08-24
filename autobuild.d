@@ -716,6 +716,7 @@ int main(string[] args) {
                               "test/cstub_tests.d",
                               "test/cpp_tests.d",
                               "test/plantuml_tests.d",
+                              "test/graphml_tests.d",
                               "test/external_main.d",
                               "test/utils.d"
         )
