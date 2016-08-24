@@ -115,9 +115,9 @@ class GraphMLFrontend : Controller, Parameters, Products {
         "--class-memberdep"].isTrue;
 
         auto variant = new GraphMLFrontend(FilePrefix(parsed["--file-prefix"].toString),
-                                           DirName(parsed["--out"].toString),
-                                           gen_class_method, gen_class_param_dep,
-                                           gen_class_inherit_dep, gen_class_member_dep);
+                DirName(parsed["--out"].toString),
+                gen_class_method, gen_class_param_dep, gen_class_inherit_dep,
+                gen_class_member_dep);
 
         variant.exclude = exclude;
         variant.restrict = restrict;
@@ -125,7 +125,9 @@ class GraphMLFrontend : Controller, Parameters, Products {
         return variant;
     }
 
-    this(FilePrefix file_prefix, DirName output_dir, Flag!"genClassMethod" class_method, Flag!"genClassParamDependency" class_param_dep, Flag!"genClassInheritDependency" class_inherit_dep,
+    this(FilePrefix file_prefix, DirName output_dir, Flag!"genClassMethod" class_method,
+            Flag!"genClassParamDependency" class_param_dep,
+            Flag!"genClassInheritDependency" class_inherit_dep,
             Flag!"genClassMemberDependency" class_member_dep) {
 
         this.file_prefix = file_prefix;

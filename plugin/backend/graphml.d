@@ -53,7 +53,6 @@ final class GraphMLAnalyzer : Visitor {
     override void visit(const(TranslationUnit) v) {
     }
 
-
     import std.format : FormatSpec;
 
     void toString(Writer, Char)(scope Writer w, FormatSpec!Char formatSpec) const {
@@ -71,7 +70,9 @@ final class GraphMLAnalyzer : Visitor {
         buf.reserve(100);
         auto fmt = FormatSpec!char("%s");
         toString((const(char)[] s) { buf ~= s; }, fmt);
-        auto trustedUnique(T)(T t) @trusted { return assumeUnique(t); }
+        auto trustedUnique(T)(T t) @trusted {
+            return assumeUnique(t);
+        }
 
         return trustedUnique(buf);
     }
