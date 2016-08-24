@@ -35,7 +35,7 @@ TestParams genTestParams(string f, const ref TestEnv testEnv) {
     p.input_ext = p.root ~ Path(f);
     p.base_file_compare = p.input_ext.stripExtension;
 
-    p.out_pu = testEnv.outdir ~ "graph_raw.xml";
+    p.out_pu = testEnv.outdir ~ "dextoo_raw.graphml";
 
     p.dexParams = ["--DRT-gcopt=profile:1", "graphml", "--debug"];
     p.dexDiagramParams = ["--class-paramdep", "--class-inheritdep", "--class-memberdep"];
@@ -53,7 +53,7 @@ void runTestFile(const ref TestParams p, ref TestEnv testEnv) {
         Path input = p.base_file_compare;
         // dfmt off
         compareResult(
-                      GR(input ~ Ext(".xml.ref"), p.out_pu),
+                      GR(input ~ Ext(".graphml.ref"), p.out_pu),
                       );
         // dfmt on
     }
@@ -64,6 +64,43 @@ void runTestFile(const ref TestParams p, ref TestEnv testEnv) {
 @Name(testId ~ "Should be analyse data of a class in global namespace")
 unittest {
     mixin(EnvSetup(globalTestdir));
-    auto p = genTestParams("dev/class.hpp", testEnv);
+    auto p = genTestParams("class_empty.hpp", testEnv);
+    runTestFile(p, testEnv);
+}
+
+@Name(testId ~ "Should be a class in a namespace")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("class_in_ns.hpp", testEnv);
+    runTestFile(p, testEnv);
+}
+
+@Name(testId ~ "Should be analyse data of free functions in global namespace")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("functions.h", testEnv);
+    runTestFile(p, testEnv);
+}
+
+@Name(
+        testId
+        ~ "Should be analyze data of free variables in the global namespace related to the file they are declared in")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("variables.h", testEnv);
+    runTestFile(p, testEnv);
+}
+
+@Name(testId ~ "Should be free variables in a namespace and thus related to the namespace")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("variables_in_ns.hpp", testEnv);
+    runTestFile(p, testEnv);
+}
+
+@Name(testId ~ "Should be all type of class classifications")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("class_variants_interface.hpp", testEnv);
     runTestFile(p, testEnv);
 }
