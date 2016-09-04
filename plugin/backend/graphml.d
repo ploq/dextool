@@ -170,10 +170,7 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
                 ctrl, recv, *container, indent + 1);
         v.accept(visitor);
 
-        auto style = visitor.style;
-        style.stereotype = visitor.classification.toInternal!StereoType;
-
-        recv.put(result, ns_stack, style);
+        recv.put(result, ns_stack, visitor.style);
     }
 
     override void visit(const(Namespace) v) {
@@ -189,6 +186,14 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
     }
 }
 
+/**
+ *
+ * The $(D UMLClassVisitor) do not know when the analyze is finished.
+ * Therefore from the viewpoint of $(D UMLClassVisitor) classification is an
+ * ongoing process. It is the responsibility of the caller of $(D
+ * UMLClassVisitor) to use the final result of the classification together with
+ * the style.
+ */
 private final class UMLClassVisitor(ReceiveT) : Visitor {
     import std.algorithm : map, copy, each, joiner;
     import std.array : Appender;
@@ -220,11 +225,6 @@ private final class UMLClassVisitor(ReceiveT) : Visitor {
      */
     TypeKindAttr type;
 
-    /** Classification of the class.
-     * Affected by methods.
-     */
-    ClassificationState classification;
-
     NodeStyle!UMLClassNode style;
 
     private {
@@ -237,6 +237,11 @@ private final class UMLClassVisitor(ReceiveT) : Visitor {
 
         /// If the class has any members.
         Flag!"hasMember" hasMember;
+
+        /** Classification of the class.
+         * Affected by methods.
+         */
+        ClassificationState classification;
     }
 
     this(ref const(ClassDeclResult) result, const(CppNs)[] reside_in_ns,
@@ -245,13 +250,28 @@ private final class UMLClassVisitor(ReceiveT) : Visitor {
         this.recv = &recv;
         this.container = &container;
         this.indent = indent;
-        this.ns_stack = reside_in_ns.dup;
+        this.ns_stack = CppNsStack(reside_in_ns.dup);
 
         this.access = CppAccess(AccessType.Private);
         this.classification = ClassificationState.Unknown;
 
         this.type = result.type;
         this.style.label = cast(string) result.name;
+    }
+
+    /**
+     * Has hidden data dependencies on:
+     *  - hasMember.
+     *  - current state of classification.
+     *
+     * Will update:
+     *  - the internal state classification
+     *  - the style stereotype
+     */
+    private void updateClassification(MethodKind kind, MemberVirtualType virtual_kind) {
+        this.classification = classifyClass(this.classification, kind,
+                virtual_kind, this.hasMember);
+        this.style.stereotype = this.classification.toInternal!StereoType;
     }
 
     /// Nested class definitions.
@@ -301,8 +321,7 @@ private final class UMLClassVisitor(ReceiveT) : Visitor {
         mixin(mixinNodeLog!());
 
         auto result = analyzeDestructor(v, *container, indent);
-        classification = classifyClass(classification, MethodKind.Dtor,
-                cast(MemberVirtualType) result.virtualKind, hasMember);
+        updateClassification(MethodKind.Dtor, cast(MemberVirtualType) result.virtualKind);
 
         auto tor = CppDtor(result.usr, result.name, access, result.virtualKind);
         style.methods ~= access.toInternal!string ~ tor.toString;
@@ -321,8 +340,7 @@ private final class UMLClassVisitor(ReceiveT) : Visitor {
                 result.returnType, access, CppConstMethod(result.isConst), result.virtualKind);
         style.methods ~= access.toInternal!string ~ method.toString;
 
-        classification = classifyClass(classification, MethodKind.Method,
-                cast(MemberVirtualType) result.virtualKind, hasMember);
+        updateClassification(MethodKind.Method, cast(MemberVirtualType) result.virtualKind);
 
         recv.put(this.type, result, access);
     }
@@ -338,8 +356,7 @@ private final class UMLClassVisitor(ReceiveT) : Visitor {
         // TODO probably not necessary for classification to store it as a
         // member. Instead extend MethodKind to having a "Member".
         hasMember = Yes.hasMember;
-        classification = classifyClass(classification, MethodKind.Unknown,
-                MemberVirtualType.Unknown, hasMember);
+        updateClassification(MethodKind.Unknown, MemberVirtualType.Unknown);
 
         recv.put(this.type, result, access);
     }
@@ -356,7 +373,7 @@ private T toInternal(T, S)(S value) @safe pure nothrow @nogc
         if (isSomeString!T && is(S == CppAccess)) {
     import cpptooling.data.representation : AccessType;
 
-    final switch (cast(AccessType) value) {
+    final switch (value) {
     case AccessType.Private:
         return "-";
     case AccessType.Protected:
@@ -697,7 +714,7 @@ private:
 
         import cpptooling.data.type : toStringNs;
 
-        auto ns_usr = cast(USRType) ns.toStringNs;
+        auto ns_usr = USRType(ns.toStringNs);
 
         if (ns_usr !in nodes) {
             auto ns_loc = LocationTag(null);
