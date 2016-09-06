@@ -9,7 +9,7 @@ one at http://mozilla.org/MPL/2.0/.
 */
 module plugin.backend.graphml;
 
-import std.traits : Unqual, isSomeString;
+import std.traits : isSomeString;
 import std.typecons : scoped, Tuple, Nullable, Flag, Yes;
 import logger = std.experimental.logger;
 
@@ -19,6 +19,7 @@ import cpptooling.analyzer.type : TypeKindAttr, TypeKind, TypeAttr,
 import cpptooling.analyzer.clang.ast : Visitor;
 import cpptooling.data.symbol.container : Container;
 import cpptooling.data.type : CppAccess;
+import cpptooling.utility.unqual : Unqual;
 
 version (unittest) {
     import unit_threaded;
@@ -395,7 +396,7 @@ private struct ShapeNode {
     void toString(Writer)(scope Writer w) const {
         import std.format : formattedWrite;
 
-        formattedWrite(w, `<y:NodeLabel>%s</y:NodeLabel>`, label);
+        formattedWrite(w, `<y:NodeLabel><![CDATA[%s]]></y:NodeLabel>`, label);
     }
 }
 
@@ -412,7 +413,7 @@ private struct UMLClassNode {
         import std.format : formattedWrite;
         import std.range.primitives : put;
 
-        formattedWrite(w, `<y:NodeLabel>%s</y:NodeLabel>`, label);
+        formattedWrite(w, `<y:NodeLabel><![CDATA[%s]]></y:NodeLabel>`, label);
 
         formattedWrite(w, `<y:Geometry height="%s" width="100.0"/>`,
                 stereotype == StereoType.None ? baseHeight : baseHeight * 2);
@@ -500,7 +501,11 @@ private void ccdataWrap(Writer, ARGS...)(scope Writer w, auto ref ARGS args) {
 
     put(w, `<![CDATA[`);
     foreach (arg; args) {
-        put(w, arg);
+        static if (__traits(hasMember, typeof(arg), "toString")) {
+            arg.toString(w);
+        } else {
+            put(w, arg);
+        }
     }
     put(w, `]]>`);
 }
@@ -558,9 +563,16 @@ private T toInternal(T, S)(S value) @safe pure nothrow @nogc
 
 import std.range : isOutputRange;
 
-/**
- * Node must never be duplicated.
+/** Transform analyze data to a xml stream.
+ *
+ * XML nodes must never be duplicated.
  * An edge source or target must be to nodes that exist.
+ *
+ * # Strategy `class`
+ * The generation of a `node` is delayed as long as possible for a class
+ * declaration in the hope of finding the definition.
+ * The delay is implemented with a cache.
+ * When finalize is called the cache is forcefully transformed to `nodes`.
  */
 class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)) {
     import cpptooling.analyzer.clang.analyze_helper : CXXBaseSpecifierResult,
@@ -570,14 +582,14 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     import cpptooling.analyzer.type : TypeKindAttr, TypeKind, TypeAttr,
         toStringDecl;
     import cpptooling.data.type : USRType, LocationTag, Location, CppNs;
+    import plugin.utility : MarkArray;
 
     private {
+        MarkArray!TypeKindAttr cache_decl;
+
         RecvXmlT recv;
         bool[USRType] streamed_nodes;
         LookupT lookup;
-
-        alias resolveType = resolveTypeRef!(LookupT, TypeKind.Info.Kind.array,
-                TypeKind.Info.Kind.funcPtr, TypeKind.Info.Kind.pointer);
     }
 
     this(RecvXmlT recv, LookupT lookup) {
@@ -641,14 +653,15 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     void put(ref const(FunctionDeclResult) result) {
         import cpptooling.data.type : TypeKindVariable, VariadicType;
 
-        auto src = resolveType(result.type.kind, result.type.attr, lookup).front;
+        auto src = resolveTypeRef(result.type.kind, result.type.attr, lookup).front;
         {
             auto loc = lookup.location(src.kind.usr).front.any;
             nodeIfNotPrimitive(streamed_nodes, recv, src, loc);
         }
 
         {
-            auto target = resolveType(result.returnType.kind, result.returnType.attr, lookup).front;
+            auto target = resolveTypeRef(result.returnType.kind, result.returnType.attr, lookup)
+                .front;
             auto loc = lookup.location(target.kind.usr).front.any;
             nodeIfNotPrimitive(streamed_nodes, recv, target, loc);
             edgeIfNotPrimitive(recv, src, target);
@@ -672,7 +685,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
                 continue;
             }
 
-            auto target = resolveType(type.kind, type.attr, lookup).front;
+            auto target = resolveTypeRef(type.kind, type.attr, lookup).front;
             auto loc = lookup.location(target.kind.usr).front.any;
             nodeIfNotPrimitive(streamed_nodes, recv, target, loc);
             edgeIfNotPrimitive(recv, src, target);
@@ -681,7 +694,17 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
 
     ///
     void put(ref const(ClassDeclResult) result, CppNs[] ns, ref const(NodeStyle!UMLClassNode) style) {
-        nodeIfMissing(streamed_nodes, recv, result.type.kind.usr, style, result.location);
+        void putDeclaration(TypeKindAttr type) {
+            cache_decl.put(type);
+        }
+
+        void putDefinition(TypeKindAttr type, LocationTag loc) {
+            nodeIfMissing(streamed_nodes, recv, type.kind.usr, style, loc);
+        }
+
+        import std.range : only;
+
+        resolveLocation(&putDeclaration, &putDefinition, only(result.type), lookup);
 
         auto ns_usr = addNamespaceNode(streamed_nodes, recv, ns);
         if (!ns_usr.isNull) {
@@ -693,18 +716,66 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     }
 
     void put(ref const(TypeKindAttr) src, ref const(DestructorResult) result, in CppAccess access) {
+        // do nothing
     }
 
     void put(ref const(TypeKindAttr) src, ref const(CXXMethodResult) result, in CppAccess access) {
     }
 
     void put(ref const(TypeKindAttr) src, ref const(FieldDeclResult) result, in CppAccess access) {
+        if (result.type.kind.info.kind == TypeKind.Info.Kind.primitive) {
+            return;
+        }
+
+        LocationTag loc;
+        foreach (maybe_loc; lookup.location(result.type.kind.usr).front.any) {
+            loc = maybe_loc;
+        }
+
+        nodeIfMissing(streamed_nodes, recv, result.type.kind.usr, result.type, loc);
+
+        // connect file to instance
+        edge(recv, src.kind.usr, result.type.kind.usr);
     }
 
     void put(ref const(TypeKindAttr) src, ref const(CXXBaseSpecifierResult) result) {
     }
 
 private:
+
+    import std.range : ElementType;
+
+    /** Resolve a type and store the result in target. */
+    static void resolveLocation(TargetDeclT, TargetDefT, Range, LookupT)(
+            TargetDeclT target_decl, TargetDefT target_def, Range range, LookupT lookup)
+            if (is(Unqual!(ElementType!Range) == TypeKindAttr) && __traits(hasMember,
+                LookupT, "kind") && __traits(hasMember, LookupT, "location")) {
+        import std.algorithm : map, joiner, cache;
+        import std.typecons : tuple;
+
+        // dfmt off
+        foreach (ref a; range
+                 .map!(a => resolveTypeRef(a.kind, a.attr, lookup))
+                 .joiner
+                 // a tuple of (TypeKindAttr, DeclLocation)
+                 .map!(a => tuple(a, lookup.location(a.kind.usr)))) {
+            // no location?
+            if (a[1].length == 0) {
+                target_decl(a[0]);
+                continue;
+            }
+            auto loc = a[1].front;
+
+            if (loc.hasDefinition) {
+                target_def(a[0], loc.definition);
+            } else {
+                target_decl(a[0]);
+            }
+        }
+        // dfmt on
+    }
+
+    // XML support functions
 
     static Nullable!USRType addNamespaceNode(NodeStoreT, RecvT)(ref NodeStoreT nodes,
             ref RecvT recv, CppNs[] ns) {
@@ -750,7 +821,7 @@ private:
         }
 
         // add node for the type
-        auto target = resolveType(result.type.kind, result.type.attr, lookup).front;
+        auto target = resolveTypeRef(result.type.kind, result.type.attr, lookup).front;
         auto loc = lookup.location(target.kind.usr).front.any;
         nodeIfNotPrimitive(nodes, recv, target, loc);
 
@@ -770,6 +841,14 @@ private:
         nodeIfMissing(nodes, recv, type.kind.usr, type, loc);
     }
 
+    /**
+     * Params:
+     *   nodes = a AA with USRType as key
+     *   recv = the receiver of the xml data
+     *   node_usr = the unique USR for the node
+     *   node = either the TypeKindAttr of the node or a type supporting
+     *          `.toString` taking a generic writer as argument.
+     */
     static void nodeIfMissing(NodeStoreT, RecvT, NodeT, LocationT)(ref NodeStoreT nodes,
             ref RecvT recv, USRType node_usr, NodeT node, LocationT loc) {
         if (node_usr in nodes) {
@@ -787,7 +866,7 @@ private:
             }
         }
 
-        static if (is(NodeT == TypeKindAttr)) {
+        static if (is(Unqual!NodeT == TypeKindAttr)) {
             auto style = makeShapeNode(node.toStringDecl);
         } else {
             auto style = node;

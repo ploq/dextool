@@ -35,6 +35,7 @@ int main(string[] args) {
                           "cpptooling.utility.taggedalgebraic",
                           "cpptooling.utility.virtualfilesystem",
                           "plugin.loader",
+                          "plugin.utility",
                           "plugin.backend.graphml",
                           "plugin.backend.plantuml",
                           // component tests

@@ -104,3 +104,10 @@ unittest {
     auto p = genTestParams("class_variants_interface.hpp", testEnv);
     runTestFile(p, testEnv);
 }
+
+@Name(testId ~ "Should be all kind of member relations between classes")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("class_members.hpp", testEnv);
+    runTestFile(p, testEnv);
+}
