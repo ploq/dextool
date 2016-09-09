@@ -19,8 +19,7 @@ struct TestParams {
 
     Path root;
     Path input_ext;
-    Path base_file_compare;
-    Path out_pu;
+    Path out_xml;
 
     // dextool parameters;
     string[] dexParams;
@@ -33,9 +32,8 @@ TestParams genTestParams(string f, const ref TestEnv testEnv) {
 
     p.root = Path("testdata/graphml").absolutePath;
     p.input_ext = p.root ~ Path(f);
-    p.base_file_compare = p.input_ext.stripExtension;
 
-    p.out_pu = testEnv.outdir ~ "dextoo_raw.graphml";
+    p.out_xml = testEnv.outdir ~ "dextool_raw.graphml";
 
     p.dexParams = ["--DRT-gcopt=profile:1", "graphml", "--debug"];
     p.dexDiagramParams = ["--class-paramdep", "--class-inheritdep", "--class-memberdep"];
@@ -47,16 +45,42 @@ TestParams genTestParams(string f, const ref TestEnv testEnv) {
 void runTestFile(const ref TestParams p, ref TestEnv testEnv) {
     dextoolYap("Input:%s", p.input_ext.toRawString);
     runDextool(p.input_ext, testEnv, p.dexParams ~ p.dexDiagramParams, p.dexFlags);
+}
 
-    if (!p.skipCompare) {
-        dextoolYap("Comparing");
-        Path input = p.base_file_compare;
-        // dfmt off
-        compareResult(
-                      GR(input ~ Ext(".graphml.ref"), p.out_pu),
-                      );
-        // dfmt on
-    }
+auto getDocument(T)(ref T p) {
+    import std.xml;
+
+    static import std.file;
+    import std.utf : validate;
+    import std.xml : Document, check;
+
+    string fin = cast(string) std.file.read(p.out_xml.toString);
+    validate(fin);
+    check(fin);
+    auto xml = new Document(fin);
+
+    return xml;
+}
+
+auto getGraph(T)(ref T p) {
+    return getDocument(p).elements.filter!(a => a.tag.name == "graph").front;
+}
+
+auto getNode(T)(ref T graph, string id) {
+    return graph.elements.filter!(a => a.tag.name == "node" && a.tag.attr["id"].text == id);
+}
+
+auto countNode(T)(ref T graph, string id) {
+    return graph.getNode(id).count;
+}
+
+auto getEdge(T)(ref T graph, string source, string target) {
+    return graph.elements.filter!(a => a.tag.name == "edge"
+            && a.tag.attr["source"].text == source && a.tag.attr["target"].text == target);
+}
+
+auto countEdge(T)(ref T graph, string source, string target) {
+    return graph.getEdge(source, target).map!(a => 1).count;
 }
 
 // BEGIN Testing #############################################################
@@ -110,4 +134,13 @@ unittest {
     mixin(EnvSetup(globalTestdir));
     auto p = genTestParams("class_members.hpp", testEnv);
     runTestFile(p, testEnv);
+
+    auto graph = getGraph(p);
+    graph.countNode("c:@S@Impl").shouldEqual(1);
+    graph.countNode("c:@S@Impl_ptr").shouldEqual(1);
+    graph.countNode("c:@S@Impl_ref").shouldEqual(1);
+    graph.countNode("c:@S@ToImpl").shouldEqual(1);
+    graph.countEdge("c:@S@ToImpl", "c:@S@Impl").shouldEqual(1);
+    graph.countEdge("c:@S@ToImpl", "c:@S@Impl_ref").shouldEqual(1);
+    graph.countEdge("c:@S@ToImpl", "c:@S@Impl_ptr").shouldEqual(1);
 }
