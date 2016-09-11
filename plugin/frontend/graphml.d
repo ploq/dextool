@@ -160,6 +160,23 @@ class GraphMLFrontend : Controller, Parameters, Products {
 
     private File fout;
 
+    static auto make(FileName fname) {
+        auto fout = File(cast(string) fname, "w");
+        writeXmlHeader(fout);
+
+        return XmlStream(fout);
+    }
+
+    @disable this(this);
+
+    ~this() {
+        writeXmlFooter(fout);
+    }
+
+    void put(const(char)[] v) {
+        fout.write(v);
+    }
+
     private static void writeXmlHeader(T)(T recv) {
         recv.writeln(`<?xml version="1.0" encoding="UTF-8"?>`);
         recv.writeln(`<graphml`);
@@ -178,21 +195,6 @@ class GraphMLFrontend : Controller, Parameters, Products {
     private static void writeXmlFooter(T)(T recv) {
         recv.writeln(`</graph>`);
         recv.writeln(`</graphml>`);
-    }
-
-    static auto make(FileName fname) {
-        auto fout = File(cast(string) fname, "w");
-        writeXmlHeader(fout);
-
-        return XmlStream(fout);
-    }
-
-    void put(const(char)[] v) {
-        fout.write(v);
-    }
-
-    void finalize() {
-        writeXmlFooter(fout);
     }
 }
 
@@ -233,8 +235,6 @@ ExitStatusType pluginMain(GraphMLFrontend variant, in string[] in_cflags,
     auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
 
     auto xml_stream = XmlStream.make(variant.toFile);
-    scope (success)
-        xml_stream.finalize();
 
     auto transform_to_file = new TransformToXmlStream!(XmlStream, Lookup)(xml_stream,
             Lookup(&container));
@@ -263,6 +263,7 @@ ExitStatusType pluginMain(GraphMLFrontend variant, in string[] in_cflags,
             return ExitStatusType.Errors;
         }
     }
+    transform_to_file.finalize();
 
     debug {
         logger.trace(visitor);

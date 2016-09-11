@@ -84,6 +84,12 @@ struct MarkArray(T) {
         arr = arr[].enumerate.filter!(a => !canFind(remove_, a.index)).map!(a => a.value).array();
         remove_.length = 0;
     }
+
+    /// Clear the $(D MarkArray).
+    void clear() {
+        arr.length = 0;
+        remove_.length = 0;
+    }
 }
 
 @Name("Should store item")

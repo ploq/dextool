@@ -136,6 +136,17 @@ unittest {
     runTestFile(p, testEnv);
 
     auto graph = getGraph(p);
+
+    // test forward declarations
+    graph.countNode("c:@S@ToForward").shouldEqual(1);
+    graph.countNode("c:@S@Forward_ptr").shouldEqual(1);
+    graph.countNode("c:@S@Forward_ref").shouldEqual(1);
+    graph.countNode("c:@S@Forward_decl").shouldEqual(1);
+    graph.countEdge("c:@S@ToForward", "c:@S@Forward_ptr").shouldEqual(1);
+    graph.countEdge("c:@S@ToForward", "c:@S@Forward_ref").shouldEqual(1);
+    graph.countEdge("c:@S@ToForward", "c:@S@Forward_decl").shouldEqual(1);
+
+    // test definitions
     graph.countNode("c:@S@Impl").shouldEqual(1);
     graph.countNode("c:@S@Impl_ptr").shouldEqual(1);
     graph.countNode("c:@S@Impl_ref").shouldEqual(1);
@@ -143,4 +154,14 @@ unittest {
     graph.countEdge("c:@S@ToImpl", "c:@S@Impl").shouldEqual(1);
     graph.countEdge("c:@S@ToImpl", "c:@S@Impl_ref").shouldEqual(1);
     graph.countEdge("c:@S@ToImpl", "c:@S@Impl_ptr").shouldEqual(1);
+
+    // test that an edge to a primitive type is not formed
+    graph.countNode("c:@S@ToPrimitive").shouldEqual(1);
+    // dfmt off
+    graph.elements
+        // all edges from the node
+        .filter!(a => a.tag.name == "edge" && a.tag.attr["source"].text == "c:@S@ToPrimitive")
+        .count
+        .shouldEqual(0);
+    // dfmt on
 }

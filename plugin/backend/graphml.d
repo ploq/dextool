@@ -573,8 +573,12 @@ import std.range : isOutputRange;
  * declaration in the hope of finding the definition.
  * The delay is implemented with a cache.
  * When finalize is called the cache is forcefully transformed to `nodes`.
+ * Even those symbols that only have a declaration as location.
  */
 class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)) {
+    import std.range : only;
+    import std.typecons : NullableRef;
+
     import cpptooling.analyzer.clang.analyze_helper : CXXBaseSpecifierResult,
         ClassDeclResult, FieldDeclResult, CXXMethodResult, ConstructorResult,
         DestructorResult, VarDeclResult, FunctionDeclResult,
@@ -587,25 +591,50 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     private {
         MarkArray!TypeKindAttr cache_decl;
 
-        RecvXmlT recv;
+        NullableRef!RecvXmlT recv;
         bool[USRType] streamed_nodes;
         LookupT lookup;
     }
 
-    this(RecvXmlT recv, LookupT lookup) {
-        this.recv = recv;
+    this(ref RecvXmlT recv, LookupT lookup) {
+        this.recv = &recv;
         this.lookup = lookup;
     }
 
 @safe:
 
     ///
-    void finalize() {
+    void finalize()
+    in {
+        logger.tracef("%d nodes left in cache", cache_decl.data.length);
+    }
+    body {
+        if (cache_decl.data.length == 0) {
+            return;
+        }
+
+        void putDeclaration(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
+            nodeIfMissing(streamed_nodes, recv, type.kind.usr, type, loc);
+        }
+
+        void putDefinition(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
+            nodeIfMissing(streamed_nodes, recv, type.kind.usr, type, loc);
+        }
+
+        resolveLocation(&putDeclaration, &putDefinition, cache_decl.data, lookup);
+        cache_decl.clear;
     }
 
     ///
     void put(ref const(TranslationUnitResult) result) {
         xmlComment(recv, result.fileName);
+
+        // empty the cache if anything is left in it
+        if (cache_decl.data.length == 0) {
+            return;
+        }
+
+        logger.tracef("%d nodes left in cache", cache_decl.data.length);
     }
 
     /** A free variable declaration.
@@ -692,17 +721,21 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         }
     }
 
-    ///
+    /**
+     * Assuming that a node ClassDecl never resolve to _another_ type in turn,
+     * like a typedef do.
+     * If the assumption doesn't hold then the target for the edge from the
+     * namespace to the class has to be changed to the one received from
+     * putDeclaration or putDefinition.
+     */
     void put(ref const(ClassDeclResult) result, CppNs[] ns, ref const(NodeStyle!UMLClassNode) style) {
-        void putDeclaration(TypeKindAttr type) {
+        void putDeclaration(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
             cache_decl.put(type);
         }
 
-        void putDefinition(TypeKindAttr type, LocationTag loc) {
+        void putDefinition(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
             nodeIfMissing(streamed_nodes, recv, type.kind.usr, style, loc);
         }
-
-        import std.range : only;
 
         resolveLocation(&putDeclaration, &putDefinition, only(result.type), lookup);
 
@@ -722,20 +755,31 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     void put(ref const(TypeKindAttr) src, ref const(CXXMethodResult) result, in CppAccess access) {
     }
 
+    /**
+     * Resolving a type for a FieldDecl inadvertently always change the USR.
+     * Thus the edge that is formed must be for the type from putDeclaration or
+     * putDefinition.
+     */
     void put(ref const(TypeKindAttr) src, ref const(FieldDeclResult) result, in CppAccess access) {
         if (result.type.kind.info.kind == TypeKind.Info.Kind.primitive) {
             return;
         }
 
-        LocationTag loc;
-        foreach (maybe_loc; lookup.location(result.type.kind.usr).front.any) {
-            loc = maybe_loc;
+        USRType target_usr = result.type.kind.usr;
+
+        void putDeclaration(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
+            target_usr = type.kind.usr;
+            cache_decl.put(type);
         }
 
-        nodeIfMissing(streamed_nodes, recv, result.type.kind.usr, result.type, loc);
+        void putDefinition(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
+            target_usr = type.kind.usr;
+            nodeIfMissing(streamed_nodes, recv, type.kind.usr, type, loc);
+        }
 
-        // connect file to instance
-        edge(recv, src.kind.usr, result.type.kind.usr);
+        resolveLocation(&putDeclaration, &putDefinition, only(result.type), lookup);
+
+        edge(recv, src.kind.usr, target_usr);
     }
 
     void put(ref const(TypeKindAttr) src, ref const(CXXBaseSpecifierResult) result) {
@@ -745,12 +789,18 @@ private:
 
     import std.range : ElementType;
 
-    /** Resolve a type and store the result in target. */
+    /** Resolve a type and its location.
+     *
+     * Performs a callback to either:
+     *  - target_def with the resolved type:s TypeKindAttr for the type and
+     *    location of the definition.
+     *  - target_decl with the resolved type:s TypeKindAttr.
+     * */
     static void resolveLocation(TargetDeclT, TargetDefT, Range, LookupT)(
             TargetDeclT target_decl, TargetDefT target_def, Range range, LookupT lookup)
             if (is(Unqual!(ElementType!Range) == TypeKindAttr) && __traits(hasMember,
                 LookupT, "kind") && __traits(hasMember, LookupT, "location")) {
-        import std.algorithm : map, joiner, cache;
+        import std.algorithm : map, joiner;
         import std.typecons : tuple;
 
         // dfmt off
@@ -761,15 +811,20 @@ private:
                  .map!(a => tuple(a, lookup.location(a.kind.usr)))) {
             // no location?
             if (a[1].length == 0) {
-                target_decl(a[0]);
+                LocationTag noloc;
+                target_decl(a[0], noloc);
                 continue;
             }
             auto loc = a[1].front;
 
             if (loc.hasDefinition) {
                 target_def(a[0], loc.definition);
+            } else if (loc.hasDeclaration) {
+                target_decl(a[0], loc.declaration);
             } else {
-                target_decl(a[0]);
+                // no location?
+                LocationTag noloc;
+                target_decl(a[0], noloc);
             }
         }
         // dfmt on

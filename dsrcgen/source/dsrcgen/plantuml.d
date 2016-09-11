@@ -312,6 +312,7 @@ class PlantumlModule : BaseModule {
     mixin Attrs;
     mixin PlantumlBase;
 
+    /// Defualt c'tor.
     this() pure {
         super();
     }
