@@ -14,6 +14,22 @@ import utils;
 
 enum globalTestdir = "graphml_tests";
 
+/** Make a hash out of the raw data.
+ *
+ * Copied from the implementation
+ * import cpptooling.utility.hash : makeHash;
+ */
+size_t makeHash(T)(T raw) @safe pure nothrow @nogc {
+    import std.digest.crc;
+
+    size_t value = 0;
+
+    if (raw is null)
+        return value;
+    ubyte[4] hash = crc32Of(raw);
+    return value ^ ((hash[0] << 24) | (hash[1] << 16) | (hash[2] << 8) | hash[3]);
+}
+
 struct TestParams {
     Flag!"skipCompare" skipCompare;
 
@@ -67,7 +83,8 @@ auto getGraph(T)(ref T p) {
 }
 
 auto getNode(T)(ref T graph, string id) {
-    return graph.elements.filter!(a => a.tag.name == "node" && a.tag.attr["id"].text == id);
+    auto id_ = makeHash(id).to!string;
+    return graph.elements.filter!(a => a.tag.name == "node" && a.tag.attr["id"].text == id_);
 }
 
 auto countNode(T)(ref T graph, string id) {
@@ -75,8 +92,10 @@ auto countNode(T)(ref T graph, string id) {
 }
 
 auto getEdge(T)(ref T graph, string source, string target) {
+    auto src_id = makeHash(source).to!string;
+    auto target_id = makeHash(target).to!string;
     return graph.elements.filter!(a => a.tag.name == "edge"
-            && a.tag.attr["source"].text == source && a.tag.attr["target"].text == target);
+            && a.tag.attr["source"].text == src_id && a.tag.attr["target"].text == target_id);
 }
 
 auto countEdge(T)(ref T graph, string source, string target) {

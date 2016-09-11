@@ -229,7 +229,6 @@ ExitStatusType pluginMain(GraphMLFrontend variant, in string[] in_cflags,
     import plugin.backend.graphml : GraphMLAnalyzer, TransformToXmlStream;
 
     const auto user_cflags = prependDefaultFlags(in_cflags, "");
-    const auto total_files = in_files.length;
 
     Container container;
     auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
@@ -242,7 +241,7 @@ ExitStatusType pluginMain(GraphMLFrontend variant, in string[] in_cflags,
     auto visitor = new GraphMLAnalyzer!(typeof(transform_to_file))(transform_to_file,
             variant, variant, variant, container);
 
-    foreach (idx, in_file; (cast(TypedefType!InFiles) in_files)) {
+    ExitStatusType analyze(T, U)(ref T in_file, U idx, U total_files) {
         logger.infof("File %d/%d ", idx + 1, total_files);
         string[] use_cflags;
         string abs_in_file;
@@ -261,6 +260,24 @@ ExitStatusType pluginMain(GraphMLFrontend variant, in string[] in_cflags,
 
         if (analyzeFile(abs_in_file, use_cflags, visitor, ctx) == ExitStatusType.Errors) {
             return ExitStatusType.Errors;
+        }
+
+        return ExitStatusType.Ok;
+    }
+
+    if (in_files.length == 0) {
+        const auto total_files = compile_db.length;
+        foreach (idx, entry; compile_db) {
+            if (analyze(entry.absoluteFile, idx, total_files) == ExitStatusType.Errors) {
+                return ExitStatusType.Errors;
+            }
+        }
+    } else {
+        const auto total_files = in_files.length;
+        foreach (idx, a_file; cast(TypedefType!InFiles) in_files) {
+            if (analyze(a_file, idx, total_files) == ExitStatusType.Errors) {
+                return ExitStatusType.Errors;
+            }
         }
     }
     transform_to_file.finalize();

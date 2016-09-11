@@ -20,6 +20,7 @@ import cpptooling.analyzer.clang.ast : Visitor;
 import cpptooling.data.symbol.container : Container;
 import cpptooling.data.type : CppAccess;
 import cpptooling.utility.unqual : Unqual;
+import cpptooling.utility.hash : makeHash;
 
 version (unittest) {
     import unit_threaded;
@@ -384,6 +385,28 @@ private T toInternal(T, S)(S value) @safe pure nothrow @nogc
     }
 }
 
+private @safe struct ValidNodeId {
+    import std.format : FormatSpec;
+    import cpptooling.data.type : USRType;
+
+    size_t payload;
+    alias payload this;
+
+    this(string usr) {
+        payload = makeHash(cast(string) usr);
+    }
+
+    this(USRType usr) {
+        this(cast(string) usr);
+    }
+
+    void toString(Writer, Char)(scope Writer w, FormatSpec!Char fmt) const {
+        import std.format : formatValue;
+
+        formatValue(w, payload, formatSpec);
+    }
+}
+
 private enum StereoType {
     None,
     Abstract,
@@ -521,7 +544,13 @@ private void xmlNode(RecvT, IdT, UrlT, StyleT)(ref RecvT recv, IdT id, UrlT url,
     import std.format : formattedWrite;
     import std.range.primitives : put;
 
-    formattedWrite(recv, `<node id="%s">`, id);
+    auto id_ = ValidNodeId(id);
+
+    debug {
+        formattedWrite(recv, `<!-- %s : %s -->`, cast(string) id, id_);
+    }
+
+    formattedWrite(recv, `<node id="%s">`, id_);
 
     put(recv, `<data key="d3">`);
     ccdataWrap(recv, url.file);
@@ -541,8 +570,16 @@ private void xmlEdge(RecvT, SourceT, TargetT)(ref RecvT recv, SourceT src, Targe
     import std.format : formattedWrite;
     import std.range.primitives : put;
 
+    auto src_ = ValidNodeId(src);
+    auto target_ = ValidNodeId(target);
+
+    debug {
+        formattedWrite(recv, `<!-- [%s : %s] > [%s : %s] -->`, cast(string) src,
+                src_, cast(string) target, target_);
+    }
+
     formattedWrite(recv, `<edge id="e%s" source="%s" target="%s"/>`,
-            nextEdgeId.to!string, src, target);
+            nextEdgeId.to!string, src_, target_);
     put(recv, "\n");
 }
 
