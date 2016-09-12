@@ -179,8 +179,35 @@ unittest {
     // dfmt off
     graph.elements
         // all edges from the node
-        .filter!(a => a.tag.name == "edge" && a.tag.attr["source"].text == "c:@S@ToPrimitive")
+        .filter!(a => a.tag.name == "edge" && a.tag.attr["source"].text == makeHash("c:@S@ToPrimitive").to!string())
         .count
         .shouldEqual(0);
     // dfmt on
+}
+
+@Name(testId ~ "Should be a inheritance representation")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("class_inherit.hpp", testEnv);
+    runTestFile(p, testEnv);
+
+    auto graph = getGraph(p);
+
+    // test inherit depth of 2
+    // VirtC -> VirtB -> VirtA
+    graph.countNode("c:@S@VirtA").shouldEqual(1);
+    graph.countNode("c:@S@VirtB").shouldEqual(1);
+    graph.countNode("c:@S@VirtC").shouldEqual(1);
+
+    graph.countEdge("c:@S@VirtB", "c:@S@VirtA").shouldEqual(1);
+    graph.countEdge("c:@S@VirtC", "c:@S@VirtB").shouldEqual(1);
+
+    // test multiple inheritance
+    // Dup inherit from DupA and DupB
+    graph.countNode("c:@S@Dup").shouldEqual(1);
+    graph.countNode("c:@S@DupA").shouldEqual(1);
+    graph.countNode("c:@S@DupB").shouldEqual(1);
+
+    graph.countEdge("c:@S@Dup", "c:@S@DupA").shouldEqual(1);
+    graph.countEdge("c:@S@Dup", "c:@S@DupB").shouldEqual(1);
 }

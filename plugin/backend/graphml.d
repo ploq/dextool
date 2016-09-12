@@ -301,7 +301,6 @@ private final class UMLClassVisitor(ReceiveT) : Visitor {
     /// Analyze the inheritance(s).
     override void visit(const(CXXBaseSpecifier) v) {
         mixin(mixinNodeLog!());
-        import cpptooling.analyzer.kind : TypeKind;
 
         auto result = analyzeCXXBaseSpecified(v, *container, indent);
 
@@ -547,7 +546,8 @@ private void xmlNode(RecvT, IdT, UrlT, StyleT)(ref RecvT recv, IdT id, UrlT url,
     auto id_ = ValidNodeId(id);
 
     debug {
-        formattedWrite(recv, `<!-- %s : %s -->`, cast(string) id, id_);
+        // printing the raw identifiers to make it easier to debug
+        formattedWrite(recv, `<!-- %s -->`, cast(string) id);
     }
 
     formattedWrite(recv, `<node id="%s">`, id_);
@@ -574,8 +574,8 @@ private void xmlEdge(RecvT, SourceT, TargetT)(ref RecvT recv, SourceT src, Targe
     auto target_ = ValidNodeId(target);
 
     debug {
-        formattedWrite(recv, `<!-- [%s : %s] > [%s : %s] -->`, cast(string) src,
-                src_, cast(string) target, target_);
+        // printing the raw identifiers to make it easier to debug
+        formattedWrite(recv, `<!-- %s - %s -->`, cast(string) src, cast(string) target);
     }
 
     formattedWrite(recv, `<edge id="e%s" source="%s" target="%s"/>`,
@@ -664,6 +664,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
 
     ///
     void put(ref const(TranslationUnitResult) result) {
+        import std.range : enumerate;
+
         xmlComment(recv, result.fileName);
 
         // empty the cache if anything is left in it
@@ -672,6 +674,21 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         }
 
         logger.tracef("%d nodes left in cache", cache_decl.data.length);
+
+        void putDeclaration(ref const(TypeKindAttr) type, ref const(LocationTag) loc, size_t idx) {
+            // hoping for the best that a definition is found later on.
+        }
+
+        void putDefinition(ref const(TypeKindAttr) type, ref const(LocationTag) loc, size_t idx) {
+            nodeIfMissing(streamed_nodes, recv, type.kind.usr, type, loc);
+            cache_decl.markForRemoval(idx);
+        }
+
+        foreach (idx, ref item; cache_decl.data.enumerate) {
+            resolveLocation(&putDeclaration, &putDefinition, only(item), lookup, idx);
+        }
+
+        cache_decl.doRemoval;
     }
 
     /** A free variable declaration.
@@ -820,6 +837,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     }
 
     void put(ref const(TypeKindAttr) src, ref const(CXXBaseSpecifierResult) result) {
+        edge(recv, src.kind.usr, result.canonicalUSR);
+        cache_decl.put(result.type);
     }
 
 private:
@@ -833,8 +852,8 @@ private:
      *    location of the definition.
      *  - target_decl with the resolved type:s TypeKindAttr.
      * */
-    static void resolveLocation(TargetDeclT, TargetDefT, Range, LookupT)(
-            TargetDeclT target_decl, TargetDefT target_def, Range range, LookupT lookup)
+    static void resolveLocation(TargetDeclT, TargetDefT, Range, LookupT, Context...)(
+            TargetDeclT target_decl, TargetDefT target_def, Range range, LookupT lookup, Context ctx)
             if (is(Unqual!(ElementType!Range) == TypeKindAttr) && __traits(hasMember,
                 LookupT, "kind") && __traits(hasMember, LookupT, "location")) {
         import std.algorithm : map, joiner;
@@ -849,19 +868,19 @@ private:
             // no location?
             if (a[1].length == 0) {
                 LocationTag noloc;
-                target_decl(a[0], noloc);
+                target_decl(a[0], noloc, ctx);
                 continue;
             }
             auto loc = a[1].front;
 
             if (loc.hasDefinition) {
-                target_def(a[0], loc.definition);
+                target_def(a[0], loc.definition, ctx);
             } else if (loc.hasDeclaration) {
-                target_decl(a[0], loc.declaration);
+                target_decl(a[0], loc.declaration, ctx);
             } else {
                 // no location?
                 LocationTag noloc;
-                target_decl(a[0], noloc);
+                target_decl(a[0], noloc, ctx);
             }
         }
         // dfmt on
