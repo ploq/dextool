@@ -211,3 +211,12 @@ unittest {
     graph.countEdge("c:@S@Dup", "c:@S@DupA").shouldEqual(1);
     graph.countEdge("c:@S@Dup", "c:@S@DupB").shouldEqual(1);
 }
+
+@Name(testId ~ "Should be a class with methods represented and relations to method parameters")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("class_methods.hpp", testEnv);
+    runTestFile(p, testEnv);
+
+    auto graph = getGraph(p);
+}
