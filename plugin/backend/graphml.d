@@ -683,7 +683,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         }
 
         foreach (idx, ref item; type_cache.data.enumerate) {
-            resolveLocation(&putDeclaration, &putDefinition,
+            resolveLocationSkipTypeRef(&putDeclaration, &putDefinition,
                     &putDeclaration, only(item), lookup, idx);
         }
 
@@ -792,8 +792,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             nodeIfMissing(streamed_nodes, recv, type.kind.usr, style, loc);
         }
 
-        resolveLocation(&putDeclaration, &putDefinition, &putDeclaration,
-                only(result.type), lookup);
+        resolveLocationSkipTypeRef(&putDeclaration, &putDefinition,
+                &putDeclaration, only(result.type), lookup);
 
         auto ns_usr = addNamespaceNode(streamed_nodes, recv, ns);
         if (!ns_usr.isNull) {
@@ -838,7 +838,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
                 continue;
             }
 
-            resolveLocation(&anyLocation, &anyLocation, &anyLocation, only(type), lookup);
+            resolveLocationSkipTypeRef(&anyLocation, &anyLocation,
+                    &anyLocation, only(type), lookup);
             logger.tracef("foo raw %s", cast(string) type.kind.usr);
         }
     }
@@ -865,8 +866,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             nodeIfMissing(streamed_nodes, recv, type.kind.usr, type, loc);
         }
 
-        resolveLocation(&putDeclaration, &putDefinition, &putDeclaration,
-                only(result.type), lookup);
+        resolveLocationSkipTypeRef(&putDeclaration, &putDefinition,
+                &putDeclaration, only(result.type), lookup);
 
         edge(recv, src.kind.usr, target_usr);
     }
@@ -884,13 +885,36 @@ private:
     /** Resolve a type and its location.
      *
      * Performs a callback to either:
-     *  - target_def with the resolved type:s TypeKindAttr for the type and
+     *  - callback_def with the resolved type:s TypeKindAttr for the type and
      *    location of the definition.
-     *  - target_decl with the resolved type:s TypeKindAttr.
+     *  - callback_decl with the resolved type:s TypeKindAttr.
+     * */
+    static void resolveLocationSkipTypeRef(LocationDeclT, LocationDefT,
+            LocationUnknownT, Range, LookupT, Context...)(LocationDeclT callback_decl, LocationDefT callback_def,
+            LocationUnknownT callback_unknown, Range range, LookupT lookup, Context ctx) {
+        import std.algorithm : map, joiner, filter;
+
+        // dfmt off
+        auto r = range
+            // do NOT follow typeref's. They are good as is.
+            .filter!(a => a.kind.info.kind != TypeKind.Info.Kind.typeRef)
+            .map!(a => resolveTypeRef(a.kind, a.attr, lookup))
+            .joiner;
+        // dfmt on
+
+        return resolveLocation(callback_decl, callback_def, callback_unknown, r, lookup, ctx);
+    }
+
+    /** Resolve a type and its location.
+     *
+     * Performs a callback to either:
+     *  - callback_def with the resolved type:s TypeKindAttr for the type and
+     *    location of the definition.
+     *  - callback_decl with the resolved type:s TypeKindAttr.
      * */
     static void resolveLocation(LocationDeclT, LocationDefT, LocationUnknownT,
-            Range, LookupT, Context...)(LocationDeclT target_decl, LocationDefT target_def,
-            LocationUnknownT target_unknown, Range range, LookupT lookup, Context ctx)
+            Range, LookupT, Context...)(LocationDeclT callback_decl, LocationDefT callback_def,
+            LocationUnknownT callback_unknown, Range range, LookupT lookup, Context ctx)
             if (is(Unqual!(ElementType!Range) == TypeKindAttr) && __traits(hasMember,
                 LookupT, "kind") && __traits(hasMember, LookupT, "location")) {
         import std.algorithm : map, joiner, filter;
@@ -898,31 +922,40 @@ private:
 
         // dfmt off
         foreach (ref a; range
-                 // do NOT follow typeref's. They are good as is.
-                 .filter!(a => a.kind.info.kind != TypeKind.Info.Kind.typeRef)
-                 .map!(a => resolveTypeRef(a.kind, a.attr, lookup))
-                 .joiner
                  // a tuple of (TypeKindAttr, DeclLocation)
                  .map!(a => tuple(a, lookup.location(a.kind.usr)))) {
             // no location?
             if (a[1].length == 0) {
                 LocationTag noloc;
-                target_unknown(a[0], noloc, ctx);
+                callback_unknown(a[0], noloc, ctx);
             }
 
             auto loc = a[1].front;
 
             if (loc.hasDefinition) {
-                target_def(a[0], loc.definition, ctx);
+                callback_def(a[0], loc.definition, ctx);
             } else if (loc.hasDeclaration) {
-                target_decl(a[0], loc.declaration, ctx);
+                callback_decl(a[0], loc.declaration, ctx);
             } else {
                 // no location?
                 LocationTag noloc;
-                target_unknown(a[0], noloc, ctx);
+                callback_unknown(a[0], noloc, ctx);
             }
         }
         // dfmt on
+    }
+
+    static auto toRelativePath(const LocationTag loc) {
+        import std.path : relativePath;
+
+        if (loc.kind == LocationTag.Kind.noloc) {
+            return loc;
+        }
+
+        string rel;
+        () @trusted{ rel = relativePath(loc.file); }();
+
+        return LocationTag(Location(rel, loc.line, loc.column));
     }
 
     // XML support functions

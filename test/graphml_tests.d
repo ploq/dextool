@@ -219,4 +219,8 @@ unittest {
     runTestFile(p, testEnv);
 
     auto graph = getGraph(p);
+
+    // test that usage of a type in a method parameter result in a relation
+    graph.countEdge("c:@S@Methods", "c:class_methods.hpp@T@MadeUp").shouldEqual(2);
+    graph.countEdge("c:@S@Virtual", "c:class_methods.hpp@T@MadeUp").shouldEqual(2);
 }
