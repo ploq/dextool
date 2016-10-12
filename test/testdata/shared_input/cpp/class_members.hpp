@@ -37,4 +37,9 @@ class ToPrimitive {
     // ignoring primitive type
     int x;
 };
+
+// case 4, func ptr
+class ToFuncPtr {
+    void (*__foo)(void*);
+};
 #endif // CLASS_MEMBERS_HPP

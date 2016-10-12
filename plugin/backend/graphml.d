@@ -13,7 +13,7 @@ import std.traits : isSomeString;
 import std.typecons : scoped, Tuple, Nullable, Flag, Yes;
 import logger = std.experimental.logger;
 
-import cpptooling.analyzer.kind : resolveTypeRef;
+import cpptooling.analyzer.kind : resolveCanonicalType, resolvePointeeType;
 import cpptooling.analyzer.type : TypeKindAttr, TypeKind, TypeAttr,
     toStringDecl;
 import cpptooling.analyzer.clang.ast : Visitor;
@@ -610,7 +610,6 @@ import std.range : isOutputRange;
  * Even those symbols that only have a declaration as location.
  */
 class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)) {
-    import std.meta : AliasSeq;
     import std.range : only;
     import std.typecons : NullableRef;
 
@@ -626,8 +625,15 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     private {
         MarkArray!TypeKindAttr type_cache;
 
-        NullableRef!RecvXmlT recv;
+        /// nodes may never be duplicated. If they are it is a violation of the
+        /// data format.
         bool[USRType] streamed_nodes;
+        /// Ensure that there are only ever one relation between two entities.
+        /// It avoids the scenario (which is common) of thick patches of
+        /// relations to common nodes.
+        bool[USRType] streamed_edges;
+
+        NullableRef!RecvXmlT recv;
         LookupT lookup;
     }
 
@@ -656,14 +662,17 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             debug logger.tracef("creating node %s", cast(string) type.kind.usr);
         }
 
-        resolveLocation(&anyLocation, &anyLocation, &anyLocation, type_cache.data, lookup);
+        LocationCallback cb;
+        cb.unknown = &anyLocation;
+        cb.declaration = &anyLocation;
+        cb.definition = &anyLocation;
+
+        resolveLocation(cb, type_cache.data, lookup);
         type_cache.clear;
     }
 
     ///
     void put(ref const(TranslationUnitResult) result) {
-        import std.range : enumerate;
-
         xmlComment(recv, result.fileName);
 
         // empty the cache if anything is left in it
@@ -673,18 +682,28 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
 
         debug logger.tracef("%d nodes left in cache", type_cache.data.length);
 
-        void putDeclaration(ref const(TypeKindAttr) type, ref const(LocationTag) loc, size_t idx) {
+        // ugly hack.
+        // used by putDefinition
+        // incremented in the foreach
+        size_t idx = 0;
+
+        void putDeclaration(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
             // hoping for the best that a definition is found later on.
         }
 
-        void putDefinition(ref const(TypeKindAttr) type, ref const(LocationTag) loc, size_t idx) {
+        void putDefinition(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
             nodeIfMissing(streamed_nodes, recv, type.kind.usr, type, loc);
             type_cache.markForRemoval(idx);
         }
 
-        foreach (idx, ref item; type_cache.data.enumerate) {
-            resolveLocationSkipTypeRef(&putDeclaration, &putDefinition,
-                    &putDeclaration, only(item), lookup, idx);
+        LocationCallback cb;
+        cb.unknown = &putDeclaration;
+        cb.declaration = &putDeclaration;
+        cb.definition = &putDefinition;
+
+        foreach (ref item; type_cache.data) {
+            resolveLocation(cb, only(item), lookup);
+            ++idx;
         }
 
         debug logger.tracef("%d nodes left in cache", type_cache.data.length);
@@ -699,18 +718,17 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     void put(ref const(VarDeclResult) result) {
         auto file_usr = addFileNode(streamed_nodes, recv, result.location);
 
-        if (result.type.kind.info.kind == TypeKind.Info.Kind.primitive) {
-            auto label = result.type.toStringDecl(cast(string) result.name);
-            nodeIfMissing(streamed_nodes, recv, result.instanceUSR,
-                    makeShapeNode(label), result.location);
-            edge(recv, file_usr, result.instanceUSR);
-        } else {
-            USRType instance_usr;
-            Nullable!USRType type_usr;
-            addInstanceNode(streamed_nodes, recv, result, lookup, instance_usr, type_usr);
+        // instance node
+        nodeIfMissing(streamed_nodes, recv, result.instanceUSR,
+                makeShapeNode(result.name), result.location);
 
-            // connect file to instance
-            edge(recv, file_usr, instance_usr);
+        // connect file to instance
+        addEdge(streamed_edges, recv, file_usr, result.instanceUSR);
+
+        // type node
+        if (result.type.kind.info.kind != TypeKind.Info.Kind.primitive) {
+            putToCache(result.type);
+            addEdge(streamed_edges, recv, result.instanceUSR, result.type.kind.usr);
         }
     }
 
@@ -725,55 +743,48 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     body {
         auto ns_usr = addNamespaceNode(streamed_nodes, recv, ns);
 
-        USRType instance_usr;
-        Nullable!USRType type_usr;
-        addInstanceNode(streamed_nodes, recv, result, lookup, instance_usr, type_usr);
+        // instance node
+        nodeIfMissing(streamed_nodes, recv, result.instanceUSR,
+                makeShapeNode(result.name), result.location);
 
-        // connect ns to instance
-        edge(recv, ns_usr, instance_usr);
+        if (!ns_usr.isNull) {
+            // connect namespace to instance
+            addEdge(streamed_edges, recv, ns_usr, result.instanceUSR);
+        }
+
+        // type node
+        if (result.type.kind.info.kind != TypeKind.Info.Kind.primitive) {
+            putToCache(result.type);
+            addEdge(streamed_edges, recv, result.instanceUSR, result.type.kind.usr);
+        }
     }
 
     ///
     void put(ref const(FunctionDeclResult) result) {
-        import cpptooling.data.type : TypeKindVariable, VariadicType;
+        import std.algorithm : map, filter, joiner;
+        import cpptooling.data.representation : unpackParam;
 
-        auto src = resolveTypeRef(result.type.kind, result.type.attr, lookup).front;
-        {
-            auto loc = lookup.location(src.kind.usr).front.any;
-            nodeIfNotPrimitive(streamed_nodes, recv, src, loc);
-        }
+        auto src = resolveCanonicalType(result.type.kind, result.type.attr, lookup).front;
+        putToCache(src);
 
         {
-            auto target = resolveTypeRef(result.returnType.kind, result.returnType.attr, lookup)
+            auto target = resolvePointeeType(result.returnType.kind, result.returnType.attr, lookup)
                 .front;
-            auto loc = lookup.location(target.kind.usr).front.any;
-            nodeIfNotPrimitive(streamed_nodes, recv, target, loc);
-            edgeIfNotPrimitive(recv, src, target);
+            putToCache(target);
+            edgeIfNotPrimitive(streamed_edges, recv, src, target);
         }
 
-        foreach (p; result.params) {
-            import std.variant : visit;
-
-            TypeKindAttr type;
-            bool is_variadic;
-
-            // dfmt off
-            () @trusted {
-            p.visit!((const TypeKindVariable v) => type = v.type,
-                     (const TypeKindAttr v) => type = v,
-                     (const VariadicType v) { is_variadic = true;  return type; });
-            }();
-            // dfmt on
-
-            if (is_variadic) {
-                continue;
-            }
-
-            auto target = resolveTypeRef(type.kind, type.attr, lookup).front;
-            auto loc = lookup.location(target.kind.usr).front.any;
-            nodeIfNotPrimitive(streamed_nodes, recv, target, loc);
-            edgeIfNotPrimitive(recv, src, target);
+        // dfmt off
+        foreach (target; result.params
+            .map!(a => a.unpackParam)
+            .filter!(a => !a.isVariadic)
+            .map!(a => a.type)
+            .map!(a => resolvePointeeType(a.kind, a.attr, lookup))
+            .joiner) {
+            putToCache(target);
+            edgeIfNotPrimitive(streamed_edges, recv, src, target);
         }
+        // dfmt on
     }
 
     /**
@@ -785,66 +796,68 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
      */
     void put(ref const(ClassDeclResult) result, CppNs[] ns, ref const(NodeStyle!UMLClassNode) style) {
         void putDeclaration(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
-            type_cache.put(type);
+            putToCache(type);
         }
 
         void putDefinition(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
             nodeIfMissing(streamed_nodes, recv, type.kind.usr, style, loc);
         }
 
-        resolveLocationSkipTypeRef(&putDeclaration, &putDefinition,
-                &putDeclaration, only(result.type), lookup);
+        LocationCallback cb;
+        cb.unknown = &putDeclaration;
+        cb.declaration = &putDeclaration;
+        cb.definition = &putDefinition;
+
+        resolveLocation(cb, only(result.type), lookup);
 
         auto ns_usr = addNamespaceNode(streamed_nodes, recv, ns);
         if (!ns_usr.isNull) {
-            edge(recv, ns_usr, result.type);
+            addEdge(streamed_edges, recv, ns_usr, result.type);
         }
     }
 
     void put(ref const(TypeKindAttr) src, ref const(ConstructorResult) result, in CppAccess access) {
+        import std.algorithm : map, filter, joiner;
+        import cpptooling.data.representation : unpackParam;
+
+        // dfmt off
+        foreach (target; result.params
+            .map!(a => a.unpackParam)
+            .filter!(a => !a.isVariadic)
+            .map!(a => a.type)
+            .map!(a => resolvePointeeType(a.kind, a.attr, lookup))
+            .joiner) {
+            putToCache(target);
+            edgeIfNotPrimitive(streamed_edges, recv, src, target);
+        }
+        // dfmt on
     }
 
     void put(ref const(TypeKindAttr) src, ref const(DestructorResult) result, in CppAccess access) {
         // do nothing
     }
 
+    ///
     void put(ref const(TypeKindAttr) src, ref const(CXXMethodResult) result, in CppAccess access) {
-        void anyLocation(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
-            if (type.kind.info.kind != TypeKind.Info.Kind.primitive) {
-                // must go via the cache for otherwise the class the method is
-                // part of isn't generated correctly.
-                type_cache.put(type);
-                edgeIfNotPrimitive(recv, src, type);
-                logger.tracef("foo res %s", cast(string) type.kind.usr);
-            }
+        import std.algorithm : map, filter, joiner;
+        import cpptooling.data.representation : unpackParam;
+
+        // dfmt off
+        foreach (target; result.params
+            .map!(a => a.unpackParam)
+            .filter!(a => !a.isVariadic)
+            .map!(a => a.type)
+            .map!(a => resolvePointeeType(a.kind, a.attr, lookup))
+            .joiner) {
+            putToCache(target);
+            edgeIfNotPrimitive(streamed_edges, recv, src, target);
         }
-
-        foreach (p; result.params) {
-            import std.variant : visit;
-            import cpptooling.data.type : TypeKindVariable, VariadicType;
-
-            TypeKindAttr type;
-            bool is_variadic;
-
-            // dfmt off
-            () @trusted {
-            p.visit!((const TypeKindVariable v) => type = v.type,
-                     (const TypeKindAttr v) => type = v,
-                     (const VariadicType v) { is_variadic = true; return type; });
-            }();
-            // dfmt on
-
-            if (is_variadic) {
-                continue;
-            }
-
-            resolveLocationSkipTypeRef(&anyLocation, &anyLocation,
-                    &anyLocation, only(type), lookup);
-            logger.tracef("foo raw %s", cast(string) type.kind.usr);
-        }
+        // dfmt on
     }
 
-    /**
+    /** Relation of a class/struct to its fields.
+     *
+     * TODO remove the comment below. Incorrect.
      * Resolving a type for a FieldDecl inadvertently always change the USR.
      * Thus the edge that is formed must be for the type from putDeclaration or
      * putDefinition.
@@ -854,55 +867,29 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             return;
         }
 
-        USRType target_usr = result.type.kind.usr;
+        auto target = resolvePointeeType(result.type.kind, result.type.attr, lookup).front;
+        putToCache(target);
 
-        void putDeclaration(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
-            target_usr = type.kind.usr;
-            type_cache.put(type);
-        }
-
-        void putDefinition(ref const(TypeKindAttr) type, ref const(LocationTag) loc) {
-            target_usr = type.kind.usr;
-            nodeIfMissing(streamed_nodes, recv, type.kind.usr, type, loc);
-        }
-
-        resolveLocationSkipTypeRef(&putDeclaration, &putDefinition,
-                &putDeclaration, only(result.type), lookup);
-
-        edge(recv, src.kind.usr, target_usr);
+        addEdge(streamed_edges, recv, src.kind.usr, target.kind.usr);
     }
 
     /// Avoid code duplication by creating nodes via the type_cache.
     void put(ref const(TypeKindAttr) src, ref const(CXXBaseSpecifierResult) result) {
-        edge(recv, src.kind.usr, result.canonicalUSR);
-        type_cache.put(result.type);
+        putToCache(result.type);
+        addEdge(streamed_edges, recv, src.kind.usr, result.canonicalUSR);
     }
 
 private:
 
     import std.range : ElementType;
 
-    /** Resolve a type and its location.
-     *
-     * Performs a callback to either:
-     *  - callback_def with the resolved type:s TypeKindAttr for the type and
-     *    location of the definition.
-     *  - callback_decl with the resolved type:s TypeKindAttr.
-     * */
-    static void resolveLocationSkipTypeRef(LocationDeclT, LocationDefT,
-            LocationUnknownT, Range, LookupT, Context...)(LocationDeclT callback_decl, LocationDefT callback_def,
-            LocationUnknownT callback_unknown, Range range, LookupT lookup, Context ctx) {
-        import std.algorithm : map, joiner, filter;
-
-        // dfmt off
-        auto r = range
-            // do NOT follow typeref's. They are good as is.
-            .filter!(a => a.kind.info.kind != TypeKind.Info.Kind.typeRef)
-            .map!(a => resolveTypeRef(a.kind, a.attr, lookup))
-            .joiner;
-        // dfmt on
-
-        return resolveLocation(callback_decl, callback_def, callback_unknown, r, lookup, ctx);
+    /** Used for callback to distinguish the type of location that has been
+     * resolved.
+     */
+    struct LocationCallback {
+        void delegate(ref const(TypeKindAttr) type, ref const(LocationTag) loc) @safe unknown;
+        void delegate(ref const(TypeKindAttr) type, ref const(LocationTag) loc) @safe declaration;
+        void delegate(ref const(TypeKindAttr) type, ref const(LocationTag) loc) @safe definition;
     }
 
     /** Resolve a type and its location.
@@ -912,12 +899,11 @@ private:
      *    location of the definition.
      *  - callback_decl with the resolved type:s TypeKindAttr.
      * */
-    static void resolveLocation(LocationDeclT, LocationDefT, LocationUnknownT,
-            Range, LookupT, Context...)(LocationDeclT callback_decl, LocationDefT callback_def,
-            LocationUnknownT callback_unknown, Range range, LookupT lookup, Context ctx)
+    static void resolveLocation(Range, LookupT)(LocationCallback callback,
+            Range range, LookupT lookup)
             if (is(Unqual!(ElementType!Range) == TypeKindAttr) && __traits(hasMember,
                 LookupT, "kind") && __traits(hasMember, LookupT, "location")) {
-        import std.algorithm : map, joiner, filter;
+        import std.algorithm : map;
         import std.typecons : tuple;
 
         // dfmt off
@@ -927,19 +913,19 @@ private:
             // no location?
             if (a[1].length == 0) {
                 LocationTag noloc;
-                callback_unknown(a[0], noloc, ctx);
+                callback.unknown(a[0], noloc);
             }
 
             auto loc = a[1].front;
 
             if (loc.hasDefinition) {
-                callback_def(a[0], loc.definition, ctx);
+                callback.definition(a[0], loc.definition);
             } else if (loc.hasDeclaration) {
-                callback_decl(a[0], loc.declaration, ctx);
+                callback.declaration(a[0], loc.declaration);
             } else {
                 // no location?
                 LocationTag noloc;
-                callback_unknown(a[0], noloc, ctx);
+                callback.unknown(a[0], noloc);
             }
         }
         // dfmt on
@@ -958,7 +944,14 @@ private:
         return LocationTag(Location(rel, loc.line, loc.column));
     }
 
-    // XML support functions
+    void putToCache(ref const TypeKindAttr type) {
+        // lower the number of allocations by checking in the hash table.
+        if (type.kind.usr !in streamed_nodes) {
+            type_cache.put(type);
+        }
+    }
+
+    // The following functions result in xml data being written.
 
     static Nullable!USRType addNamespaceNode(NodeStoreT, RecvT)(ref NodeStoreT nodes,
             ref RecvT recv, CppNs[] ns) {
@@ -970,15 +963,13 @@ private:
 
         auto ns_usr = USRType(ns.toStringNs);
 
-        if (ns_usr !in nodes) {
-            auto ns_loc = LocationTag(null);
-            nodeIfMissing(nodes, recv, ns_usr, makeShapeNode(cast(string) ns_usr), ns_loc);
-        }
+        auto ns_loc = LocationTag(null);
+        nodeIfMissing(nodes, recv, ns_usr, makeShapeNode(ns_usr), ns_loc);
 
         return Nullable!USRType(ns_usr);
     }
 
-    static auto addFileNode(NodeStoreT, RecvT, LocationT)(ref NodeStoreT nodes,
+    static USRType addFileNode(NodeStoreT, RecvT, LocationT)(ref NodeStoreT nodes,
             ref RecvT recv, LocationT location) {
         auto file_usr = cast(USRType) location.file;
 
@@ -992,27 +983,6 @@ private:
         }
 
         return file_usr;
-    }
-
-    static void addInstanceNode(NodeStoreT, RecvT, LookupT)(ref NodeStoreT nodes, ref RecvT recv,
-            VarDeclResult result, LookupT lookup, out USRType instance_usr,
-            out Nullable!USRType type_usr) {
-        { // add instance node
-            auto label = result.type.toStringDecl(cast(string) result.name);
-            nodeIfMissing(nodes, recv, result.instanceUSR, makeShapeNode(label), result.location);
-            instance_usr = result.instanceUSR;
-        }
-
-        // add node for the type
-        auto target = resolveTypeRef(result.type.kind, result.type.attr, lookup).front;
-        auto loc = lookup.location(target.kind.usr).front.any;
-        nodeIfNotPrimitive(nodes, recv, target, loc);
-
-        // connect instance to type
-        if (target.kind.info.kind != TypeKind.Info.Kind.primitive) {
-            edge(recv, result.instanceUSR, target);
-            type_usr = target.kind.usr;
-        }
     }
 
     static void nodeIfNotPrimitive(NodeStoreT, RecvT, LocationT)(ref NodeStoreT nodes,
@@ -1059,17 +1029,19 @@ private:
         nodes[node_usr] = true;
     }
 
-    static void edgeIfNotPrimitive(RecvT)(ref RecvT recv, TypeKindAttr src, TypeKindAttr target) {
+    static void edgeIfNotPrimitive(EdgeStoreT, RecvT)(ref EdgeStoreT edges,
+            ref RecvT recv, TypeKindAttr src, TypeKindAttr target) {
         if (target.kind.info.kind == TypeKind.Info.Kind.null_
                 || src.kind.info.kind == TypeKind.Info.Kind.primitive
                 || target.kind.info.kind == TypeKind.Info.Kind.primitive) {
             return;
         }
 
-        edge(recv, src, target);
+        addEdge(edges, recv, src, target);
     }
 
-    static void edge(RecvT, SrcT, TargetT)(ref RecvT recv, SrcT src, TargetT target) {
+    static void addEdge(EdgeStoreT, RecvT, SrcT, TargetT)(ref EdgeStoreT edges,
+            ref RecvT recv, SrcT src, TargetT target) {
         string target_usr;
         static if (is(Unqual!TargetT == TypeKindAttr)) {
             if (target.kind.info.kind == TypeKind.Info.Kind.null_) {
@@ -1088,6 +1060,18 @@ private:
             src_usr = cast(string) src;
         }
 
+        // skip self edges
+        if (target_usr == src_usr) {
+            return;
+        }
+
+        // naive approach
+        USRType edge_key = USRType(src_usr ~ target_usr);
+        if (edge_key in edges) {
+            return;
+        }
+
         xmlEdge(recv, src_usr, target_usr);
+        edges[edge_key] = true;
     }
 }

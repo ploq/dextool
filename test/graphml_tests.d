@@ -123,6 +123,16 @@ unittest {
     mixin(EnvSetup(globalTestdir));
     auto p = genTestParams("functions.h", testEnv);
     runTestFile(p, testEnv);
+
+    auto graph = getGraph(p);
+
+    immutable fid = "File:/home/joker/src/dlang/clang_fun/test/testdata/graphml/functions.h Line:44 Column:9$1func_return_func_ptr";
+
+    // test the relation via the return type
+    // function exist
+    graph.countNode(fid).shouldEqual(1);
+    // function relate to return type
+    graph.countEdge(fid, "c:functions.h@T@gun_ptr").shouldEqual(1);
 }
 
 @Name(
@@ -132,6 +142,42 @@ unittest {
     mixin(EnvSetup(globalTestdir));
     auto p = genTestParams("variables.h", testEnv);
     runTestFile(p, testEnv);
+
+    auto graph = getGraph(p);
+
+    immutable fid = "/home/joker/src/dlang/clang_fun/test/testdata/graphml/variables.h";
+
+    // Nodes for all globals exist.
+    graph.countNode("c:@a").shouldEqual(1);
+    graph.countNode("c:@expect_b").shouldEqual(1);
+    graph.countNode("c:@expect_c").shouldEqual(1);
+    graph.countNode("c:@expect_d").shouldEqual(1);
+    graph.countNode("c:@expect_e").shouldEqual(1);
+    graph.countNode("c:@expect_f").shouldEqual(1);
+    graph.countNode("c:@expect_g").shouldEqual(1);
+    graph.countNode("c:@expect_h").shouldEqual(1);
+    graph.countNode("c:@expect_i").shouldEqual(1);
+    graph.countNode("c:@expect_my_int").shouldEqual(1);
+    graph.countNode("c:@expect_const_my_int").shouldEqual(1);
+
+    // the file should be related to all of them
+    graph.countEdge(fid, "c:@a").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_b").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_c").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_d").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_e").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_f").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_g").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_h").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_i").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_my_int").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_const_my_int").shouldEqual(1);
+
+    // the variables that are pointers have relations to the pointer type
+    // only testing one, assuming the rest are then OK.
+    graph.countEdge("c:@expect_d",
+            "File:/home/joker/src/dlang/clang_fun/test/testdata/graphml/variables.h Line:17 Column:13$1expect_d")
+        .shouldEqual(1);
 }
 
 @Name(testId ~ "Should be free variables in a namespace and thus related to the namespace")
@@ -139,6 +185,42 @@ unittest {
     mixin(EnvSetup(globalTestdir));
     auto p = genTestParams("variables_in_ns.hpp", testEnv);
     runTestFile(p, testEnv);
+
+    auto graph = getGraph(p);
+
+    immutable fid = "ns";
+
+    // Nodes for all globals exist.
+    graph.countNode("c:@N@ns@a").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_b").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_c").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_d").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_e").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_f").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_g").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_h").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_i").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_my_int").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_const_my_int").shouldEqual(1);
+
+    // the file should be related to all of them
+    graph.countEdge(fid, "c:@N@ns@a").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_b").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_c").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_d").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_e").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_f").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_g").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_h").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_i").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_my_int").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_const_my_int").shouldEqual(1);
+
+    // the variables that are pointers have relations to the pointer type
+    // only testing one, assuming the rest are then OK.
+    graph.countEdge("c:@N@ns@expect_d",
+            "File:/home/joker/src/dlang/clang_fun/test/testdata/graphml/variables.h Line:17 Column:13$1expect_d")
+        .shouldEqual(1);
 }
 
 @Name(testId ~ "Should be all type of class classifications")
@@ -183,6 +265,14 @@ unittest {
         .count
         .shouldEqual(0);
     // dfmt on
+
+    // test that a node and edge to a funcptr is formed
+    graph.countNode(
+            "File:/home/joker/src/dlang/clang_fun/test/testdata/graphml/class_members.hpp Line:43 Column:12$1__foo")
+        .shouldEqual(1);
+    graph.countEdge("c:@S@ToFuncPtr",
+            "File:/home/joker/src/dlang/clang_fun/test/testdata/graphml/class_members.hpp Line:43 Column:12$1__foo")
+        .shouldEqual(1);
 }
 
 @Name(testId ~ "Should be a inheritance representation")
@@ -221,6 +311,6 @@ unittest {
     auto graph = getGraph(p);
 
     // test that usage of a type in a method parameter result in a relation
-    graph.countEdge("c:@S@Methods", "c:class_methods.hpp@T@MadeUp").shouldEqual(2);
-    graph.countEdge("c:@S@Virtual", "c:class_methods.hpp@T@MadeUp").shouldEqual(2);
+    graph.countEdge("c:@S@Methods", "c:class_methods.hpp@T@MadeUp").shouldEqual(1);
+    graph.countEdge("c:@S@Virtual", "c:class_methods.hpp@T@MadeUp").shouldEqual(1);
 }
