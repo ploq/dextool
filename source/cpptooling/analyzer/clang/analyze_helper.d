@@ -24,7 +24,7 @@ import clang.Cursor : Cursor;
 import clang.SourceLocation : SourceLocation;
 
 import cpptooling.analyzer.clang.ast : FunctionDecl, VarDecl, Constructor,
-    Destructor, CXXMethod, ClassDecl, FieldDecl, CXXBaseSpecifier,
+    Destructor, CXXMethod, ClassDecl, FieldDecl, CXXBaseSpecifier, StructDecl,
     TranslationUnit, Visitor;
 import cpptooling.analyzer.clang.type : retrieveType, TypeKind, TypeKindAttr,
     TypeResult, TypeResults, logTypeResult;
@@ -422,7 +422,15 @@ struct ClassDeclResult {
     LocationTag location;
 }
 
-auto analyzeClassDecl(const(ClassDecl) decl, ref Container container, in uint indent) {
+/// same kind of data as ClassDeclResult.
+struct StructDeclResult {
+    ClassDeclResult payload;
+    alias payload this;
+}
+
+auto analyzeClassStructDecl(T)(const(T) decl, ref Container container, in uint indent)
+        if (is(T == ClassDecl) || is(T == StructDecl)) {
+
     auto type = () @trusted{ return retrieveType(decl.cursor, container, indent); }();
     put(type, container, indent);
 
@@ -431,8 +439,17 @@ auto analyzeClassDecl(const(ClassDecl) decl, ref Container container, in uint in
     auto loc = () @trusted{ return locToTag(decl.cursor.location()); }();
     auto name = CppClassName(decl.cursor.spelling);
 
-    return ClassDeclResult(type.primary.type, name, loc);
+    auto rval = ClassDeclResult(type.primary.type, name, loc);
+
+    static if (is(T == ClassDecl)) {
+        return rval;
+    } else {
+        return StructDeclResult(rval);
+    }
 }
+
+alias analyzeClassDecl = analyzeClassStructDecl!ClassDecl;
+alias analyzeStructDecl = analyzeClassStructDecl!StructDecl;
 
 /// dummy
 struct TranslationUnitResult {
