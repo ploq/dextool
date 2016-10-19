@@ -4,7 +4,8 @@
 #define VARIABLES_H
 
 // Test of primitive types
-int a;
+int expect_primitive;
+int expect_primitive_array[3];
 extern int expect_b;
 
 /* a duplicate, expecting it to be ignored */

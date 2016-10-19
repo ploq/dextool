@@ -390,30 +390,36 @@ private T toInternal(T, S)(S value) @safe pure nothrow @nogc
     }
 }
 
-private string toColor(TypeKind.Info.Kind kind) @safe pure nothrow @nogc {
+private ColorKind toColor(TypeKind.Info.Kind kind) @safe pure nothrow @nogc {
     switch (kind) with (TypeKind.Info) {
     case Kind.func:
-        return "FF6600";
+        return ColorKind.func;
     default:
-        return null;
+        return ColorKind.none;
     }
 }
 
 private enum ColorKind {
     none,
     file,
+    globalConst,
     global,
-    namespace
+    namespace,
+    func
 }
 
-private string toColor(ColorKind kind) @safe pure nothrow @nogc {
+private string toInternalString(ColorKind kind) @safe pure nothrow @nogc {
     switch (kind) {
     case ColorKind.file:
         return "CCFFCC";
+    case ColorKind.globalConst:
+        return "FFCCFF";
     case ColorKind.global:
-        return "FF99CC";
+        return "FF33FF";
     case ColorKind.namespace:
         return "FFCCCC";
+    case ColorKind.func:
+        return "FF6600";
     default:
         return null;
     }
@@ -449,7 +455,7 @@ private enum StereoType {
 
 private struct ShapeNode {
     string label;
-    string color;
+    ColorKind color;
 
     private enum baseHeight = 20;
     private enum baseWidth = 140;
@@ -458,8 +464,8 @@ private struct ShapeNode {
         import std.format : formattedWrite;
 
         formattedWrite(w, `<y:Geometry height="%s" width="%s"/>`, baseHeight, baseWidth);
-        if (color !is null) {
-            formattedWrite(w, `<y:Fill color="#%s" transparent="false"/>`, color);
+        if (color != ColorKind.none) {
+            formattedWrite(w, `<y:Fill color="#%s" transparent="false"/>`, color.toInternalString);
         }
         formattedWrite(w,
                 `<y:NodeLabel autoSizePolicy="node_size" configuration="CroppingLabel"><![CDATA[%s]]></y:NodeLabel>`,
@@ -530,7 +536,7 @@ unittest {
     }
 }
 
-private auto makeShapeNode(string label, string color = null) {
+private auto makeShapeNode(string label, ColorKind color = ColorKind.none) {
     return NodeStyle!ShapeNode(ShapeNode(label, color));
 }
 
@@ -643,6 +649,30 @@ private T toInternal(T, S)(S value) @safe pure nothrow @nogc
     }
 }
 
+/** Deduct if the type is primitive from the point of view of TransformToXmlStream.
+ *
+ * Filtering out arrays or ptrs of primitive types as to not result in too much
+ * noise.
+ */
+private bool isPrimitive(LookupT)(const TypeKind type, LookupT lookup) @safe nothrow {
+    switch (type.info.kind) with (TypeKind.Info) {
+    case Kind.primitive:
+        return true;
+    case Kind.array:
+        foreach (ele; lookup.kind(type.info.element)) {
+            return ele.info.kind == Kind.primitive;
+        }
+        return false;
+    case Kind.pointer:
+        foreach (ele; lookup.kind(type.info.pointee)) {
+            return ele.info.kind == Kind.primitive;
+        }
+        return false;
+    default:
+        return false;
+    }
+}
+
 import std.range : isOutputRange;
 
 /** Transform analyze data to a xml stream.
@@ -698,7 +728,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
                             payload.attr, identifier), color).toString(w);
                     break;
                 default:
-                    makeShapeNode(payload.toStringDecl, null).toString(w);
+                    makeShapeNode(payload.toStringDecl).toString(w);
                 }
             }
         }
@@ -738,7 +768,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         }
 
         void anyLocation(ref const(TypeData) type, ref const(LocationTag) loc) {
-            if (type.kind.info.kind == TypeKind.Info.Kind.primitive) {
+            if (type.kind.isPrimitive(lookup)) {
                 return;
             }
 
@@ -776,7 +806,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         }
 
         void putDefinition(ref const(TypeData) type, ref const(LocationTag) loc) {
-            if (type.kind.info.kind != TypeKind.Info.Kind.primitive) {
+            if (!type.kind.isPrimitive(lookup)) {
                 nodeIfMissing(streamed_nodes, recv, type.kind.usr, type, loc);
             }
 
@@ -806,14 +836,15 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         auto file_usr = addFileNode(streamed_nodes, recv, result.location);
 
         // instance node
-        nodeIfMissing(streamed_nodes, recv, result.instanceUSR,
-                makeShapeNode(result.name, toColor(ColorKind.global)), result.location);
+        nodeIfMissing(streamed_nodes, recv, result.instanceUSR, makeShapeNode(result.name,
+                result.type.attr.isConst ? ColorKind.globalConst : ColorKind.global),
+                result.location);
 
         // connect file to instance
         addEdge(streamed_edges, recv, file_usr, result.instanceUSR);
 
         // type node
-        if (result.type.kind.info.kind != TypeKind.Info.Kind.primitive) {
+        if (!result.type.kind.isPrimitive(lookup)) {
             putToCache(TypeKindAttr(result.type.kind, TypeAttr.init));
             addEdge(streamed_edges, recv, result.instanceUSR, result.type.kind.usr);
         }
@@ -831,8 +862,9 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         auto ns_usr = addNamespaceNode(streamed_nodes, recv, ns);
 
         // instance node
-        nodeIfMissing(streamed_nodes, recv, result.instanceUSR,
-                makeShapeNode(result.name, toColor(ColorKind.global)), result.location);
+        nodeIfMissing(streamed_nodes, recv, result.instanceUSR, makeShapeNode(result.name,
+                result.type.attr.isConst ? ColorKind.globalConst : ColorKind.global),
+                result.location);
 
         if (!ns_usr.isNull) {
             // connect namespace to instance
@@ -840,7 +872,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         }
 
         // type node
-        if (result.type.kind.info.kind != TypeKind.Info.Kind.primitive) {
+        if (!result.type.kind.isPrimitive(lookup)) {
             putToCache(TypeKindAttr(result.type.kind, TypeAttr.init));
             addEdge(streamed_edges, recv, result.instanceUSR, result.type.kind.usr);
         }
@@ -858,7 +890,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             auto target = resolvePointeeType(result.returnType.kind, result.returnType.attr, lookup)
                 .front;
             putToCache(target);
-            edgeIfNotPrimitive(streamed_edges, recv, src, target);
+            edgeIfNotPrimitive(streamed_edges, recv, src, target, lookup);
         }
 
         // dfmt off
@@ -870,7 +902,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             .joiner
             .map!(a => TypeKindAttr(a.kind, TypeAttr.init))) {
             putToCache(target);
-            edgeIfNotPrimitive(streamed_edges, recv, src, target);
+            edgeIfNotPrimitive(streamed_edges, recv, src, target, lookup);
         }
         // dfmt on
     }
@@ -917,7 +949,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             .joiner
             .map!(a => TypeKindAttr(a.kind, TypeAttr.init))) {
             putToCache(target);
-            edgeIfNotPrimitive(streamed_edges, recv, src, target);
+            edgeIfNotPrimitive(streamed_edges, recv, src, target, lookup);
         }
         // dfmt on
     }
@@ -940,7 +972,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             .joiner
             .map!(a => TypeKindAttr(a.kind, TypeAttr.init))) {
             putToCache(target);
-            edgeIfNotPrimitive(streamed_edges, recv, src, target);
+            edgeIfNotPrimitive(streamed_edges, recv, src, target, lookup);
         }
         // dfmt on
     }
@@ -953,19 +985,20 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
      * putDefinition.
      */
     void put(ref const(TypeKindAttr) src, ref const(FieldDeclResult) result, in CppAccess access) {
-        if (result.type.kind.info.kind == TypeKind.Info.Kind.primitive) {
+        if (result.type.kind.isPrimitive(lookup)) {
             return;
         }
 
         auto target = resolvePointeeType(result.type.kind, result.type.attr, lookup).front;
         putToCache(TypeKindAttr(target.kind, TypeAttr.init));
 
-        edgeIfNotPrimitive(streamed_edges, recv, src, target);
+        edgeIfNotPrimitive(streamed_edges, recv, src, target, lookup);
     }
 
     /// Avoid code duplication by creating nodes via the type_cache.
     void put(ref const(TypeKindAttr) src, ref const(CXXBaseSpecifierResult) result) {
         putToCache(result.type);
+        // by definition it can never be a primitive type so no check needed.
         addEdge(streamed_edges, recv, src.kind.usr, result.canonicalUSR);
     }
 
@@ -1061,8 +1094,7 @@ private:
         auto ns_usr = USRType(ns.toStringNs);
 
         auto ns_loc = LocationTag(null);
-        nodeIfMissing(nodes, recv, ns_usr, makeShapeNode(ns_usr,
-                ColorKind.namespace.toColor), ns_loc);
+        nodeIfMissing(nodes, recv, ns_usr, makeShapeNode(ns_usr, ColorKind.namespace), ns_loc);
 
         return Nullable!USRType(ns_usr);
     }
@@ -1078,15 +1110,15 @@ private:
             auto file_loc = LocationTag(Location(location.file, 0, 0));
 
             nodeIfMissing(nodes, recv, file_usr, makeShapeNode(file_label,
-                    ColorKind.file.toColor), file_loc);
+                    ColorKind.file), file_loc);
         }
 
         return file_usr;
     }
 
-    static void nodeIfNotPrimitive(NodeStoreT, RecvT, LocationT)(ref NodeStoreT nodes,
-            ref RecvT recv, TypeKindAttr type, LocationT loc) {
-        if (type.kind.info.kind == TypeKind.Info.Kind.primitive) {
+    static void nodeIfNotPrimitive(NodeStoreT, RecvT, LocationT, LookupT)(ref NodeStoreT nodes,
+            ref RecvT recv, TypeKindAttr type, LocationT loc, LookupT lookup) {
+        if (type.kind.isPrimitive(lookup)) {
             return;
         }
 
@@ -1131,11 +1163,10 @@ private:
         nodes[node_usr] = true;
     }
 
-    static void edgeIfNotPrimitive(EdgeStoreT, RecvT)(ref EdgeStoreT edges,
-            ref RecvT recv, TypeKindAttr src, TypeKindAttr target) {
+    static void edgeIfNotPrimitive(EdgeStoreT, RecvT, LookupT)(ref EdgeStoreT edges,
+            ref RecvT recv, TypeKindAttr src, TypeKindAttr target, LookupT lookup) {
         if (target.kind.info.kind == TypeKind.Info.Kind.null_
-                || src.kind.info.kind == TypeKind.Info.Kind.primitive
-                || target.kind.info.kind == TypeKind.Info.Kind.primitive) {
+                || src.kind.isPrimitive(lookup) || target.kind.isPrimitive(lookup)) {
             return;
         }
 

@@ -125,8 +125,8 @@ unittest {
     runTestFile(p, testEnv);
 
     auto graph = getGraph(p);
-
-    immutable fid = "File:/home/joker/src/dlang/clang_fun/test/testdata/graphml/functions.h Line:44 Column:9$1func_return_func_ptr";
+    string fid = "File:" ~ thisExePath.dirName.toString
+        ~ "/testdata/graphml/functions.h Line:44 Column:9$1func_return_func_ptr";
 
     // test the relation via the return type
     // function exist
@@ -145,10 +145,11 @@ unittest {
 
     auto graph = getGraph(p);
 
-    immutable fid = "/home/joker/src/dlang/clang_fun/test/testdata/graphml/variables.h";
+    string fid = thisExePath.dirName.toString ~ "/testdata/graphml/variables.h";
 
     // Nodes for all globals exist.
-    graph.countNode("c:@a").shouldEqual(1);
+    graph.countNode("c:@expect_primitive").shouldEqual(1);
+    graph.countNode("c:@expect_primitive_array").shouldEqual(1);
     graph.countNode("c:@expect_b").shouldEqual(1);
     graph.countNode("c:@expect_c").shouldEqual(1);
     graph.countNode("c:@expect_d").shouldEqual(1);
@@ -161,7 +162,8 @@ unittest {
     graph.countNode("c:@expect_const_my_int").shouldEqual(1);
 
     // the file should be related to all of them
-    graph.countEdge(fid, "c:@a").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_primitive").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_primitive_array").shouldEqual(1);
     graph.countEdge(fid, "c:@expect_b").shouldEqual(1);
     graph.countEdge(fid, "c:@expect_c").shouldEqual(1);
     graph.countEdge(fid, "c:@expect_d").shouldEqual(1);
@@ -173,11 +175,14 @@ unittest {
     graph.countEdge(fid, "c:@expect_my_int").shouldEqual(1);
     graph.countEdge(fid, "c:@expect_const_my_int").shouldEqual(1);
 
-    // the variables that are pointers have relations to the pointer type
-    // only testing one, assuming the rest are then OK.
-    graph.countEdge("c:@expect_d",
-            "File:/home/joker/src/dlang/clang_fun/test/testdata/graphml/variables.h Line:17 Column:13$1expect_d")
-        .shouldEqual(1);
+    // a ptr at a primitive do not result in an edge to the type
+    graph.countEdge("c:@expect_d", "File:" ~ thisExePath.dirName.toString
+            ~ "/testdata/graphml/variables.h Line:18 Column:13$1expect_d").shouldEqual(0);
+
+    // a ptr at e.g. a typedef of a primitive type result in an edge to the type
+    graph.countEdge("c:@expect_const_my_int", "File:" ~ thisExePath.dirName.toString
+            ~ "/testdata/graphml/variables.h Line:30 Column:28$1expect_const_my_int").shouldEqual(
+            1);
 }
 
 @Name(testId ~ "Should be free variables in a namespace and thus related to the namespace")
@@ -191,7 +196,8 @@ unittest {
     immutable fid = "ns";
 
     // Nodes for all globals exist.
-    graph.countNode("c:@N@ns@a").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_primitive").shouldEqual(1);
+    graph.countNode("c:@N@ns@expect_primitive_array").shouldEqual(1);
     graph.countNode("c:@N@ns@expect_b").shouldEqual(1);
     graph.countNode("c:@N@ns@expect_c").shouldEqual(1);
     graph.countNode("c:@N@ns@expect_d").shouldEqual(1);
@@ -204,7 +210,8 @@ unittest {
     graph.countNode("c:@N@ns@expect_const_my_int").shouldEqual(1);
 
     // the file should be related to all of them
-    graph.countEdge(fid, "c:@N@ns@a").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_primitive").shouldEqual(1);
+    graph.countEdge(fid, "c:@N@ns@expect_primitive_array").shouldEqual(1);
     graph.countEdge(fid, "c:@N@ns@expect_b").shouldEqual(1);
     graph.countEdge(fid, "c:@N@ns@expect_c").shouldEqual(1);
     graph.countEdge(fid, "c:@N@ns@expect_d").shouldEqual(1);
@@ -216,11 +223,14 @@ unittest {
     graph.countEdge(fid, "c:@N@ns@expect_my_int").shouldEqual(1);
     graph.countEdge(fid, "c:@N@ns@expect_const_my_int").shouldEqual(1);
 
-    // the variables that are pointers have relations to the pointer type
-    // only testing one, assuming the rest are then OK.
-    graph.countEdge("c:@N@ns@expect_d",
-            "File:/home/joker/src/dlang/clang_fun/test/testdata/graphml/variables.h Line:17 Column:13$1expect_d")
-        .shouldEqual(1);
+    // a ptr at a primitive do not result in an edge to the type
+    graph.countEdge("c:@N@ns@expect_d", "File:" ~ thisExePath.dirName.toString
+            ~ "/testdata/graphml/variables.h Line:18 Column:13$1expect_d").shouldEqual(0);
+
+    // a ptr at e.g. a typedef of a primitive type result in an edge to the type
+    graph.countEdge("c:@N@ns@expect_const_my_int", "File:" ~ thisExePath.dirName.toString
+            ~ "/testdata/graphml/variables.h Line:30 Column:28$1expect_const_my_int").shouldEqual(
+            1);
 }
 
 @Name(testId ~ "Should be all type of class classifications")
@@ -267,12 +277,10 @@ unittest {
     // dfmt on
 
     // test that a node and edge to a funcptr is formed
-    graph.countNode(
-            "File:/home/joker/src/dlang/clang_fun/test/testdata/graphml/class_members.hpp Line:43 Column:12$1__foo")
-        .shouldEqual(1);
-    graph.countEdge("c:@S@ToFuncPtr",
-            "File:/home/joker/src/dlang/clang_fun/test/testdata/graphml/class_members.hpp Line:43 Column:12$1__foo")
-        .shouldEqual(1);
+    graph.countNode("File:" ~ thisExePath.dirName.toString
+            ~ "/testdata/graphml/class_members.hpp Line:43 Column:12$1__foo").shouldEqual(1);
+    graph.countEdge("c:@S@ToFuncPtr", "File:" ~ thisExePath.dirName.toString
+            ~ "/testdata/graphml/class_members.hpp Line:43 Column:12$1__foo").shouldEqual(1);
 }
 
 @Name(testId ~ "Should be a inheritance representation")
