@@ -322,3 +322,10 @@ unittest {
     graph.countEdge("c:@S@Methods", "c:class_methods.hpp@T@MadeUp").shouldEqual(1);
     graph.countEdge("c:@S@Virtual", "c:class_methods.hpp@T@MadeUp").shouldEqual(1);
 }
+
+@Name(testId ~ "Should be function body")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("functions_body.hpp", testEnv);
+    runTestFile(p, testEnv);
+}

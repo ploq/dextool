@@ -58,7 +58,7 @@ private ulong nextEdgeId()() {
 
 final class GraphMLAnalyzer(ReceiveT) : Visitor {
     import cpptooling.analyzer.clang.ast : TranslationUnit, ClassDecl, VarDecl,
-        FunctionDecl, Namespace, UnexposedDecl, StructDecl;
+        FunctionDecl, Namespace, UnexposedDecl, StructDecl, CompoundStmt;
     import cpptooling.analyzer.clang.ast.visitor : generateIndentIncrDecr;
     import cpptooling.analyzer.clang.analyze_helper : analyzeFunctionDecl,
         analyzeVarDecl, analyzeClassStructDecl, analyzeTranslationUnit;
@@ -146,8 +146,9 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
         mixin(mixinNodeLog!());
 
         auto result = analyzeFunctionDecl(v, *container, indent);
-
         recv.put(result);
+
+        v.accept(this);
     }
 
     /** Implicit promise that THIS method will output the class node after the
@@ -174,8 +175,8 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
             //}
         }
 
-        auto visitor = scoped!(UMLClassVisitor!(ReceiveT))(result, ns_stack,
-                ctrl, recv, *container, indent + 1);
+        auto visitor = scoped!(ClassVisitor!(ReceiveT))(result, ns_stack, ctrl,
+                recv, *container, indent + 1);
         v.accept(visitor);
 
         recv.put(result, ns_stack, visitor.style);
@@ -192,17 +193,29 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
         // fill the namespace with content from the analyse
         v.accept(this);
     }
+
+    // Function or method body body
+
+    override void visit(const(CompoundStmt) v) {
+        mixin(mixinNodeLog!());
+
+        () @trusted{
+            auto visitor = scoped!(BodyVisitor!(ReceiveT))(ns_stack, ctrl,
+                    recv, *container, indent + 1);
+            v.accept(visitor);
+        }();
+    }
 }
 
 /**
  *
- * The $(D UMLClassVisitor) do not know when the analyze is finished.
- * Therefore from the viewpoint of $(D UMLClassVisitor) classification is an
+ * The $(D ClassVisitor) do not know when the analyze is finished.
+ * Therefore from the viewpoint of $(D ClassVisitor) classification is an
  * ongoing process. It is the responsibility of the caller of $(D
- * UMLClassVisitor) to use the final result of the classification together with
+ * ClassVisitor) to use the final result of the classification together with
  * the style.
  */
-private final class UMLClassVisitor(ReceiveT) : Visitor {
+private final class ClassVisitor(ReceiveT) : Visitor {
     import std.algorithm : map, copy, each, joiner;
     import std.array : Appender;
     import std.conv : to;
@@ -296,7 +309,7 @@ private final class UMLClassVisitor(ReceiveT) : Visitor {
         //
         //recv.put(result, ns_stack);
         //
-        //auto visitor = scoped!(UMLClassVisitor!(ControllerT, ReceiveT))(result.type,
+        //auto visitor = scoped!(ClassVisitor!(ControllerT, ReceiveT))(result.type,
         //        ns_stack, ctrl, recv, *container, indent + 1);
         //v.accept(visitor);
         //
@@ -373,6 +386,56 @@ private final class UMLClassVisitor(ReceiveT) : Visitor {
 
         mixin(mixinNodeLog!());
         access = CppAccess(toAccessType(v.cursor.access.accessSpecifier));
+    }
+}
+
+/**
+ */
+private final class BodyVisitor(ReceiveT) : Visitor {
+    import std.algorithm;
+    import std.array;
+    import std.conv;
+    import std.typecons;
+
+    import cpptooling.analyzer.clang.ast;
+    import cpptooling.analyzer.clang.ast.visitor : generateIndentIncrDecr;
+    import cpptooling.analyzer.clang.analyze_helper;
+    import cpptooling.data.representation;
+    import cpptooling.utility.clang : logNode, mixinNodeLog;
+
+    alias visit = Visitor.visit;
+
+    mixin generateIndentIncrDecr;
+
+    private {
+        Controller ctrl;
+        NullableRef!ReceiveT recv;
+
+        Container* container;
+        CppNsStack ns_stack;
+    }
+
+    this(const(CppNs)[] reside_in_ns, Controller ctrl, ref ReceiveT recv,
+            ref Container container, in uint indent) {
+        this.ctrl = ctrl;
+        this.recv = &recv;
+        this.container = &container;
+        this.indent = indent;
+        this.ns_stack = CppNsStack(reside_in_ns.dup);
+    }
+
+    override void visit(const(Statement) v) {
+        mixin(mixinNodeLog!());
+        v.accept(this);
+    }
+
+    override void visit(const(Expression) v) {
+        mixin(mixinNodeLog!());
+        v.accept(this);
+    }
+
+    override void visit(const(VarDecl) v) {
+        mixin(mixinNodeLog!());
     }
 }
 
