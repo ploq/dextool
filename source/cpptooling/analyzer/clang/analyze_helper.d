@@ -137,7 +137,17 @@ struct FunctionDeclResult {
     Flag!"isDefinition" isDefinition;
 }
 
-auto analyzeFunctionDecl(const(FunctionDecl) v, ref Container container, in uint indent) @trusted {
+auto analyzeFunctionDecl(const(FunctionDecl) v, ref Container container, in uint indent) @safe {
+    return analyzeFunctionDecl(v.cursor, container, indent);
+}
+
+auto analyzeFunctionDecl(const(Cursor) c_in, ref Container container, in uint indent) @trusted
+in {
+    import deimos.clang.index : CXCursorKind;
+
+    assert(c_in.kind == CXCursorKind.CXCursor_FunctionDecl);
+}
+body {
     import std.algorithm : among;
     import std.functional : pipe;
 
@@ -197,11 +207,11 @@ auto analyzeFunctionDecl(const(FunctionDecl) v, ref Container container, in uint
 
         auto data = ComposeData(tr);
 
-        data.name = CFunctionName(v.cursor.spelling);
-        data.loc = locToTag(v.cursor.location());
-        data.is_definition = cast(Flag!"isDefinition") v.cursor.isDefinition;
+        data.name = CFunctionName(c_in.spelling);
+        data.loc = locToTag(c_in.location());
+        data.is_definition = cast(Flag!"isDefinition") c_in.isDefinition;
 
-        switch (v.cursor.storageClass()) with (CX_StorageClass) {
+        switch (c_in.storageClass()) with (CX_StorageClass) {
         case CX_SC_Extern:
             data.storageClass = StorageClass.Extern;
             break;
@@ -251,7 +261,7 @@ auto analyzeFunctionDecl(const(FunctionDecl) v, ref Container container, in uint
                           }
                       }
                       )
-        (v.cursor);
+        (c_in);
     // dfmt on
 
     return rval;
