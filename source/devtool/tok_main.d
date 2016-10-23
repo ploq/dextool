@@ -16,24 +16,29 @@ import deimos.clang.index;
 
 import clang.Util;
 
-auto _getTokenKindSpelling(CXTokenKind kind) {
-    with (CXTokenKind) switch (kind) {
-    case CXToken_Punctuation:
-        return "Punctuation";
-    case CXToken_Keyword:
-        return "Keyword";
-    case CXToken_Identifier:
-        return "Identifier";
-    case CXToken_Literal:
-        return "Literal";
-    case CXToken_Comment:
-        return "Comment";
-    default:
-        return "Unknown";
-    }
+void showClangVersion() {
+    CXString version_ = clang_getClangVersion();
+    writef("%s\n", toD(version_));
 }
 
-void show_all_tokens(ref CXTranslationUnit tu, CXToken* tokens, uint numTokens) {
+void showAllTokens(ref CXTranslationUnit tu, CXToken* tokens, uint numTokens) {
+    static auto _getTokenKindSpelling(CXTokenKind kind) {
+        with (CXTokenKind) switch (kind) {
+        case CXToken_Punctuation:
+            return "Punctuation";
+        case CXToken_Keyword:
+            return "Keyword";
+        case CXToken_Identifier:
+            return "Identifier";
+        case CXToken_Literal:
+            return "Literal";
+        case CXToken_Comment:
+            return "Comment";
+        default:
+            return "Unknown";
+        }
+    }
+
     writeln("=== show tokens ===");
     writef("NumTokens: %d\n", numTokens);
     for (auto i = 0U; i < numTokens; i++) {
@@ -57,15 +62,15 @@ void show_all_tokens(ref CXTranslationUnit tu, CXToken* tokens, uint numTokens) 
     }
 }
 
-auto get_filesize(in string fileName) {
-    import std.file;
-
-    return getSize(fileName);
-}
-
 CXSourceRange get_filerange(ref CXTranslationUnit tu, in string filename) {
+    auto getFileSize(in string fileName) {
+        import std.file;
+
+        return getSize(fileName);
+    }
+
     CXFile file = clang_getFile(tu, filename.toStringz);
-    uint fileSize = cast(uint) get_filesize(filename);
+    uint fileSize = cast(uint) getFileSize(filename);
 
     // get top/last location of the file
     CXSourceLocation topLoc = clang_getLocationForOffset(tu, file, 0);
@@ -84,11 +89,6 @@ CXSourceRange get_filerange(ref CXTranslationUnit tu, in string filename) {
     }
 
     return range;
-}
-
-void show_clang_version() {
-    CXString version_ = clang_getClangVersion();
-    writef("%s\n", toD(version_));
 }
 
 int tokenize(string filename) {
@@ -112,7 +112,7 @@ int tokenize(string filename) {
     clang_tokenize(tu, range, &tokens, &numTokens);
 
     // show tokens
-    show_all_tokens(tu, tokens, numTokens);
+    showAllTokens(tu, tokens, numTokens);
 
     clang_disposeTokens(tu, tokens, numTokens);
     clang_disposeTranslationUnit(tu);
@@ -121,7 +121,7 @@ int tokenize(string filename) {
     return 0;
 }
 
-int dump_ast(string filename, string[] flags) {
+int dumpAst(string filename, string[] flags) {
     import cpptooling.analyzer.clang.context;
     import clang.TranslationUnit : dumpAST;
 
@@ -144,13 +144,13 @@ int main(string[] args) {
         flags = args[3 .. $];
     }
 
-    show_clang_version();
+    showClangVersion();
 
     switch (args[1]) {
     case "tok":
         return tokenize(args[2]);
     case "dumpast":
-        return dump_ast(args[2], flags);
+        return dumpAst(args[2], flags);
     default:
         return 1;
     }
