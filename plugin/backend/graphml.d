@@ -78,7 +78,7 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
         Products prod;
         Container* container;
 
-        CppNs[] ns_stack;
+        CppNs[] scope_stack;
     }
 
     this(ReceiveT recv, Controller ctrl, Parameters params, Products prod, ref Container container) {
@@ -135,10 +135,10 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
 
         auto result = analyzeVarDecl(v, *container, indent);
 
-        if (ns_stack.length == 0) {
+        if (scope_stack.length == 0) {
             recv.put(result);
         } else {
-            recv.put(result, ns_stack);
+            recv.put(result, scope_stack);
         }
     }
 
@@ -148,7 +148,11 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
         auto result = analyzeFunctionDecl(v, *container, indent);
         recv.put(result);
 
-        v.accept(this);
+        () @trusted{
+            auto visitor = scoped!(BodyVisitor!(ReceiveT))(result.type,
+                    scope_stack, ctrl, recv, *container, indent + 1);
+            v.accept(visitor);
+        }();
     }
 
     /** Implicit promise that THIS method will output the class node after the
@@ -175,35 +179,23 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
             //}
         }
 
-        auto visitor = scoped!(ClassVisitor!(ReceiveT))(result, ns_stack, ctrl,
-                recv, *container, indent + 1);
+        auto visitor = scoped!(ClassVisitor!(ReceiveT))(result, scope_stack,
+                ctrl, recv, *container, indent + 1);
         v.accept(visitor);
 
-        recv.put(result, ns_stack, visitor.style);
+        recv.put(result, scope_stack, visitor.style);
     }
 
     override void visit(const(Namespace) v) {
         mixin(mixinNodeLog!());
 
-        () @trusted{ ns_stack ~= CppNs(v.cursor.spelling); }();
+        () @trusted{ scope_stack ~= CppNs(v.cursor.spelling); }();
         // pop the stack when done
         scope (exit)
-            ns_stack = ns_stack[0 .. $ - 1];
+            scope_stack = scope_stack[0 .. $ - 1];
 
         // fill the namespace with content from the analyse
         v.accept(this);
-    }
-
-    // Function or method body body
-
-    override void visit(const(CompoundStmt) v) {
-        mixin(mixinNodeLog!());
-
-        () @trusted{
-            auto visitor = scoped!(BodyVisitor!(ReceiveT))(ns_stack, ctrl,
-                    recv, *container, indent + 1);
-            v.accept(visitor);
-        }();
     }
 }
 
@@ -253,7 +245,7 @@ private final class ClassVisitor(ReceiveT) : Visitor {
         NullableRef!ReceiveT recv;
 
         Container* container;
-        CppNsStack ns_stack;
+        CppNsStack scope_stack;
         CppAccess access;
 
         /// If the class has any members.
@@ -271,7 +263,7 @@ private final class ClassVisitor(ReceiveT) : Visitor {
         this.recv = &recv;
         this.container = &container;
         this.indent = indent;
-        this.ns_stack = CppNsStack(reside_in_ns.dup);
+        this.scope_stack = CppNsStack(reside_in_ns.dup);
 
         this.access = CppAccess(AccessType.Private);
         this.classification = ClassificationState.Unknown;
@@ -307,10 +299,10 @@ private final class ClassVisitor(ReceiveT) : Visitor {
         //    }
         //}
         //
-        //recv.put(result, ns_stack);
+        //recv.put(result, scope_stack);
         //
         //auto visitor = scoped!(ClassVisitor!(ControllerT, ReceiveT))(result.type,
-        //        ns_stack, ctrl, recv, *container, indent + 1);
+        //        scope_stack, ctrl, recv, *container, indent + 1);
         //v.accept(visitor);
         //
         //auto result_class = ClassClassificationResult(visitor.type, visitor.classification);
@@ -389,7 +381,8 @@ private final class ClassVisitor(ReceiveT) : Visitor {
     }
 }
 
-/**
+/** Visit a function or method body.
+ *
  */
 private final class BodyVisitor(ReceiveT) : Visitor {
     import std.algorithm;
@@ -407,21 +400,27 @@ private final class BodyVisitor(ReceiveT) : Visitor {
 
     mixin generateIndentIncrDecr;
 
+    /** Type representation of parent.
+     * Used as the source of the outgoing relations from this class.
+     */
+    TypeKindAttr parent;
+
     private {
         Controller ctrl;
         NullableRef!ReceiveT recv;
 
         Container* container;
-        CppNsStack ns_stack;
+        CppNsStack scope_stack;
     }
 
-    this(const(CppNs)[] reside_in_ns, Controller ctrl, ref ReceiveT recv,
-            ref Container container, in uint indent) {
+    this(const(TypeKindAttr) parent, const(CppNs)[] reside_in_ns, Controller ctrl,
+            ref ReceiveT recv, ref Container container, in uint indent) {
+        this.parent = parent;
         this.ctrl = ctrl;
         this.recv = &recv;
         this.container = &container;
         this.indent = indent;
-        this.ns_stack = CppNsStack(reside_in_ns.dup);
+        this.scope_stack = CppNsStack(reside_in_ns.dup);
     }
 
     override void visit(const(Statement) v) {
@@ -434,9 +433,22 @@ private final class BodyVisitor(ReceiveT) : Visitor {
         v.accept(this);
     }
 
-    override void visit(const(VarDecl) v) {
+    override void visit(const(CallExpr) v) {
         mixin(mixinNodeLog!());
+
+        auto c_func = v.cursor.referenced;
+
+        if (c_func.kind == CXCursorKind.CXCursor_FunctionDecl) {
+            auto result = analyzeFunctionDecl(c_func, *container, indent);
+            recv.put(parent, result);
+        }
+
+        v.accept(this);
     }
+
+    //override void visit(const(VarDecl) v) {
+    //    mixin(mixinNodeLog!());
+    //}
 }
 
 private T toInternal(T, S)(S value) @safe pure nothrow @nogc 
@@ -968,6 +980,24 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             edgeIfNotPrimitive(streamed_edges, recv, src, target, lookup);
         }
         // dfmt on
+    }
+
+    /** Calls from src to result.
+     *
+     * Assuming that src is already put in the cache.
+     *
+     * Only interested in the relation from src to the function.
+     */
+    void put(ref const(TypeKindAttr) in_src, ref const(FunctionDeclResult) result) {
+        import std.algorithm : map, filter, joiner;
+        import cpptooling.data.representation : unpackParam;
+
+        auto src = resolveCanonicalType(in_src.kind, in_src.attr, lookup).front;
+
+        auto target = resolveCanonicalType(result.type.kind, result.type.attr, lookup).front;
+        putToCache(TypeData(target, cast(string) result.name));
+
+        edgeIfNotPrimitive(streamed_edges, recv, src, target, lookup);
     }
 
     /**

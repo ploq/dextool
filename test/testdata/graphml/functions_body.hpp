@@ -17,6 +17,20 @@ void if_() {
     }
 }
 
+void if_else(int x) {
+    if (x) {
+        x = 2;
+    } else {
+        x = 4;
+    }
+
+    if (x) {
+        x = 2;
+    } else {
+        x = 4;
+    }
+}
+
 void for_() {
     for (int x = 0; x < 10; ++x) {
         empty();
