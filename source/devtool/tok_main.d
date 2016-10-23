@@ -132,10 +132,99 @@ int dumpAst(string filename, string[] flags) {
     return 0;
 }
 
+int dumpBody(string fname, string[] flags) {
+    import std.typecons : scoped, NullableRef;
+    import cpptooling.analyzer.clang.analyze_helper;
+    import cpptooling.analyzer.clang.ast;
+    import cpptooling.analyzer.clang.context;
+    import cpptooling.analyzer.clang.utility : hasParseErrors, logDiagnostic;
+    import cpptooling.utility.clang : logNode, mixinNodeLog;
+    import cpptooling.data.symbol.container : Container;
+
+    final class BodyVisitor : Visitor {
+        alias visit = Visitor.visit;
+        mixin generateIndentIncrDecr;
+
+        NullableRef!Container container;
+
+        this(ref Container container) {
+            this.container = &container;
+        }
+
+        override void visit(const(Declaration) v) {
+            mixin(mixinNodeLog!());
+            v.accept(this);
+        }
+
+        override void visit(const(Statement) v) {
+            mixin(mixinNodeLog!());
+            v.accept(this);
+        }
+
+        override void visit(const(Expression) v) {
+            mixin(mixinNodeLog!());
+            v.accept(this);
+        }
+
+        override void visit(const(CallExpr) v) {
+            mixin(mixinNodeLog!());
+
+            auto c_func = v.cursor.referenced;
+            logger.trace("CallExpr: ", c_func.spelling, " kind:", c_func.kind.to!string());
+
+            if (c_func.kind == CXCursorKind.CXCursor_FunctionDecl) {
+                auto result = analyzeFunctionDecl(c_func, container, indent);
+                logger.trace("result: ", result);
+            } else {
+                logger.trace("unknown callexpr: ", c_func.kind.to!string());
+            }
+
+            v.accept(this);
+        }
+    }
+
+    final class MainVisitor : Visitor {
+        alias visit = Visitor.visit;
+        mixin generateIndentIncrDecr;
+
+        Container container;
+
+        override void visit(const(TranslationUnit) v) {
+            mixin(mixinNodeLog!());
+            v.accept(this);
+        }
+
+        override void visit(const(FunctionDecl) v) @trusted {
+            mixin(mixinNodeLog!());
+
+            auto visitor = scoped!(BodyVisitor)(container);
+            visitor.indent = indent;
+            v.accept(visitor);
+        }
+    }
+
+    auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
+    auto tu = ctx.makeTranslationUnit(fname, flags);
+
+    if (tu.hasParseErrors) {
+        logDiagnostic(tu);
+    }
+
+    auto visitor = new MainVisitor;
+    auto ast = ClangAST!(typeof(visitor))(tu.cursor);
+    ast.accept(visitor);
+
+    return 0;
+}
+
 int main(string[] args) {
+    import application.logger : confLogLevel, ConfigureLog;
+
+    confLogLevel(ConfigureLog.debug_);
+
     if (args.length < 3) {
         writeln("devtool <category> filename");
-        writeln("categories: tok, ast, dumpast");
+        writeln("categories: tok, ast, dumpast, dumpbody");
         return 1;
     }
 
@@ -151,6 +240,8 @@ int main(string[] args) {
         return tokenize(args[2]);
     case "dumpast":
         return dumpAst(args[2], flags);
+    case "dumpbody":
+        return dumpBody(args[2], flags);
     default:
         return 1;
     }
