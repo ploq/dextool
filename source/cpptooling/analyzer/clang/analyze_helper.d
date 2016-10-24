@@ -137,11 +137,11 @@ struct FunctionDeclResult {
     Flag!"isDefinition" isDefinition;
 }
 
-auto analyzeFunctionDecl(const(FunctionDecl) v, ref Container container, in uint indent) @safe {
+FunctionDeclResult analyzeFunctionDecl(const(FunctionDecl) v, ref Container container, in uint indent) @safe {
     return analyzeFunctionDecl(v.cursor, container, indent);
 }
 
-auto analyzeFunctionDecl(const(Cursor) c_in, ref Container container, in uint indent) @trusted
+FunctionDeclResult analyzeFunctionDecl(const(Cursor) c_in, ref Container container, in uint indent) @trusted
 in {
     import deimos.clang.index : CXCursorKind;
 
@@ -275,12 +275,12 @@ struct VarDeclResult {
 }
 
 /// Analyze a variable declaration
-auto analyzeVarDecl(const(VarDecl) v, ref Container container, in uint indent) @safe {
+VarDeclResult analyzeVarDecl(const(VarDecl) v, ref Container container, in uint indent) @safe {
     return analyzeVarDecl(v.cursor, container, indent);
 }
 
 /// ditto
-auto analyzeVarDecl(const(Cursor) v, ref Container container, in uint indent) @safe
+VarDeclResult analyzeVarDecl(const(Cursor) v, ref Container container, in uint indent) @safe
 in {
     import deimos.clang.index : CXCursorKind;
 
