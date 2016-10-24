@@ -323,9 +323,28 @@ unittest {
     graph.countEdge("c:@S@Virtual", "c:class_methods.hpp@T@MadeUp").shouldEqual(1);
 }
 
-@Name(testId ~ "Should be callgraph from functions")
+@Name(testId ~ "Should be callgraph between functions")
 unittest {
     mixin(EnvSetup(globalTestdir));
     auto p = genTestParams("functions_body_call.hpp", testEnv);
     runTestFile(p, testEnv);
+
+    auto graph = getGraph(p);
+    string fid = "File:" ~ thisExePath.dirName.toString;
+    string id_empty = fid ~ "/testdata/graphml/functions_body_call.hpp Line:6 Column:6$1empty";
+    string id_single_call = fid
+        ~ "/testdata/graphml/functions_body_call.hpp Line:17 Column:6$1single_call";
+    string id_for = fid ~ "/testdata/graphml/functions_body_call.hpp Line:29 Column:6$1for_";
+    string id_if = fid ~ "/testdata/graphml/functions_body_call.hpp Line:21 Column:6$1if_";
+    string id_nested = fid ~ "/testdata/graphml/functions_body_call.hpp Line:35 Column:6$1nested";
+    string id_arg0 = fid ~ "/testdata/graphml/functions_body_call.hpp Line:9 Column:5$1arg0";
+    string id_arg1 = fid ~ "/testdata/graphml/functions_body_call.hpp Line:13 Column:7$1arg1";
+
+    graph.countNode(id_empty).shouldEqual(1);
+    graph.countEdge(id_single_call, id_empty).shouldEqual(1);
+    graph.countEdge(id_for, id_empty).shouldEqual(1);
+    graph.countEdge(id_if, id_empty).shouldEqual(1);
+    graph.countEdge(id_if, id_arg0).shouldEqual(1);
+    graph.countEdge(id_nested, id_arg0).shouldEqual(1);
+    graph.countEdge(id_nested, id_arg1).shouldEqual(1);
 }
