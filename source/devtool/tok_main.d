@@ -170,7 +170,7 @@ int dumpBody(string fname, string[] flags) {
             mixin(mixinNodeLog!());
 
             auto c_func = v.cursor.referenced;
-            logger.trace("CallExpr: ", c_func.spelling, " kind:", c_func.kind.to!string());
+            logger.trace("ref: ", c_func.spelling, " kind:", c_func.kind.to!string());
 
             if (c_func.kind == CXCursorKind.CXCursor_FunctionDecl) {
                 auto result = analyzeFunctionDecl(c_func, container, indent);
@@ -178,6 +178,15 @@ int dumpBody(string fname, string[] flags) {
             } else {
                 logger.trace("unknown callexpr: ", c_func.kind.to!string());
             }
+
+            v.accept(this);
+        }
+
+        override void visit(const(DeclRefExpr) v) {
+            mixin(mixinNodeLog!());
+
+            auto c_ref = v.cursor.referenced;
+            logger.trace("ref: ", c_ref.spelling, " kind:", c_ref.kind.to!string());
 
             v.accept(this);
         }
