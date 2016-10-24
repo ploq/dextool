@@ -174,7 +174,7 @@ int dumpBody(string fname, string[] flags) {
 
             if (c_func.kind == CXCursorKind.CXCursor_FunctionDecl) {
                 auto result = analyzeFunctionDecl(c_func, container, indent);
-                logger.trace("result: ", result);
+                () @trusted{ logger.trace("result: ", result); }();
             } else {
                 logger.trace("unknown callexpr: ", c_func.kind.to!string());
             }
