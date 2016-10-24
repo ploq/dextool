@@ -323,9 +323,9 @@ unittest {
     graph.countEdge("c:@S@Virtual", "c:class_methods.hpp@T@MadeUp").shouldEqual(1);
 }
 
-@Name(testId ~ "Should be function body")
+@Name(testId ~ "Should be callgraph from functions")
 unittest {
     mixin(EnvSetup(globalTestdir));
-    auto p = genTestParams("functions_body.hpp", testEnv);
+    auto p = genTestParams("functions_body_call.hpp", testEnv);
     runTestFile(p, testEnv);
 }
