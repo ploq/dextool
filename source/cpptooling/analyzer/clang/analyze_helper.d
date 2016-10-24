@@ -274,18 +274,30 @@ struct VarDeclResult {
     USRType instanceUSR;
 }
 
+/// Analyze a variable declaration
 auto analyzeVarDecl(const(VarDecl) v, ref Container container, in uint indent) @safe {
+    return analyzeVarDecl(v.cursor, container, indent);
+}
+
+/// ditto
+auto analyzeVarDecl(const(Cursor) v, ref Container container, in uint indent) @safe
+in {
+    import deimos.clang.index : CXCursorKind;
+
+    assert(v.kind == CXCursorKind.CXCursor_VarDecl);
+}
+body {
     import clang.Cursor : Cursor;
     import cpptooling.analyzer.clang.type : retrieveType;
     import cpptooling.analyzer.clang.utility : put;
     import cpptooling.data.representation : CppVariable;
 
-    auto type = () @trusted{ return retrieveType(v.cursor, container, indent); }();
+    auto type = () @trusted{ return retrieveType(v, container, indent); }();
     put(type, container, indent);
 
-    auto name = CppVariable(v.cursor.spelling);
-    auto loc = locToTag(v.cursor.location());
-    auto instance_usr = USRType(v.cursor.usr);
+    auto name = CppVariable(v.spelling);
+    auto loc = locToTag(v.location());
+    auto instance_usr = USRType(v.usr);
     // Assuming that all variable declarations have a USR
     assert(instance_usr.length > 0);
 
