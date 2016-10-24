@@ -27,7 +27,7 @@ void if_() {
 }
 
 void for_() {
-    for (int x = arg0(2); x < 10; ++x) {
+    for (int for_x = arg0(2); for_x < 10; ++for_x) {
         empty();
     }
 }

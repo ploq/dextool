@@ -348,3 +348,19 @@ unittest {
     graph.countEdge(id_nested, id_arg0).shouldEqual(1);
     graph.countEdge(id_nested, id_arg1).shouldEqual(1);
 }
+
+@Name(testId ~ "Should be functions related to globals")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("functions_body_globals.hpp", testEnv);
+    runTestFile(p, testEnv);
+
+    auto graph = getGraph(p);
+    string fid = "File:" ~ thisExePath.dirName.toString;
+    string id_global = "c:@global";
+
+    graph.countEdge(fid ~ "/testdata/graphml/functions_body_globals.hpp Line:6 Column:6$1read_access",
+            id_global).shouldEqual(1);
+    graph.countEdge(fid ~ "/testdata/graphml/functions_body_globals.hpp Line:10 Column:6$1assign_access",
+            id_global).shouldEqual(1);
+}

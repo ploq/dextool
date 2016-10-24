@@ -423,7 +423,7 @@ private final class BodyVisitor(ReceiveT) : Visitor {
         this.scope_stack = CppNsStack(reside_in_ns.dup);
     }
 
-    override void visit(const(Statement) v) {
+    override void visit(const(Declaration) v) {
         mixin(mixinNodeLog!());
         v.accept(this);
     }
@@ -433,13 +433,35 @@ private final class BodyVisitor(ReceiveT) : Visitor {
         v.accept(this);
     }
 
+    override void visit(const(Statement) v) {
+        mixin(mixinNodeLog!());
+        v.accept(this);
+    }
+
     override void visit(const(CallExpr) v) {
         mixin(mixinNodeLog!());
+        import deimos.clang.index : CXCursorKind;
 
         auto c_func = v.cursor.referenced;
 
         if (c_func.kind == CXCursorKind.CXCursor_FunctionDecl) {
             auto result = analyzeFunctionDecl(c_func, *container, indent);
+            recv.put(parent, result);
+        }
+
+        v.accept(this);
+    }
+
+    override void visit(const(DeclRefExpr) v) {
+        mixin(mixinNodeLog!());
+        import deimos.clang.index : CXCursorKind;
+        import cpptooling.analyzer.clang.utility : isGlobalOrNamespaceScope;
+
+        auto c_ref = v.cursor.referenced;
+
+        // accessing a global
+        if (c_ref.kind == CXCursorKind.CXCursor_VarDecl && c_ref.isGlobalOrNamespaceScope) {
+            auto result = analyzeVarDecl(c_ref, *container, indent);
             recv.put(parent, result);
         }
 
@@ -953,6 +975,16 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         }
     }
 
+    /** Accessing a global.
+     *
+     * Assuming that src is already put in the cache.
+     * Assuming that target is already in cache or will be in the future when
+     * traversing the AST.
+     * */
+    void put(ref const(TypeKindAttr) src, ref const(VarDeclResult) result) {
+        addEdge(streamed_edges, recv, src.kind.usr, result.instanceUSR);
+    }
+
     ///
     void put(ref const(FunctionDeclResult) result) {
         import std.algorithm : map, filter, joiner;
@@ -989,9 +1021,6 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
      * Only interested in the relation from src to the function.
      */
     void put(ref const(TypeKindAttr) in_src, ref const(FunctionDeclResult) result) {
-        import std.algorithm : map, filter, joiner;
-        import cpptooling.data.representation : unpackParam;
-
         auto src = resolveCanonicalType(in_src.kind, in_src.attr, lookup).front;
 
         auto target = resolveCanonicalType(result.type.kind, result.type.attr, lookup).front;
