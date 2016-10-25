@@ -58,7 +58,8 @@ private ulong nextEdgeId()() {
 
 final class GraphMLAnalyzer(ReceiveT) : Visitor {
     import cpptooling.analyzer.clang.ast : TranslationUnit, ClassDecl, VarDecl,
-        FunctionDecl, Namespace, UnexposedDecl, StructDecl, CompoundStmt;
+        FunctionDecl, Namespace, UnexposedDecl, StructDecl, CompoundStmt,
+        Constructor, Destructor, CXXMethod;
     import cpptooling.analyzer.clang.ast.visitor : generateIndentIncrDecr;
     import cpptooling.analyzer.clang.analyze_helper : analyzeFunctionDecl,
         analyzeVarDecl, analyzeClassStructDecl, analyzeTranslationUnit;
@@ -149,41 +150,10 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
         recv.put(result);
 
         () @trusted{
-            auto visitor = scoped!(BodyVisitor!(ReceiveT))(result.type,
-                    scope_stack, ctrl, recv, *container, indent + 1);
+            auto visitor = scoped!(BodyVisitor!(ReceiveT))(result.type, ctrl,
+                    recv, *container, indent + 1);
             v.accept(visitor);
         }();
-    }
-
-    /** Implicit promise that THIS method will output the class node after the
-     * class has been classified.
-     */
-    override void visit(const(ClassDecl) v) {
-        mixin(mixinNodeLog!());
-        visitClassStruct(v);
-    }
-
-    override void visit(const(StructDecl) v) {
-        mixin(mixinNodeLog!());
-        visitClassStruct(v);
-    }
-
-    private void visitClassStruct(T)(const(T) v) @trusted {
-        import std.algorithm : map, joiner;
-
-        auto result = analyzeClassStructDecl(v, *container, indent);
-
-        foreach (loc; container.find!LocationTag(result.type.kind.usr).map!(a => a.any).joiner) {
-            //if (!ctrl.doFile(loc.file, loc.file)) {
-            //    return;
-            //}
-        }
-
-        auto visitor = scoped!(ClassVisitor!(ReceiveT))(result, scope_stack,
-                ctrl, recv, *container, indent + 1);
-        v.accept(visitor);
-
-        recv.put(result, scope_stack, visitor.style);
     }
 
     override void visit(const(Namespace) v) {
@@ -196,6 +166,69 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
 
         // fill the namespace with content from the analyse
         v.accept(this);
+    }
+
+    // === Class and Struct ===
+
+    /** Implicit promise that THIS method will output the class node after the
+     * class has been classified.
+     */
+    override void visit(const(ClassDecl) v) {
+        mixin(mixinNodeLog!());
+        auto result = analyzeClassStructDecl(v, *container, indent + 1);
+        auto style = visitClassStruct(v, result.type);
+        style.label = result.name;
+        recv.put(result, scope_stack, style);
+    }
+
+    override void visit(const(StructDecl) v) {
+        mixin(mixinNodeLog!());
+        auto result = analyzeClassStructDecl(v, *container, indent + 1);
+        auto style = visitClassStruct(v, result.type);
+        style.label = result.name;
+        recv.put(result, scope_stack, style);
+    }
+
+    override void visit(const(Constructor) v) {
+        mixin(mixinNodeLog!());
+        visitClassStructMethod(v);
+    }
+
+    override void visit(const(Destructor) v) {
+        mixin(mixinNodeLog!());
+        visitClassStructMethod(v);
+    }
+
+    override void visit(const(CXXMethod) v) {
+        mixin(mixinNodeLog!());
+        visitClassStructMethod(v);
+    }
+
+    private auto visitClassStruct(T)(const(T) v, TypeKindAttr type) @trusted {
+        import std.algorithm : map, joiner;
+
+        foreach (loc; container.find!LocationTag(type.kind.usr).map!(a => a.any).joiner) {
+            //if (!ctrl.doFile(loc.file, loc.file)) {
+            //    return;
+            //}
+        }
+
+        auto visitor = scoped!(ClassVisitor!(ReceiveT))(type, scope_stack,
+                ctrl, recv, *container, indent + 1);
+        v.accept(visitor);
+
+        return visitor.style;
+    }
+
+    private auto visitClassStructMethod(T)(const(T) v) {
+        auto parent = v.cursor.semanticParent;
+        auto result = analyzeClassStructDecl(parent, *container, indent);
+
+        () @trusted{
+            auto visitor = scoped!(BodyVisitor!(ReceiveT))(result.type, ctrl,
+                    recv, *container, indent + 1);
+            v.accept(visitor);
+        }();
     }
 }
 
@@ -236,7 +269,7 @@ private final class ClassVisitor(ReceiveT) : Visitor {
     /** Type representation of this class.
      * Used as the source of the outgoing relations from this class.
      */
-    TypeKindAttr type;
+    TypeKindAttr this_;
 
     NodeStyle!UMLClassNode style;
 
@@ -257,7 +290,7 @@ private final class ClassVisitor(ReceiveT) : Visitor {
         ClassificationState classification;
     }
 
-    this(ref const(ClassDeclResult) result, const(CppNs)[] reside_in_ns,
+    this(ref const(TypeKindAttr) this_, const(CppNs)[] reside_in_ns,
             Controller ctrl, ref ReceiveT recv, ref Container container, in uint indent) {
         this.ctrl = ctrl;
         this.recv = &recv;
@@ -268,8 +301,7 @@ private final class ClassVisitor(ReceiveT) : Visitor {
         this.access = CppAccess(AccessType.Private);
         this.classification = ClassificationState.Unknown;
 
-        this.type = result.type;
-        this.style.label = cast(string) result.name;
+        this.this_ = this_;
     }
 
     /**
@@ -315,7 +347,7 @@ private final class ClassVisitor(ReceiveT) : Visitor {
 
         auto result = analyzeCXXBaseSpecified(v, *container, indent);
 
-        recv.put(this.type, result);
+        recv.put(this_, result);
     }
 
     override void visit(const(Constructor) v) {
@@ -326,7 +358,13 @@ private final class ClassVisitor(ReceiveT) : Visitor {
         auto tor = CppCtor(result.usr, result.name, result.params, access);
         style.methods ~= access.toInternal!string ~ tor.toString;
 
-        recv.put(this.type, result, access);
+        recv.put(this_, result, access);
+
+        () @trusted{
+            auto visitor = scoped!(BodyVisitor!(ReceiveT))(this_, ctrl, recv,
+                    *container, indent + 1);
+            v.accept(visitor);
+        }();
     }
 
     override void visit(const(Destructor) v) {
@@ -338,7 +376,13 @@ private final class ClassVisitor(ReceiveT) : Visitor {
         auto tor = CppDtor(result.usr, result.name, access, result.virtualKind);
         style.methods ~= access.toInternal!string ~ tor.toString;
 
-        recv.put(this.type, result, access);
+        recv.put(this_, result, access);
+
+        () @trusted{
+            auto visitor = scoped!(BodyVisitor!(ReceiveT))(this_, ctrl, recv,
+                    *container, indent + 1);
+            v.accept(visitor);
+        }();
     }
 
     override void visit(const(CXXMethod) v) {
@@ -354,7 +398,13 @@ private final class ClassVisitor(ReceiveT) : Visitor {
 
         updateClassification(MethodKind.Method, cast(MemberVirtualType) result.virtualKind);
 
-        recv.put(this.type, result, access);
+        recv.put(this_, result, access);
+
+        () @trusted{
+            auto visitor = scoped!(BodyVisitor!(ReceiveT))(this_, ctrl, recv,
+                    *container, indent + 1);
+            v.accept(visitor);
+        }();
     }
 
     override void visit(const(FieldDecl) v) {
@@ -370,7 +420,7 @@ private final class ClassVisitor(ReceiveT) : Visitor {
         hasMember = Yes.hasMember;
         updateClassification(MethodKind.Unknown, MemberVirtualType.Unknown);
 
-        recv.put(this.type, result, access);
+        recv.put(this_, result, access);
     }
 
     override void visit(const(CXXAccessSpecifier) v) @trusted {
@@ -410,17 +460,15 @@ private final class BodyVisitor(ReceiveT) : Visitor {
         NullableRef!ReceiveT recv;
 
         Container* container;
-        CppNsStack scope_stack;
     }
 
-    this(const(TypeKindAttr) parent, const(CppNs)[] reside_in_ns, Controller ctrl,
-            ref ReceiveT recv, ref Container container, in uint indent) {
+    this(const(TypeKindAttr) parent, Controller ctrl, ref ReceiveT recv,
+            ref Container container, in uint indent) {
         this.parent = parent;
         this.ctrl = ctrl;
         this.recv = &recv;
         this.container = &container;
         this.indent = indent;
-        this.scope_stack = CppNsStack(reside_in_ns.dup);
     }
 
     override void visit(const(Declaration) v) {

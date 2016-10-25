@@ -125,8 +125,7 @@ unittest {
     runTestFile(p, testEnv);
 
     auto graph = getGraph(p);
-    string fid = "File:" ~ thisExePath.dirName.toString
-        ~ "/testdata/graphml/functions.h Line:44 Column:9$1func_return_func_ptr";
+    string fid = "c:@F@func_return_func_ptr";
 
     // test the relation via the return type
     // function exist
@@ -277,10 +276,8 @@ unittest {
     // dfmt on
 
     // test that a node and edge to a funcptr is formed
-    graph.countNode("File:" ~ thisExePath.dirName.toString
-            ~ "/testdata/graphml/class_members.hpp Line:43 Column:12$1__foo").shouldEqual(1);
-    graph.countEdge("c:@S@ToFuncPtr", "File:" ~ thisExePath.dirName.toString
-            ~ "/testdata/graphml/class_members.hpp Line:43 Column:12$1__foo").shouldEqual(1);
+    graph.countNode("c:@S@ToFuncPtr").shouldEqual(1);
+    graph.countEdge("c:@S@ToFuncPtr", "c:@S@ToFuncPtr@FI@__foo").shouldEqual(1);
 }
 
 @Name(testId ~ "Should be a inheritance representation")
@@ -330,15 +327,13 @@ unittest {
     runTestFile(p, testEnv);
 
     auto graph = getGraph(p);
-    string fid = "File:" ~ thisExePath.dirName.toString;
-    string id_empty = fid ~ "/testdata/graphml/functions_body_call.hpp Line:6 Column:6$1empty";
-    string id_single_call = fid
-        ~ "/testdata/graphml/functions_body_call.hpp Line:17 Column:6$1single_call";
-    string id_for = fid ~ "/testdata/graphml/functions_body_call.hpp Line:29 Column:6$1for_";
-    string id_if = fid ~ "/testdata/graphml/functions_body_call.hpp Line:21 Column:6$1if_";
-    string id_nested = fid ~ "/testdata/graphml/functions_body_call.hpp Line:35 Column:6$1nested";
-    string id_arg0 = fid ~ "/testdata/graphml/functions_body_call.hpp Line:9 Column:5$1arg0";
-    string id_arg1 = fid ~ "/testdata/graphml/functions_body_call.hpp Line:13 Column:7$1arg1";
+    string id_empty = "c:@F@empty#";
+    string id_single_call = "c:@F@single_call#";
+    string id_for = "c:@F@for_#";
+    string id_if = "c:@F@if_#";
+    string id_nested = "c:@F@nested#";
+    string id_arg0 = "c:@F@arg0#I#";
+    string id_arg1 = "c:@F@arg1#I#";
 
     graph.countNode(id_empty).shouldEqual(1);
     graph.countEdge(id_single_call, id_empty).shouldEqual(1);
@@ -356,11 +351,15 @@ unittest {
     runTestFile(p, testEnv);
 
     auto graph = getGraph(p);
-    string fid = "File:" ~ thisExePath.dirName.toString;
     string id_global = "c:@global";
 
-    graph.countEdge(fid ~ "/testdata/graphml/functions_body_globals.hpp Line:6 Column:6$1read_access",
-            id_global).shouldEqual(1);
-    graph.countEdge(fid ~ "/testdata/graphml/functions_body_globals.hpp Line:10 Column:6$1assign_access",
-            id_global).shouldEqual(1);
+    graph.countEdge("c:@F@read_access#", id_global).shouldEqual(1);
+    graph.countEdge("c:@F@assign_access#", id_global).shouldEqual(1);
+}
+
+@Name(testId ~ "Should be methods call chain")
+unittest {
+    mixin(EnvSetup(globalTestdir));
+    auto p = genTestParams("class_method_body.hpp", testEnv);
+    runTestFile(p, testEnv);
 }
