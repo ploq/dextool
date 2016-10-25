@@ -217,10 +217,11 @@ struct Lookup {
 
 ExitStatusType pluginMain(GraphMLFrontend variant, in string[] in_cflags,
         CompileCommandDB compile_db, InFiles in_files, Flag!"skipFileError" skipFileError) {
+    import std.algorithm : map;
     import std.conv : text;
     import std.path : buildNormalizedPath, asAbsolutePath;
+    import std.range : enumerate;
     import std.typecons : TypedefType, Yes;
-    import std.file : FileException;
 
     import cpptooling.analyzer.clang.context : ClangContext;
     import cpptooling.data.symbol.container : Container;
@@ -265,26 +266,42 @@ ExitStatusType pluginMain(GraphMLFrontend variant, in string[] in_cflags,
         return ExitStatusType.Ok;
     }
 
-    if (in_files.length == 0) {
-        const auto total_files = compile_db.length;
-        foreach (idx, entry; compile_db) {
-            if (analyze(entry.absoluteFile, idx, total_files) == ExitStatusType.Errors) {
+    ExitStatusType analyzeFiles(T)(ref T files, const size_t total_files, ref string[] skipped_files) {
+        foreach (idx, file; files) {
+            auto status = analyze(file, idx, total_files);
+            if (status == ExitStatusType.Errors && skipFileError) {
+                skipped_files ~= file;
+            } else if (status == ExitStatusType.Errors) {
                 return ExitStatusType.Errors;
             }
         }
+
+        return ExitStatusType.Ok;
+    }
+
+    string[] skipped_files;
+    ExitStatusType exit_status;
+
+    if (in_files.length == 0) {
+        auto range = compile_db.map!(a => a.absoluteFile).enumerate;
+        exit_status = analyzeFiles(range, compile_db.length, skipped_files);
     } else {
-        const auto total_files = in_files.length;
-        foreach (idx, a_file; cast(TypedefType!InFiles) in_files) {
-            if (analyze(a_file, idx, total_files) == ExitStatusType.Errors) {
-                return ExitStatusType.Errors;
-            }
+        auto range = cast(TypedefType!InFiles) in_files;
+        exit_status = analyzeFiles(range, in_files.length, skipped_files);
+    }
+
+    transform_to_file.finalize();
+
+    if (skipped_files.length != 0) {
+        logger.error("Skipped the following files due to errors:");
+        foreach (f; skipped_files) {
+            logger.error("  ", f);
         }
     }
-    transform_to_file.finalize();
 
     debug {
         logger.trace(visitor);
     }
 
-    return ExitStatusType.Ok;
+    return exit_status;
 }
