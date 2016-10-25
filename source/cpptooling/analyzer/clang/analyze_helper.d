@@ -450,16 +450,19 @@ struct StructDeclResult {
     alias payload this;
 }
 
-auto analyzeClassStructDecl(T)(const(T) decl, ref Container container, in uint indent)
+StructDeclResult analyzeClassStructDecl(T)(const(T) decl, ref Container container, in uint indent)
         if (is(T == ClassDecl) || is(T == StructDecl)) {
+    return analyzeClassStructDecl(decl.cursor, container, indent);
+}
 
-    auto type = () @trusted{ return retrieveType(decl.cursor, container, indent); }();
+StructDeclResult analyzeClassStructDecl(const(Cursor) cursor, ref Container container, in uint indent) @safe {
+    auto type = () @trusted{ return retrieveType(cursor, container, indent); }();
     put(type, container, indent);
 
     // BUG location should be the definition. This may result in the
     // declaration.
-    auto loc = () @trusted{ return locToTag(decl.cursor.location()); }();
-    auto name = CppClassName(decl.cursor.spelling);
+    auto loc = () @trusted{ return locToTag(cursor.location()); }();
+    auto name = CppClassName(cursor.spelling);
 
     auto rval = ClassDeclResult(type.primary.type, name, loc);
 
