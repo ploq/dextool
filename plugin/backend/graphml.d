@@ -221,7 +221,16 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
     }
 
     private auto visitClassStructMethod(T)(const(T) v) {
+        import std.algorithm : among;
+        import deimos.clang.index : CXCursorKind;
+
         auto parent = v.cursor.semanticParent;
+
+        // can't handle ClassTemplates etc yet
+        if (!parent.kind.among(CXCursorKind.CXCursor_ClassDecl, CXCursorKind.CXCursor_StructDecl)) {
+            return;
+        }
+
         auto result = analyzeClassStructDecl(parent, *container, indent);
 
         () @trusted{
@@ -323,22 +332,13 @@ private final class ClassVisitor(ReceiveT) : Visitor {
     override void visit(const(ClassDecl) v) @trusted {
         mixin(mixinNodeLog!());
 
-        //auto result = analyzeClassDecl(v, *container, indent);
-        //
-        //foreach (loc; container.find!LocationTag(result.type.kind.usr).map!(a => a.any).joiner) {
-        //    if (!ctrl.doFile(loc.file, loc.file)) {
-        //        return;
-        //    }
-        //}
-        //
-        //recv.put(result, scope_stack);
-        //
-        //auto visitor = scoped!(ClassVisitor!(ControllerT, ReceiveT))(result.type,
-        //        scope_stack, ctrl, recv, *container, indent + 1);
-        //v.accept(visitor);
-        //
-        //auto result_class = ClassClassificationResult(visitor.type, visitor.classification);
-        //recv.put(this.type, result_class);
+        auto result = analyzeClassDecl(v, *container, indent + 1);
+        auto visitor = scoped!(ClassVisitor!(ReceiveT))(result.type,
+                scope_stack, ctrl, recv, *container, indent + 1);
+        v.accept(visitor);
+        auto style = visitor.style;
+        style.label = result.name;
+        recv.put(result, scope_stack, style);
     }
 
     /// Analyze the inheritance(s).
@@ -547,26 +547,48 @@ private ColorKind toColor(TypeKind.Info.Kind kind) @safe pure nothrow @nogc {
 private enum ColorKind {
     none,
     file,
-    globalConst,
     global,
+    globalConst,
+    globalStatic,
     namespace,
     func
 }
 
-private string toInternalString(ColorKind kind) @safe pure nothrow @nogc {
+private struct FillColor {
+    string color1;
+    string color2;
+
+    import std.format : FormatSpec;
+
+    void toString(Writer, Char)(scope Writer w, FormatSpec!Char fmt) const {
+        import std.format : formattedWrite;
+
+        if (color1 !is null) {
+            formattedWrite(w, `color="#%s"`, color1);
+        }
+
+        if (color2 !is null) {
+            formattedWrite(w, ` color2="#%s"`, color2);
+        }
+    }
+}
+
+private FillColor toInternal(ColorKind kind) @safe pure nothrow @nogc {
     switch (kind) {
     case ColorKind.file:
-        return "CCFFCC";
-    case ColorKind.globalConst:
-        return "FFCCFF";
+        return FillColor("CCFFCC", null);
     case ColorKind.global:
-        return "FF33FF";
+        return FillColor("FF33FF", null);
+    case ColorKind.globalConst:
+        return FillColor("FFCCFF", null);
+    case ColorKind.globalStatic:
+        return FillColor("FFD9D2", "FF66FF");
     case ColorKind.namespace:
-        return "FFCCCC";
+        return FillColor("FFCCCC", null);
     case ColorKind.func:
-        return "FF6600";
+        return FillColor("FF6600", null);
     default:
-        return null;
+        return FillColor(null, null);
     }
 }
 
@@ -610,7 +632,7 @@ private struct ShapeNode {
 
         formattedWrite(w, `<y:Geometry height="%s" width="%s"/>`, baseHeight, baseWidth);
         if (color != ColorKind.none) {
-            formattedWrite(w, `<y:Fill color="#%s" transparent="false"/>`, color.toInternalString);
+            formattedWrite(w, `<y:Fill %s transparent="false"/>`, color.toInternal);
         }
         formattedWrite(w,
                 `<y:NodeLabel autoSizePolicy="node_size" configuration="CroppingLabel"><![CDATA[%s]]></y:NodeLabel>`,
@@ -973,6 +995,19 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         type_cache.doRemoval;
     }
 
+    static ColorKind decideColor(ref const(VarDeclResult) result) {
+        import cpptooling.data.type : StorageClass;
+
+        auto color = ColorKind.global;
+        if (result.type.attr.isConst) {
+            color = ColorKind.globalConst;
+        } else if (result.storageClass == StorageClass.Static) {
+            color = ColorKind.globalStatic;
+        }
+
+        return color;
+    }
+
     /** A free variable declaration.
      *
      * This method do NOT handle those inside a function/method/namespace.
@@ -981,9 +1016,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         auto file_usr = addFileNode(streamed_nodes, recv, result.location);
 
         // instance node
-        nodeIfMissing(streamed_nodes, recv, result.instanceUSR, makeShapeNode(result.name,
-                result.type.attr.isConst ? ColorKind.globalConst : ColorKind.global),
-                result.location);
+        nodeIfMissing(streamed_nodes, recv, result.instanceUSR,
+                makeShapeNode(result.name, decideColor(result)), result.location);
 
         // connect file to instance
         addEdge(streamed_edges, recv, file_usr, result.instanceUSR);
@@ -1007,9 +1041,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         auto ns_usr = addNamespaceNode(streamed_nodes, recv, ns);
 
         // instance node
-        nodeIfMissing(streamed_nodes, recv, result.instanceUSR, makeShapeNode(result.name,
-                result.type.attr.isConst ? ColorKind.globalConst : ColorKind.global),
-                result.location);
+        nodeIfMissing(streamed_nodes, recv, result.instanceUSR,
+                makeShapeNode(result.name, decideColor(result)), result.location);
 
         if (!ns_usr.isNull) {
             // connect namespace to instance
