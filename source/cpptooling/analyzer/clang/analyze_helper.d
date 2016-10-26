@@ -19,7 +19,7 @@ import std.typecons : Nullable, tuple, Flag, Yes, No;
 
 import cpptooling.utility.unqual : Unqual;
 
-import deimos.clang.index : CX_CXXAccessSpecifier;
+import deimos.clang.index : CX_CXXAccessSpecifier, CX_StorageClass;
 import clang.Cursor : Cursor;
 import clang.SourceLocation : SourceLocation;
 
@@ -65,6 +65,17 @@ AccessType toAccessType(CX_CXXAccessSpecifier accessSpec) @safe {
         return AccessType.Protected;
     case CX_CXXPrivate:
         return AccessType.Private;
+    }
+}
+
+StorageClass toStorageClass(CX_StorageClass storageClass) {
+    switch (storageClass) with (CX_StorageClass) {
+    case CX_SC_Extern:
+        return StorageClass.Extern;
+    case CX_SC_Static:
+        return StorageClass.Static;
+    default:
+        return StorageClass.None;
     }
 }
 
@@ -203,24 +214,12 @@ body {
     }
 
     ComposeData getCursorData(TypeResults tr) {
-        import deimos.clang.index : CX_StorageClass;
-
         auto data = ComposeData(tr);
 
         data.name = CFunctionName(c_in.spelling);
         data.loc = locToTag(c_in.location());
         data.is_definition = cast(Flag!"isDefinition") c_in.isDefinition;
-
-        switch (c_in.storageClass()) with (CX_StorageClass) {
-        case CX_SC_Extern:
-            data.storageClass = StorageClass.Extern;
-            break;
-        case CX_SC_Static:
-            data.storageClass = StorageClass.Static;
-            break;
-        default:
-            break;
-        }
+        data.storageClass = c_in.storageClass().toStorageClass;
 
         return data;
     }
@@ -272,6 +271,7 @@ struct VarDeclResult {
     CppVariable name;
     LocationTag location;
     USRType instanceUSR;
+    StorageClass storageClass;
 }
 
 /// Analyze a variable declaration
@@ -305,7 +305,9 @@ body {
     // USR.
     container.put(loc, instance_usr, Yes.isDefinition);
 
-    return VarDeclResult(type.primary.type, name, loc, instance_usr);
+    auto storage = () @trusted{ return v.storageClass.toStorageClass; }();
+
+    return VarDeclResult(type.primary.type, name, loc, instance_usr, storage);
 }
 
 struct ConstructorResult {

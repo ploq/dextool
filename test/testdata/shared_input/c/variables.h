@@ -29,4 +29,6 @@ typedef int my_int;
 extern my_int expect_my_int;
 extern const my_int* const expect_const_my_int;
 
+static int static_storage;
+
 #endif // VARIABLES_H
