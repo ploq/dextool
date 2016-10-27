@@ -149,6 +149,7 @@ unittest {
     // Nodes for all globals exist.
     graph.countNode("c:@expect_primitive").shouldEqual(1);
     graph.countNode("c:@expect_primitive_array").shouldEqual(1);
+    graph.countNode("c:@expect_const_primitive_array").shouldEqual(1);
     graph.countNode("c:@expect_b").shouldEqual(1);
     graph.countNode("c:@expect_c").shouldEqual(1);
     graph.countNode("c:@expect_d").shouldEqual(1);
@@ -163,6 +164,7 @@ unittest {
     // the file should be related to all of them
     graph.countEdge(fid, "c:@expect_primitive").shouldEqual(1);
     graph.countEdge(fid, "c:@expect_primitive_array").shouldEqual(1);
+    graph.countEdge(fid, "c:@expect_const_primitive_array").shouldEqual(1);
     graph.countEdge(fid, "c:@expect_b").shouldEqual(1);
     graph.countEdge(fid, "c:@expect_c").shouldEqual(1);
     graph.countEdge(fid, "c:@expect_d").shouldEqual(1);
@@ -176,11 +178,11 @@ unittest {
 
     // a ptr at a primitive do not result in an edge to the type
     graph.countEdge("c:@expect_d", "File:" ~ thisExePath.dirName.toString
-            ~ "/testdata/graphml/variables.h Line:18 Column:13$1expect_d").shouldEqual(0);
+            ~ "/testdata/graphml/variables.h Line:19 Column:13$1expect_d").shouldEqual(0);
 
     // a ptr at e.g. a typedef of a primitive type result in an edge to the type
-    graph.countEdge("c:@expect_const_my_int", "File:" ~ thisExePath.dirName.toString
-            ~ "/testdata/graphml/variables.h Line:30 Column:28$1expect_const_my_int").shouldEqual(
+    graph.countEdge("c:@expect_const_ptr_my_int", "File:" ~ thisExePath.dirName.toString
+            ~ "/testdata/graphml/variables.h Line:32 Column:28$1expect_const_ptr_my_int").shouldEqual(
             1);
 }
 
@@ -197,6 +199,7 @@ unittest {
     // Nodes for all globals exist.
     graph.countNode("c:@N@ns@expect_primitive").shouldEqual(1);
     graph.countNode("c:@N@ns@expect_primitive_array").shouldEqual(1);
+    graph.countNode("c:variables.h@N@ns@expect_const_primitive_array").shouldEqual(1);
     graph.countNode("c:@N@ns@expect_b").shouldEqual(1);
     graph.countNode("c:@N@ns@expect_c").shouldEqual(1);
     graph.countNode("c:@N@ns@expect_d").shouldEqual(1);
@@ -211,6 +214,7 @@ unittest {
     // the file should be related to all of them
     graph.countEdge(fid, "c:@N@ns@expect_primitive").shouldEqual(1);
     graph.countEdge(fid, "c:@N@ns@expect_primitive_array").shouldEqual(1);
+    graph.countEdge(fid, "c:variables.h@N@ns@expect_const_primitive_array").shouldEqual(1);
     graph.countEdge(fid, "c:@N@ns@expect_b").shouldEqual(1);
     graph.countEdge(fid, "c:@N@ns@expect_c").shouldEqual(1);
     graph.countEdge(fid, "c:@N@ns@expect_d").shouldEqual(1);
@@ -227,8 +231,8 @@ unittest {
             ~ "/testdata/graphml/variables.h Line:18 Column:13$1expect_d").shouldEqual(0);
 
     // a ptr at e.g. a typedef of a primitive type result in an edge to the type
-    graph.countEdge("c:@N@ns@expect_const_my_int", "File:" ~ thisExePath.dirName.toString
-            ~ "/testdata/graphml/variables.h Line:30 Column:28$1expect_const_my_int").shouldEqual(
+    graph.countEdge("c:@N@ns@expect_const_ptr_my_int", "File:" ~ thisExePath.dirName.toString
+            ~ "/testdata/graphml/variables.h Line:32 Column:28$1expect_const_ptr_my_int").shouldEqual(
             1);
 }
 

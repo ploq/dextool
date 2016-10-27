@@ -6,6 +6,7 @@
 // Test of primitive types
 int expect_primitive;
 int expect_primitive_array[3];
+const int expect_const_primitive_array[3] = {0, 1, 2};
 extern int expect_b;
 
 /* a duplicate, expecting it to be ignored */
@@ -27,8 +28,10 @@ extern const int* const* expect_i;
 // Test of typedef primitive type
 typedef int my_int;
 extern my_int expect_my_int;
-extern const my_int* const expect_const_my_int;
+extern const my_int expect_const_my_int;
+extern const my_int* const expect_const_ptr_my_int;
 
+// expect static storage
 static int static_storage;
 
 #endif // VARIABLES_H

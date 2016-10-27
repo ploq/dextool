@@ -188,7 +188,10 @@ class GraphMLFrontend : Controller, Parameters, Products {
 
         recv.writeln(`<key attr.name="url" attr.type="string" for="node" id="d3"/>`);
         recv.writeln(`<key attr.name="description" attr.type="string" for="node" id="d4"/>`);
-        recv.writeln(`<key for="node" id="d5" yfiles.type="nodegraphics"/>`);
+        recv.writeln(`<key yfiles.type="nodegraphics" for="node" id="d5"/>`);
+        recv.writeln(`<key attr.name="kind" attr.type="string" for="node" id="d6"/>`);
+        recv.writeln(`<key attr.name="typeAttr" attr.type="string" for="node" id="d7"/>`);
+        recv.writeln(`<key attr.name="signature" attr.type="string" for="node" id="d8"/>`);
         recv.writeln(`<graph id="G" edgedefault="directed">`);
     }
 

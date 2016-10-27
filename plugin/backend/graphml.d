@@ -9,6 +9,7 @@ one at http://mozilla.org/MPL/2.0/.
 */
 module plugin.backend.graphml;
 
+import std.format : FormatSpec;
 import std.traits : isSomeString;
 import std.typecons : scoped, Tuple, Nullable, Flag, Yes;
 import logger = std.experimental.logger;
@@ -90,15 +91,12 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
         this.container = &container;
     }
 
-    import std.format : FormatSpec;
-
     void toString(Writer, Char)(scope Writer w, FormatSpec!Char formatSpec) const {
         container.toString(w, formatSpec);
     }
 
     override string toString() @safe const {
         import std.exception : assumeUnique;
-        import std.format : FormatSpec;
 
         char[] buf;
         buf.reserve(100);
@@ -558,8 +556,6 @@ private struct FillColor {
     string color1;
     string color2;
 
-    import std.format : FormatSpec;
-
     void toString(Writer, Char)(scope Writer w, FormatSpec!Char fmt) const {
         import std.format : formattedWrite;
 
@@ -593,7 +589,6 @@ private FillColor toInternal(ColorKind kind) @safe pure nothrow @nogc {
 }
 
 private @safe struct ValidNodeId {
-    import std.format : FormatSpec;
     import cpptooling.data.type : USRType;
 
     size_t payload;
@@ -627,7 +622,7 @@ private struct ShapeNode {
     private enum baseHeight = 20;
     private enum baseWidth = 140;
 
-    void toString(Writer)(scope Writer w) const {
+    void toString(Writer, Char)(scope Writer w, FormatSpec!Char = "%s") const {
         import std.format : formattedWrite;
 
         formattedWrite(w, `<y:Geometry height="%s" width="%s"/>`, baseHeight, baseWidth);
@@ -698,7 +693,7 @@ unittest {
     foreach (T; AliasSeq!(ShapeNode, UMLClassNode)) {
         {
             NodeStyle!T node;
-            node.toString(app);
+            node.toString(app, FormatSpec!char("%s"));
         }
     }
 }
@@ -724,7 +719,7 @@ private struct NodeStyle(PayloadT) {
 
     alias payload this;
 
-    void toString(Writer)(scope Writer w) const {
+    void toString(Writer, Char)(scope Writer w, FormatSpec!Char spec) const {
         import std.range.primitives : put;
 
         enum graph_node = PayloadT.stringof;
@@ -742,7 +737,7 @@ private void ccdataWrap(Writer, ARGS...)(scope Writer w, auto ref ARGS args) {
     put(w, `<![CDATA[`);
     foreach (arg; args) {
         static if (__traits(hasMember, typeof(arg), "toString")) {
-            arg.toString(w);
+            arg.toString(w, FormatSpec!char("%s"));
         } else {
             put(w, arg);
         }
@@ -756,7 +751,18 @@ private void xmlComment(RecvT, CharT)(ref RecvT recv, CharT v) {
     formattedWrite(recv, "<!-- %s -->\n", v);
 }
 
-private void xmlNode(RecvT, IdT, UrlT, StyleT)(ref RecvT recv, IdT id, UrlT url, StyleT style) {
+private struct XmlNodeData(UrlT, StyleT) {
+    import std.typecons : Nullable;
+    import cpptooling.analyzer.kind : TypeAttr;
+
+    Nullable!UrlT url;
+    Nullable!string kind;
+    Nullable!TypeAttr typeAttr;
+    Nullable!string signature;
+    Nullable!StyleT style;
+}
+
+private void xmlNode(RecvT, IdT, NodeT)(ref RecvT recv, IdT id, NodeT data) {
     import std.conv : to;
     import std.format : formattedWrite;
     import std.range.primitives : put;
@@ -770,15 +776,38 @@ private void xmlNode(RecvT, IdT, UrlT, StyleT)(ref RecvT recv, IdT id, UrlT url,
 
     formattedWrite(recv, `<node id="%s">`, id_);
 
-    put(recv, `<data key="d3">`);
-    ccdataWrap(recv, url.file);
-    put(recv, "</data>");
+    if (!data.url.isNull) {
+        put(recv, `<data key="d3">`);
+        ccdataWrap(recv, data.url.file);
+        put(recv, "</data>");
 
-    put(recv, `<data key="d4">`);
-    ccdataWrap(recv, "Line:", url.line.to!string, " Column:", url.column.to!string);
-    put(recv, "</data>");
+        put(recv, `<data key="d4">`);
+        ccdataWrap(recv, "Line:", data.url.line.to!string, " Column:",
+                data.url.column.to!string);
+        put(recv, "</data>");
+    }
 
-    style.toString(recv);
+    if (!data.kind.isNull) {
+        put(recv, `<data key="d6">`);
+        ccdataWrap(recv, data.kind.get);
+        put(recv, "</data>");
+    }
+
+    if (!data.typeAttr.isNull) {
+        put(recv, `<data key="d7">`);
+        ccdataWrap(recv, data.typeAttr.get);
+        put(recv, "</data>");
+    }
+
+    if (!data.signature.isNull) {
+        put(recv, `<data key="d8">`);
+        ccdataWrap(recv, data.signature.get);
+        put(recv, "</data>");
+    }
+
+    if (!data.style.isNull) {
+        data.style.get.toString(recv, FormatSpec!char("%s"));
+    }
 
     put(recv, "</node>\n");
 }
@@ -884,18 +913,16 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             // used by functions
             string identifier;
 
-            void toString(Writer)(scope Writer w) const {
-                import std.range.primitives : put;
-
+            void toString(Writer, Char)(scope Writer w, FormatSpec!Char spec = "%s") const {
                 auto color = payload.kind.info.kind.toColor;
 
                 switch (payload.kind.info.kind) with (TypeKind.Info) {
                 case Kind.func:
-                    makeShapeNode(toStringDecl(payload.kind,
-                            payload.attr, identifier), color).toString(w);
+                    makeShapeNode(toStringDecl(payload.kind, payload.attr,
+                            identifier), color).toString(w, FormatSpec!char("%s"));
                     break;
                 default:
-                    makeShapeNode(payload.toStringDecl).toString(w);
+                    makeShapeNode(payload.toStringDecl).toString(w, FormatSpec!char("%s"));
                 }
             }
         }
@@ -1013,20 +1040,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
      * This method do NOT handle those inside a function/method/namespace.
      */
     void put(ref const(VarDeclResult) result) {
-        auto file_usr = addFileNode(streamed_nodes, recv, result.location);
-
-        // instance node
-        nodeIfMissing(streamed_nodes, recv, result.instanceUSR,
-                makeShapeNode(result.name, decideColor(result)), result.location);
-
-        // connect file to instance
-        addEdge(streamed_edges, recv, file_usr, result.instanceUSR);
-
-        // type node
-        if (!result.type.kind.isPrimitive(lookup)) {
-            putToCache(TypeKindAttr(result.type.kind, TypeAttr.init));
-            addEdge(streamed_edges, recv, result.instanceUSR, result.type.kind.usr);
-        }
+        Nullable!USRType file_usr = addFileNode(streamed_nodes, recv, result.location);
+        addVarDecl(file_usr, result);
     }
 
     /** A free variable declaration in a namespace.
@@ -1039,14 +1054,20 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     }
     body {
         auto ns_usr = addNamespaceNode(streamed_nodes, recv, ns);
+        addVarDecl(ns_usr, result);
+    }
 
-        // instance node
-        nodeIfMissing(streamed_nodes, recv, result.instanceUSR,
-                makeShapeNode(result.name, decideColor(result)), result.location);
+    private void addVarDecl(Nullable!USRType parent, ref const(VarDeclResult) result) {
+        { // instance node
+            XmlNodeData!(Location, NodeStyle!ShapeNode) node;
+            node.url = result.location;
+            node.style = makeShapeNode(result.name, decideColor(result));
+            nodeIfMissing(streamed_nodes, recv, result.instanceUSR, node);
+        }
 
-        if (!ns_usr.isNull) {
+        if (!parent.isNull) {
             // connect namespace to instance
-            addEdge(streamed_edges, recv, ns_usr, result.instanceUSR);
+            addEdge(streamed_edges, recv, parent, result.instanceUSR);
         }
 
         // type node
@@ -1123,7 +1144,11 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         }
 
         void putDefinition(ref const(TypeData) type, ref const(LocationTag) loc) {
-            nodeIfMissing(streamed_nodes, recv, type.kind.usr, style, loc);
+            XmlNodeData!(LocationTag, NodeStyle!UMLClassNode) data;
+            data.url = loc;
+            // how do I copy the const struct?
+            data.style = () @trusted{ return cast(NodeStyle!UMLClassNode) style; }();
+            nodeIfMissing(streamed_nodes, recv, type.kind.usr, data);
         }
 
         LocationCallback cb;
@@ -1296,8 +1321,10 @@ private:
 
         auto ns_usr = USRType(ns.toStringNs);
 
-        auto ns_loc = LocationTag(null);
-        nodeIfMissing(nodes, recv, ns_usr, makeShapeNode(ns_usr, ColorKind.namespace), ns_loc);
+        XmlNodeData!(LocationTag, NodeStyle!ShapeNode) node;
+        node.url = LocationTag(null);
+        node.style = makeShapeNode(ns_usr, ColorKind.namespace);
+        nodeIfMissing(nodes, recv, ns_usr, node);
 
         return Nullable!USRType(ns_usr);
     }
@@ -1310,10 +1337,12 @@ private:
             import std.path : baseName;
 
             auto file_label = location.file.baseName;
-            auto file_loc = LocationTag(Location(location.file, 0, 0));
+            auto file_loc = Location(location.file, 0, 0);
 
-            nodeIfMissing(nodes, recv, file_usr, makeShapeNode(file_label,
-                    ColorKind.file), file_loc);
+            XmlNodeData!(Location, NodeStyle!ShapeNode) node;
+            node.url = file_loc;
+            node.style = makeShapeNode(file_label, ColorKind.file);
+            nodeIfMissing(nodes, recv, file_usr, node);
         }
 
         return file_usr;
@@ -1336,33 +1365,23 @@ private:
      *   node = either the TypeKindAttr of the node or a type supporting
      *          `.toString` taking a generic writer as argument.
      */
-    static void nodeIfMissing(NodeStoreT, RecvT, NodeT, LocationT)(ref NodeStoreT nodes,
-            ref RecvT recv, USRType node_usr, NodeT node, LocationT loc) {
+    static void nodeIfMissing(NodeStoreT, RecvT)(ref NodeStoreT nodes,
+            ref RecvT recv, USRType node_usr, TypeData node, Location loc) {
+
+        XmlNodeData!(Location, TypeData) data;
+        data.url = loc;
+        data.style = node;
+
+        nodeIfMissing(nodes, recv, node_usr, data);
+    }
+
+    static void nodeIfMissing(NodeStoreT, RecvT, NodeT)(ref NodeStoreT nodes,
+            ref RecvT recv, USRType node_usr, NodeT node) {
         if (node_usr in nodes) {
             return;
         }
 
-        Location url;
-        static if (is(Unqual!LocationT == LocationTag)) {
-            url = loc;
-        } else {
-            if (loc.length != 0) {
-                url = loc.front;
-            }
-        }
-
-        static if (is(Unqual!NodeT == TypeKindAttr)) {
-            import cpptooling.analyzer.type : toStringDecl;
-
-            auto style = makeShapeNode(node.toStringDecl);
-        }
-        static if (is(Unqual!NodeT == TypeData)) {
-            auto style = node;
-        } else {
-            auto style = node;
-        }
-
-        xmlNode(recv, cast(string) node_usr, url, style);
+        xmlNode(recv, cast(string) node_usr, node);
         nodes[node_usr] = true;
     }
 
