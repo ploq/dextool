@@ -795,7 +795,7 @@ private void xmlNode(RecvT, IdT, NodeT)(ref RecvT recv, IdT id, NodeT data) {
 
     if (!data.typeAttr.isNull) {
         put(recv, `<data key="d7">`);
-        ccdataWrap(recv, data.typeAttr.get);
+        data.typeAttr.get.toString(recv, FormatSpec!char("%s"));
         put(recv, "</data>");
     }
 
@@ -913,17 +913,27 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             // used by functions
             string identifier;
 
-            void toString(Writer, Char)(scope Writer w, FormatSpec!Char spec = "%s") const {
-                auto color = payload.kind.info.kind.toColor;
+            ///
+            XmlNodeData!(Location, NodeStyle!ShapeNode) toXmlNode() const {
+                import std.conv : to;
 
+                XmlNodeData!(Location, NodeStyle!ShapeNode) data;
+
+                data.kind = payload.kind.info.kind.to!string();
+                data.typeAttr = payload.attr;
+
+                auto color = payload.kind.info.kind.toColor;
                 switch (payload.kind.info.kind) with (TypeKind.Info) {
                 case Kind.func:
-                    makeShapeNode(toStringDecl(payload.kind, payload.attr,
-                            identifier), color).toString(w, FormatSpec!char("%s"));
+                    data.style = makeShapeNode(identifier, color);
+                    data.signature = payload.toStringDecl(identifier);
                     break;
                 default:
-                    makeShapeNode(payload.toStringDecl).toString(w, FormatSpec!char("%s"));
+                    data.style = makeShapeNode(payload.kind.toStringDecl(TypeAttr.init));
+                    data.signature = payload.toStringDecl;
                 }
+
+                return data;
             }
         }
 
@@ -1061,6 +1071,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         { // instance node
             XmlNodeData!(Location, NodeStyle!ShapeNode) node;
             node.url = result.location;
+            node.typeAttr = result.type.attr;
+            node.signature = result.type.kind.toStringDecl(TypeAttr.init);
             node.style = makeShapeNode(result.name, decideColor(result));
             nodeIfMissing(streamed_nodes, recv, result.instanceUSR, node);
         }
@@ -1368,10 +1380,8 @@ private:
     static void nodeIfMissing(NodeStoreT, RecvT)(ref NodeStoreT nodes,
             ref RecvT recv, USRType node_usr, TypeData node, Location loc) {
 
-        XmlNodeData!(Location, TypeData) data;
+        auto data = node.toXmlNode;
         data.url = loc;
-        data.style = node;
-
         nodeIfMissing(nodes, recv, node_usr, data);
     }
 
