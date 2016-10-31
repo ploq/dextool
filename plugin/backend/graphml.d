@@ -174,7 +174,13 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
     override void visit(const(ClassDecl) v) {
         mixin(mixinNodeLog!());
         auto result = analyzeClassStructDecl(v, *container, indent + 1);
+
+        scope_stack ~= CppNs(cast(string) result.name);
+        scope (exit)
+            scope_stack = scope_stack[0 .. $ - 1];
+
         auto style = visitClassStruct(v, result.type);
+
         style.label = result.name;
         recv.put(result, scope_stack, style);
     }
@@ -182,6 +188,11 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
     override void visit(const(StructDecl) v) {
         mixin(mixinNodeLog!());
         auto result = analyzeClassStructDecl(v, *container, indent + 1);
+
+        scope_stack ~= CppNs(cast(string) result.name);
+        scope (exit)
+            scope_stack = scope_stack[0 .. $ - 1];
+
         auto style = visitClassStruct(v, result.type);
         style.label = result.name;
         recv.put(result, scope_stack, style);
@@ -204,6 +215,7 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
 
     private auto visitClassStruct(T)(const(T) v, TypeKindAttr type) @trusted {
         import std.algorithm : map, joiner;
+        import cpptooling.data.type : AccessType;
 
         foreach (loc; container.find!LocationTag(type.kind.usr).map!(a => a.any).joiner) {
             //if (!ctrl.doFile(loc.file, loc.file)) {
@@ -211,8 +223,14 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
             //}
         }
 
+        static if (is(T == ClassDecl)) {
+            auto access_init = AccessType.Private;
+        } else {
+            auto access_init = AccessType.Public;
+        }
+
         auto visitor = scoped!(ClassVisitor!(ReceiveT))(type, scope_stack,
-                ctrl, recv, *container, indent + 1);
+                access_init, ctrl, recv, *container, indent + 1);
         v.accept(visitor);
 
         return visitor.style;
@@ -253,13 +271,14 @@ private final class ClassVisitor(ReceiveT) : Visitor {
     import std.conv : to;
     import std.typecons : scoped, TypedefType, NullableRef;
 
-    import cpptooling.analyzer.clang.ast : ClassDecl, CXXBaseSpecifier,
-        Constructor, Destructor, CXXMethod, FieldDecl, CXXAccessSpecifier;
+    import cpptooling.analyzer.clang.ast : ClassDecl, StructDecl,
+        CXXBaseSpecifier, Constructor, Destructor, CXXMethod, FieldDecl,
+        CXXAccessSpecifier;
     import cpptooling.analyzer.clang.ast.visitor : generateIndentIncrDecr;
     import cpptooling.analyzer.clang.analyze_helper : analyzeClassDecl,
-        analyzeConstructor, analyzeDestructor, analyzeCXXMethod,
-        analyzeFieldDecl, analyzeCXXBaseSpecified, toAccessType,
-        ClassDeclResult;
+        analyzeStructDecl, analyzeConstructor, analyzeDestructor,
+        analyzeCXXMethod, analyzeFieldDecl, analyzeCXXBaseSpecified,
+        toAccessType, ClassDeclResult;
     import cpptooling.data.type : MemberVirtualType;
     import cpptooling.data.representation : CppNsStack, CppNs, AccessType,
         CppAccess, CppDtor, CppCtor, CppMethod;
@@ -297,7 +316,7 @@ private final class ClassVisitor(ReceiveT) : Visitor {
         ClassificationState classification;
     }
 
-    this(ref const(TypeKindAttr) this_, const(CppNs)[] reside_in_ns,
+    this(ref const(TypeKindAttr) this_, const(CppNs)[] reside_in_ns, AccessType init_access,
             Controller ctrl, ref ReceiveT recv, ref Container container, in uint indent) {
         this.ctrl = ctrl;
         this.recv = &recv;
@@ -305,7 +324,7 @@ private final class ClassVisitor(ReceiveT) : Visitor {
         this.indent = indent;
         this.scope_stack = CppNsStack(reside_in_ns.dup);
 
-        this.access = CppAccess(AccessType.Private);
+        this.access = CppAccess(init_access);
         this.classification = ClassificationState.Unknown;
 
         this.this_ = this_;
@@ -327,16 +346,46 @@ private final class ClassVisitor(ReceiveT) : Visitor {
     }
 
     /// Nested class definitions.
-    override void visit(const(ClassDecl) v) @trusted {
+    override void visit(const(ClassDecl) v) {
         mixin(mixinNodeLog!());
-
         auto result = analyzeClassDecl(v, *container, indent + 1);
-        auto visitor = scoped!(ClassVisitor!(ReceiveT))(result.type,
-                scope_stack, ctrl, recv, *container, indent + 1);
-        v.accept(visitor);
-        auto style = visitor.style;
+
+        scope_stack ~= CppNs(cast(string) result.name);
+        scope (exit)
+            scope_stack = scope_stack[0 .. $ - 1];
+
+        auto style = visitClassStruct(v, result.type);
         style.label = result.name;
         recv.put(result, scope_stack, style);
+    }
+
+    override void visit(const(StructDecl) v) {
+        mixin(mixinNodeLog!());
+        auto result = analyzeStructDecl(v, *container, indent + 1);
+
+        scope_stack ~= CppNs(cast(string) result.name);
+        scope (exit)
+            scope_stack = scope_stack[0 .. $ - 1];
+
+        auto style = visitClassStruct(v, result.type);
+        style.label = result.name;
+        recv.put(result, scope_stack, style);
+    }
+
+    private auto visitClassStruct(T)(const(T) v, TypeKindAttr type) @trusted {
+        import cpptooling.data.type : AccessType;
+
+        static if (is(T == ClassDecl)) {
+            auto access_init = AccessType.Private;
+        } else {
+            auto access_init = AccessType.Public;
+        }
+
+        auto visitor = scoped!(ClassVisitor!(ReceiveT))(type, scope_stack,
+                AccessType.Private, ctrl, recv, *container, indent + 1);
+        v.accept(visitor);
+
+        return visitor.style;
     }
 
     /// Analyze the inheritance(s).
@@ -533,15 +582,6 @@ private T toInternal(T, S)(S value) @safe pure nothrow @nogc
     }
 }
 
-private ColorKind toColor(TypeKind.Info.Kind kind) @safe pure nothrow @nogc {
-    switch (kind) with (TypeKind.Info) {
-    case Kind.func:
-        return ColorKind.func;
-    default:
-        return ColorKind.none;
-    }
-}
-
 private enum ColorKind {
     none,
     file,
@@ -549,7 +589,8 @@ private enum ColorKind {
     globalConst,
     globalStatic,
     namespace,
-    func
+    func,
+    class_
 }
 
 private struct FillColor {
@@ -559,18 +600,20 @@ private struct FillColor {
     void toString(Writer, Char)(scope Writer w, FormatSpec!Char fmt) const {
         import std.format : formattedWrite;
 
-        if (color1 !is null) {
+        if (color1.length > 0) {
             formattedWrite(w, `color="#%s"`, color1);
         }
 
-        if (color2 !is null) {
+        if (color2.length > 0) {
             formattedWrite(w, ` color2="#%s"`, color2);
         }
     }
 }
 
 private FillColor toInternal(ColorKind kind) @safe pure nothrow @nogc {
-    switch (kind) {
+    final switch (kind) {
+    case ColorKind.none:
+        return FillColor(null, null);
     case ColorKind.file:
         return FillColor("CCFFCC", null);
     case ColorKind.global:
@@ -583,8 +626,8 @@ private FillColor toInternal(ColorKind kind) @safe pure nothrow @nogc {
         return FillColor("FFCCCC", null);
     case ColorKind.func:
         return FillColor("FF6600", null);
-    default:
-        return FillColor(null, null);
+    case ColorKind.class_:
+        return FillColor("FFCC33", null);
     }
 }
 
@@ -702,7 +745,7 @@ private auto makeShapeNode(string label, ColorKind color = ColorKind.none) {
     return NodeStyle!ShapeNode(ShapeNode(label, color));
 }
 
-private auto makeUMLClassNode(string label, string color = null) {
+private auto makeUMLClassNode(string label) {
     return NodeStyle!UMLClassNode(UMLClassNode(label));
 }
 
@@ -898,20 +941,37 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
 
     private {
         struct TypeData {
-            this(TypeKindAttr type) {
-                this(type, null);
-            }
+            import cpptooling.utility.taggedalgebraic : TaggedAlgebraic;
 
-            this(TypeKindAttr type, string identifier) {
-                this.payload = type;
-                this.identifier = identifier;
-            }
+            alias Extra = TaggedAlgebraic!ExtraTagged;
 
             TypeKindAttr payload;
+            Extra extra;
+
             alias payload this;
 
-            // used by functions
-            string identifier;
+            struct Func {
+                string identifier;
+                string signature;
+            }
+
+            struct Type {
+            }
+
+            struct Record {
+                string identifier;
+            }
+
+            struct Variable {
+            }
+
+            static union ExtraTagged {
+                typeof(null) null_;
+                Func func;
+                Type type;
+                Variable variable;
+                Record record;
+            }
 
             ///
             XmlNodeData!(Location, NodeStyle!ShapeNode) toXmlNode() const {
@@ -919,18 +979,29 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
 
                 XmlNodeData!(Location, NodeStyle!ShapeNode) data;
 
-                data.kind = payload.kind.info.kind.to!string();
+                data.kind = extra.kind.to!string();
+                //data.kind = payload.kind.info.kind.to!string();
                 data.typeAttr = payload.attr;
 
-                auto color = payload.kind.info.kind.toColor;
-                switch (payload.kind.info.kind) with (TypeKind.Info) {
+                final switch (extra.kind) with (Extra) {
                 case Kind.func:
-                    data.style = makeShapeNode(identifier, color);
-                    data.signature = payload.toStringDecl(identifier);
+                    data.style = makeShapeNode(extra.identifier, ColorKind.func);
+                    data.signature = extra.signature;
                     break;
-                default:
+                case Kind.type:
                     data.style = makeShapeNode(payload.kind.toStringDecl(TypeAttr.init));
                     data.signature = payload.toStringDecl;
+                    break;
+                case Kind.variable:
+                    break;
+                case Kind.record:
+                    data.style = makeShapeNode(extra.identifier, ColorKind.class_);
+                    break;
+                case Kind.null_:
+                    data.kind = null;
+                    data.style = makeShapeNode(payload.kind.toStringDecl(TypeAttr.init));
+                    data.signature = payload.toStringDecl;
+                    break;
                 }
 
                 return data;
@@ -1072,7 +1143,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             XmlNodeData!(Location, NodeStyle!ShapeNode) node;
             node.url = result.location;
             node.typeAttr = result.type.attr;
-            node.signature = result.type.kind.toStringDecl(TypeAttr.init);
+            node.signature = result.type.toStringDecl(result.name);
             node.style = makeShapeNode(result.name, decideColor(result));
             nodeIfMissing(streamed_nodes, recv, result.instanceUSR, node);
         }
@@ -1084,7 +1155,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
 
         // type node
         if (!result.type.kind.isPrimitive(lookup)) {
-            putToCache(TypeKindAttr(result.type.kind, TypeAttr.init));
+            putToCache(TypeData(result.type, TypeData.Extra(TypeData.Type())));
             addEdge(streamed_edges, recv, result.instanceUSR, result.type.kind.usr);
         }
     }
@@ -1105,7 +1176,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         import cpptooling.data.representation : unpackParam;
 
         auto src = resolveCanonicalType(result.type.kind, result.type.attr, lookup).front;
-        putToCache(TypeData(src, cast(string) result.name));
+        putToCache(TypeData(src, TypeData.Extra(TypeData.Func(cast(string) result.name,
+                result.type.toStringDecl(result.name)))));
 
         {
             auto target = resolvePointeeType(result.returnType.kind, result.returnType.attr, lookup)
@@ -1138,7 +1210,8 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         auto src = resolveCanonicalType(in_src.kind, in_src.attr, lookup).front;
 
         auto target = resolveCanonicalType(result.type.kind, result.type.attr, lookup).front;
-        putToCache(TypeData(target, cast(string) result.name));
+        putToCache(TypeData(target, TypeData.Extra(TypeData.Func(cast(string) result.name,
+                result.type.toStringDecl(result.name)))));
 
         edgeIfNotPrimitive(streamed_edges, recv, src, target, lookup);
     }
@@ -1152,7 +1225,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
      */
     void put(ref const(ClassDeclResult) result, CppNs[] ns, ref const(NodeStyle!UMLClassNode) style) {
         void putDeclaration(ref const(TypeData) type, ref const(LocationTag) loc) {
-            putToCache(type);
+            putToCache(TypeData(type, TypeData.Extra(TypeData.Record(result.name))));
         }
 
         void putDefinition(ref const(TypeData) type, ref const(LocationTag) loc) {
@@ -1309,15 +1382,14 @@ private:
 
     void putToCache(T)(const T data) {
         // lower the number of allocations by checking in the hash table.
+        if (data.kind.usr in streamed_nodes) {
+            return;
+        }
 
         static if (is(T == TypeKindAttr)) {
-            if (data.kind.usr !in streamed_nodes) {
-                type_cache.put(TypeData(data));
-            }
+            type_cache.put(TypeData(data, TypeData.Extra(TypeData.Type())));
         } else {
-            if (data.kind.usr !in streamed_nodes) {
-                type_cache.put(data);
-            }
+            type_cache.put(data);
         }
     }
 
