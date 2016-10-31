@@ -174,13 +174,7 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
     override void visit(const(ClassDecl) v) {
         mixin(mixinNodeLog!());
         auto result = analyzeClassStructDecl(v, *container, indent + 1);
-
-        scope_stack ~= CppNs(cast(string) result.name);
-        scope (exit)
-            scope_stack = scope_stack[0 .. $ - 1];
-
         auto style = visitClassStruct(v, result.type);
-
         style.label = result.name;
         recv.put(result, scope_stack, style);
     }
@@ -188,11 +182,6 @@ final class GraphMLAnalyzer(ReceiveT) : Visitor {
     override void visit(const(StructDecl) v) {
         mixin(mixinNodeLog!());
         auto result = analyzeClassStructDecl(v, *container, indent + 1);
-
-        scope_stack ~= CppNs(cast(string) result.name);
-        scope (exit)
-            scope_stack = scope_stack[0 .. $ - 1];
-
         auto style = visitClassStruct(v, result.type);
         style.label = result.name;
         recv.put(result, scope_stack, style);
