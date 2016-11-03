@@ -170,10 +170,13 @@ int dumpBody(string fname, string[] flags) {
             mixin(mixinNodeLog!());
 
             auto c_func = v.cursor.referenced;
-            logger.trace("ref: ", c_func.spelling, " kind:", c_func.kind.to!string());
+            logger.tracef("ref:'%s' kind:%s", c_func.spelling, c_func.kind.to!string());
 
             if (c_func.kind == CXCursorKind.CXCursor_FunctionDecl) {
                 auto result = analyzeFunctionDecl(c_func, container, indent);
+                () @trusted{ logger.trace("result: ", result); }();
+            } else if (c_func.kind == CXCursorKind.CXCursor_CXXMethod) {
+                auto result = analyzeCXXMethod(c_func, container, indent);
                 () @trusted{ logger.trace("result: ", result); }();
             } else {
                 logger.trace("unknown callexpr: ", c_func.kind.to!string());
@@ -203,7 +206,25 @@ int dumpBody(string fname, string[] flags) {
             v.accept(this);
         }
 
+        override void visit(const(ClassDecl) v) {
+            mixin(mixinNodeLog!());
+            v.accept(this);
+        }
+
+        override void visit(const(StructDecl) v) {
+            mixin(mixinNodeLog!());
+            v.accept(this);
+        }
+
         override void visit(const(FunctionDecl) v) @trusted {
+            mixin(mixinNodeLog!());
+
+            auto visitor = scoped!(BodyVisitor)(container);
+            visitor.indent = indent;
+            v.accept(visitor);
+        }
+
+        override void visit(const(CXXMethod) v) @trusted {
             mixin(mixinNodeLog!());
 
             auto visitor = scoped!(BodyVisitor)(container);
