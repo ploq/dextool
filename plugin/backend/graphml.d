@@ -783,7 +783,7 @@ private void xmlComment(RecvT, CharT)(ref RecvT recv, CharT v) {
     formattedWrite(recv, "<!-- %s -->\n", v);
 }
 
-private struct XmlNodeData(UrlT, StyleT) {
+private struct XmlNode(UrlT, StyleT) {
     import std.typecons : Nullable;
     import cpptooling.analyzer.kind : TypeAttr;
 
@@ -792,56 +792,64 @@ private struct XmlNodeData(UrlT, StyleT) {
     Nullable!TypeAttr typeAttr;
     Nullable!string signature;
     Nullable!StyleT style;
-}
 
-private void xmlNode(RecvT, IdT, NodeT)(ref RecvT recv, IdT id, NodeT data) {
-    import std.conv : to;
-    import std.format : formattedWrite;
-    import std.range.primitives : put;
+    void renderOpen(RecvT, IdT)(ref RecvT recv, IdT id) {
+        import std.conv : to;
+        import std.format : formattedWrite;
+        import std.range.primitives : put;
 
-    auto id_ = ValidNodeId(id);
+        auto id_ = ValidNodeId(id);
 
-    debug {
-        // printing the raw identifiers to make it easier to debug
-        formattedWrite(recv, `<!-- %s -->`, cast(string) id);
+        debug {
+            // printing the raw identifiers to make it easier to debug
+            formattedWrite(recv, `<!-- %s -->`, cast(string) id);
+        }
+
+        formattedWrite(recv, `<node id="%s">`, id_);
+
+        if (!url.isNull) {
+            put(recv, `<data key="d3">`);
+            ccdataWrap(recv, url.file);
+            put(recv, "</data>");
+
+            put(recv, `<data key="d4">`);
+            ccdataWrap(recv, "Line:", url.line.to!string, " Column:", url.column.to!string);
+            put(recv, "</data>");
+        }
+
+        if (!kind.isNull) {
+            put(recv, `<data key="d6">`);
+            ccdataWrap(recv, kind.get);
+            put(recv, "</data>");
+        }
+
+        if (!typeAttr.isNull) {
+            put(recv, `<data key="d7">`);
+            typeAttr.get.toString(recv, FormatSpec!char("%s"));
+            put(recv, "</data>");
+        }
+
+        if (!signature.isNull) {
+            put(recv, `<data key="d8">`);
+            ccdataWrap(recv, signature.get);
+            put(recv, "</data>");
+        }
+
+        if (!style.isNull) {
+            style.get.toString(recv, FormatSpec!char("%s"));
+        }
     }
 
-    formattedWrite(recv, `<node id="%s">`, id_);
+    void renderClose(RecvT)(ref RecvT recv) {
+        import std.range.primitives : put;
 
-    if (!data.url.isNull) {
-        put(recv, `<data key="d3">`);
-        ccdataWrap(recv, data.url.file);
-        put(recv, "</data>");
-
-        put(recv, `<data key="d4">`);
-        ccdataWrap(recv, "Line:", data.url.line.to!string, " Column:",
-                data.url.column.to!string);
-        put(recv, "</data>");
+        put(recv, "</node>\n");
     }
 
-    if (!data.kind.isNull) {
-        put(recv, `<data key="d6">`);
-        ccdataWrap(recv, data.kind.get);
-        put(recv, "</data>");
+    void render(RecvT, IdT)(ref RecvT recv, IdT id) {
+        renderOpen(recv, id);
+        renderClose(recv);
     }
-
-    if (!data.typeAttr.isNull) {
-        put(recv, `<data key="d7">`);
-        data.typeAttr.get.toString(recv, FormatSpec!char("%s"));
-        put(recv, "</data>");
-    }
-
-    if (!data.signature.isNull) {
-        put(recv, `<data key="d8">`);
-        ccdataWrap(recv, data.signature.get);
-        put(recv, "</data>");
-    }
-
-    if (!data.style.isNull) {
-        data.style.get.toString(recv, FormatSpec!char("%s"));
-    }
-
-    put(recv, "</node>\n");
 }
 
 private enum EdgeKind {
@@ -981,10 +989,10 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
             }
 
             ///
-            XmlNodeData!(Location, NodeStyle!ShapeNode) toXmlNode() const {
+            XmlNode!(Location, NodeStyle!ShapeNode) toXmlNode() const {
                 import std.conv : to;
 
-                XmlNodeData!(Location, NodeStyle!ShapeNode) data;
+                XmlNode!(Location, NodeStyle!ShapeNode) data;
 
                 data.kind = extra.kind.to!string();
                 //data.kind = payload.kind.info.kind.to!string();
@@ -1147,7 +1155,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
 
     private void addVarDecl(Nullable!USRType parent, ref const(VarDeclResult) result) {
         { // instance node
-            XmlNodeData!(Location, NodeStyle!ShapeNode) node;
+            XmlNode!(Location, NodeStyle!ShapeNode) node;
             node.url = result.location;
             node.typeAttr = result.type.attr;
             node.signature = result.type.toStringDecl(result.name);
@@ -1236,7 +1244,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         }
 
         void putDefinition(ref const(TypeData) type, ref const(LocationTag) loc) {
-            XmlNodeData!(LocationTag, NodeStyle!UMLClassNode) data;
+            XmlNode!(LocationTag, NodeStyle!UMLClassNode) data;
             data.url = loc;
             // how do I copy the const struct?
             data.style = () @trusted{ return cast(NodeStyle!UMLClassNode) style; }();
@@ -1412,7 +1420,7 @@ private:
 
         auto ns_usr = USRType(ns.toStringNs);
 
-        XmlNodeData!(LocationTag, NodeStyle!ShapeNode) node;
+        XmlNode!(LocationTag, NodeStyle!ShapeNode) node;
         node.url = LocationTag(null);
         node.style = makeShapeNode(ns_usr, ColorKind.namespace);
         nodeIfMissing(nodes, recv, ns_usr, node);
@@ -1430,7 +1438,7 @@ private:
             auto file_label = location.file.baseName;
             auto file_loc = Location(location.file, 0, 0);
 
-            XmlNodeData!(Location, NodeStyle!ShapeNode) node;
+            XmlNode!(Location, NodeStyle!ShapeNode) node;
             node.url = file_loc;
             node.style = makeShapeNode(file_label, ColorKind.file);
             nodeIfMissing(nodes, recv, file_usr, node);
@@ -1470,7 +1478,7 @@ private:
             return;
         }
 
-        xmlNode(recv, cast(string) node_usr, node);
+        node.render(recv, cast(string) node_usr);
         nodes[node_usr] = true;
     }
 
