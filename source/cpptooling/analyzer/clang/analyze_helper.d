@@ -322,7 +322,7 @@ struct ConstructorResult {
  *   container = container to store the type in
  *   indent = to use when logging
  *
- * Return: tuple of analyzed data.
+ * Returns: analyzed data.
  */
 auto analyzeConstructor(const(Constructor) v, ref Container container, in uint indent) @safe {
     auto type = () @trusted{ return retrieveType(v.cursor, container, indent); }();
@@ -363,17 +363,21 @@ struct CXXMethodResult {
     Flag!"isConst" isConst;
 }
 
+CXXMethodResult analyzeCXXMethod(const(CXXMethod) v, ref Container container, in uint indent) @safe {
+    return analyzeCXXMethod(v.cursor, container, indent);
+}
+
 /// ditto
-auto analyzeCXXMethod(const(CXXMethod) v, ref Container container, in uint indent) @safe {
-    auto type = () @trusted{ return retrieveType(v.cursor, container, indent); }();
+CXXMethodResult analyzeCXXMethod(const(Cursor) v, ref Container container, in uint indent) @safe {
+    auto type = () @trusted{ return retrieveType(v, container, indent); }();
     assert(type.get.primary.type.kind.info.kind == TypeKind.Info.Kind.func);
     put(type, container, indent);
 
-    auto name = CppMethodName(v.cursor.spelling);
+    auto name = CppMethodName(v.spelling);
     auto params = toCxParam(type.primary.type.kind, container);
     auto return_type = CxReturnType(TypeKindAttr(container.find!TypeKind(
             type.primary.type.kind.info.return_).front, type.primary.type.kind.info.returnAttr));
-    auto is_virtual = classify(v.cursor);
+    auto is_virtual = classify(v);
 
     return CXXMethodResult(type.primary.type, name, params,
             cast(Flag!"isOperator") isOperator(name), return_type, is_virtual,
