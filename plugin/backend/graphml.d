@@ -844,7 +844,13 @@ private void xmlNode(RecvT, IdT, NodeT)(ref RecvT recv, IdT id, NodeT data) {
     put(recv, "</node>\n");
 }
 
-private void xmlEdge(RecvT, SourceT, TargetT)(ref RecvT recv, SourceT src, TargetT target) @safe {
+private enum EdgeKind {
+    Directed,
+    Generalization
+}
+
+private void xmlEdge(RecvT, SourceT, TargetT)(ref RecvT recv, SourceT src,
+        TargetT target, EdgeKind kind) @safe {
     import std.conv : to;
     import std.format : formattedWrite;
     import std.range.primitives : put;
@@ -857,8 +863,20 @@ private void xmlEdge(RecvT, SourceT, TargetT)(ref RecvT recv, SourceT src, Targe
         formattedWrite(recv, `<!-- %s - %s -->`, cast(string) src, cast(string) target);
     }
 
-    formattedWrite(recv, `<edge id="e%s" source="%s" target="%s"/>`,
-            nextEdgeId.to!string, src_, target_);
+    final switch (kind) with (EdgeKind) {
+    case Directed:
+        formattedWrite(recv, `<edge id="e%s" source="%s" target="%s"/>`,
+                nextEdgeId.to!string, src_, target_);
+        break;
+    case Generalization:
+        formattedWrite(recv, `<edge id="e%s" source="%s" target="%s">`,
+                nextEdgeId.to!string, src_, target_);
+        put(recv,
+                `<data key="d9"><y:PolyLineEdge><y:Arrows source="none" target="white_delta"/></y:PolyLineEdge></data>`);
+        put(recv, `</edge>`);
+        break;
+    }
+
     put(recv, "\n");
 }
 
@@ -1301,7 +1319,7 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
     void put(ref const(TypeKindAttr) src, ref const(CXXBaseSpecifierResult) result) {
         putToCache(result.type);
         // by definition it can never be a primitive type so no check needed.
-        addEdge(streamed_edges, recv, src.kind.usr, result.canonicalUSR);
+        addEdge(streamed_edges, recv, src.kind.usr, result.canonicalUSR, EdgeKind.Generalization);
     }
 
 private:
@@ -1467,7 +1485,7 @@ private:
     }
 
     static void addEdge(EdgeStoreT, RecvT, SrcT, TargetT)(ref EdgeStoreT edges,
-            ref RecvT recv, SrcT src, TargetT target) {
+            ref RecvT recv, SrcT src, TargetT target, EdgeKind kind = EdgeKind.Directed) {
         string target_usr;
         static if (is(Unqual!TargetT == TypeKindAttr)) {
             if (target.kind.info.kind == TypeKind.Info.Kind.null_) {
@@ -1497,7 +1515,7 @@ private:
             return;
         }
 
-        xmlEdge(recv, src_usr, target_usr);
+        xmlEdge(recv, src_usr, target_usr, kind);
         edges[edge_key] = true;
     }
 }
