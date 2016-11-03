@@ -50,8 +50,8 @@ shared static this() {
 
     import plugin.frontend.graphml;
 
-    registerPlugin(CliCategory("graphml"), CliCategoryInfo("static analyse of type relations as GraphML"),
-            graphml_opt, &plugin.frontend.graphml.runPlugin);
+    registerPlugin(CliCategory("graphml"), CliCategoryInfo(
+            "static analyse of type relations as GraphML"), &plugin.frontend.graphml.runPlugin);
 }
 
 version (unittest) {

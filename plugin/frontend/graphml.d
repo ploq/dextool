@@ -23,8 +23,8 @@ import plugin.types;
 import plugin.backend.graphml : Controller, Parameters, Products;
 
 auto runPlugin(CliBasicOption opt, CliArgs args) {
-    import std.typecons : TypedefType;
     import docopt;
+    import plugin.utility : toDocopt;
 
     auto parsed = docopt.docoptParse(opt.toDocopt(graphml_opt), args);
 
