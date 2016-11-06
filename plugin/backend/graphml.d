@@ -10,6 +10,7 @@ one at http://mozilla.org/MPL/2.0/.
 module plugin.backend.graphml;
 
 import std.format : FormatSpec;
+import std.range : isOutputRange;
 import std.traits : isSomeString;
 import std.typecons : scoped, Tuple, Nullable, Flag, Yes;
 import logger = std.experimental.logger;
@@ -850,6 +851,165 @@ private struct XmlNode(UrlT, StyleT) {
         renderOpen(recv, id);
         renderClose(recv);
     }
+}
+
+private enum IdT {
+    dummy0,
+    dummy1,
+    dummy2,
+    url,
+    description,
+    kind,
+    typeAttr,
+    signature,
+    nodegraphics,
+    edgegraphics,
+}
+
+/// Write the XML header for graphml with needed key definitions.
+void xmlHeader(RecvT)(ref RecvT recv) {
+    import std.conv : to;
+    import std.format : formattedWrite;
+    import std.range.primitives : put;
+
+    put(recv, `<?xml version="1.0" encoding="UTF-8"?>` ~ "\n");
+    put(recv, `<graphml` ~ "\n");
+    put(recv, ` xmlns="http://graphml.graphdrawing.org/xmlns"` ~ "\n");
+    put(recv, ` xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"` ~ "\n");
+    put(recv, ` xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns` ~ "\n");
+    put(recv, `   http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd"` ~ "\n");
+    put(recv, ` xmlns:y="http://www.yworks.com/xml/graphml">` ~ "\n");
+
+    put(recv, `<graph id="G" edgedefault="directed">` ~ "\n");
+
+    formattedWrite(recv,
+            `<key for="node" attr.name="url" attr.type="string" id="d%s"/>` ~ "\n",
+            cast(int) IdT.url);
+    formattedWrite(recv, `<key for="node" attr.name="description" attr.type="string" id="d%s"/>` ~ "\n",
+            cast(int) IdT.description);
+    formattedWrite(recv, `<key for="node" attr.name="kind" attr.type="string" id="d%s"/>` ~ "\n",
+            cast(int) IdT.kind);
+    formattedWrite(recv, `<key for="node" attr.name="typeAttr" attr.type="string" id="d%s"/>` ~ "\n",
+            cast(int) IdT.typeAttr);
+    formattedWrite(recv, `<key for="node" attr.name="signature" attr.type="string" id="d%s"/>` ~ "\n",
+            cast(int) IdT.signature);
+    formattedWrite(recv, `<key for="edge" yfiles.type="nodegraphics" id="d%s"/>` ~ "\n",
+            cast(int) IdT.nodegraphics);
+    formattedWrite(recv, `<key for="node" yfiles.type="edgegraphics" id="d%s"/>` ~ "\n",
+            cast(int) IdT.edgegraphics);
+}
+
+@Name("Should be enum IDs converted to int strings")
+unittest {
+    // Even though the test seems stupid it exists to ensure that the first and
+    // last ID is as expected. If they mismatch then the header generator is
+    // probably wrong.
+    import std.format : format;
+
+    format("%s", cast(int) IdT.url).shouldEqual("3");
+    format("%s", cast(int) IdT.edgegraphics).shouldEqual("9");
+}
+
+/// Finish the graphml.
+void xmlFooter(RecvT)(ref RecvT recv) {
+    import std.range.primitives : put;
+
+    put(recv, "</graph>\n");
+    put(recv, "</graphml>\n");
+}
+
+private struct Attr {
+    IdT id;
+}
+
+/// Stream to put attribute data into for complex member methods that handle
+/// the serialization themself.
+private alias StreamAttr = void delegate(const(char)[]);
+
+/** Serialize a struct's fields tagged with the UDA Attr to xml elements.
+ *
+ * Params:
+ *  RecvT = an OutputRange of char
+ *  T = type to analyse for UDA's
+ *  recv = ?
+ *  bundle = ?
+ */
+private void nodeAttrToXml(RecvT, T)(ref RecvT recv, ref T bundle)
+        if (isOutputRange!(RecvT, char)) {
+    import std.conv : to;
+    import std.format : formattedWrite;
+    import std.range.primitives : put;
+    import std.traits;
+    import std.meta;
+
+    static void dataTag(RecvT, T)(ref RecvT recv, Attr attr, T data) {
+        formattedWrite(recv, `<data key="d%s">`, cast(int) attr.id);
+
+        static if (isSomeFunction!T) {
+            data((scope const(char)[] buf) { put(recv, buf); });
+        } else static if (__traits(hasMember, T, "get")) {
+            // for Nullable etc
+            ccdataWrap(recv, data.get);
+        } else {
+            ccdataWrap(recv, data);
+        }
+
+        put(recv, "</data>");
+    }
+
+    // TODO block when trying to stream multiple key's with same id
+
+    foreach (member_name; __traits(allMembers, T)) {
+        alias memberType = Alias!(__traits(getMember, T, member_name));
+        alias res = getUDAs!(memberType, Attr);
+        // lazy helper for retrieving the compoes `bundle.<field>`
+        enum member = "__traits(getMember, bundle, member_name)";
+
+        static if (res.length == 0) {
+            // ignore those without the UDA Attr
+        } else static if (is(memberType)) {
+            // ignore types
+        } else static if (isSomeFunction!memberType) {
+            // process functions
+            // may only have one parameter and it must accept the delegate StreamAttr
+            static if (std.traits.Parameters!(memberType).length == 1
+                    && is(std.traits.Parameters!(memberType)[0] == StreamAttr)) {
+                dataTag(recv, res[0], &mixin(member));
+            } else {
+                static assert(0,
+                        "member function tagged with Attr may only take one argument. The argument must be of type "
+                        ~ typeof(StreamAttr).stringof ~ " but is of type " ~ std.traits.Parameters!(memberType)
+                        .stringof);
+            }
+        } else static if (is(typeof(memberType.init))) {
+            // process basic types
+            dataTag(recv, res[0], mixin(member));
+        }
+    }
+}
+
+@Name("Should serialize those fields and methods of the struct that has the UDA Attr")
+unittest {
+    static struct Foo {
+        int ignore;
+        @Attr(IdT.kind) string value;
+        void f(StreamAttr stream) @Attr(IdT.url) {
+            stream("f");
+        }
+    }
+
+    char[] buf;
+    struct Recv {
+        void put(const(char)[] s) {
+            buf ~= s;
+        }
+    }
+
+    Recv recv;
+    auto s = Foo(1, "value");
+    nodeAttrToXml(recv, s);
+    (cast(string) buf).shouldEqual(
+            `<data key="d5"><![CDATA[value]]></data><data key="d3">f</data>`);
 }
 
 private enum EdgeKind {

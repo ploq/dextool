@@ -162,44 +162,20 @@ class GraphMLFrontend : Controller, Parameters, Products {
 
     static auto make(FileName fname) {
         auto fout = File(cast(string) fname, "w");
-        writeXmlHeader(fout);
-
         return XmlStream(fout);
     }
 
     @disable this(this);
 
-    ~this() {
-        writeXmlFooter(fout);
-    }
-
     void put(const(char)[] v) {
         fout.write(v);
     }
+}
 
-    private static void writeXmlHeader(T)(T recv) {
-        recv.writeln(`<?xml version="1.0" encoding="UTF-8"?>`);
-        recv.writeln(`<graphml`);
-        recv.writeln(` xmlns="http://graphml.graphdrawing.org/xmlns"`);
-        recv.writeln(` xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
-        recv.writeln(` xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns`);
-        recv.writeln(`   http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd"`);
-        recv.writeln(` xmlns:y="http://www.yworks.com/xml/graphml">`);
+unittest {
+    import std.range.primitives : isOutputRange;
 
-        recv.writeln(`<key for="node" attr.name="url" attr.type="string" id="d3"/>`);
-        recv.writeln(`<key for="node" attr.name="description" attr.type="string" id="d4"/>`);
-        recv.writeln(`<key for="node" yfiles.type="nodegraphics" id="d5"/>`);
-        recv.writeln(`<key for="node" attr.name="kind" attr.type="string" id="d6"/>`);
-        recv.writeln(`<key for="node" attr.name="typeAttr" attr.type="string" id="d7"/>`);
-        recv.writeln(`<key for="node" attr.name="signature" attr.type="string" id="d8"/>`);
-        recv.writeln(`<key for="edge" yfiles.type="edgegraphics" id="d9"/>`);
-        recv.writeln(`<graph id="G" edgedefault="directed">`);
-    }
-
-    private static void writeXmlFooter(T)(T recv) {
-        recv.writeln(`</graph>`);
-        recv.writeln(`</graphml>`);
-    }
+    static assert(isOutputRange!(XmlStream, char), "Should be an output range");
 }
 
 struct Lookup {
@@ -219,13 +195,16 @@ struct Lookup {
     }
 }
 
+/// TODO cleaner split between frontend and backend is needed. Move most of the
+/// logic to the backend and leave the error handling in the frontend. E.g. by
+/// using callbacks.
 ExitStatusType pluginMain(GraphMLFrontend variant, in string[] in_cflags,
         CompileCommandDB compile_db, InFiles in_files, Flag!"skipFileError" skipFileError) {
     import std.algorithm : map;
     import std.conv : text;
     import std.path : buildNormalizedPath, asAbsolutePath;
     import std.range : enumerate;
-    import std.typecons : TypedefType, Yes;
+    import std.typecons : TypedefType, Yes, NullableRef;
 
     import cpptooling.analyzer.clang.context : ClangContext;
     import cpptooling.data.symbol.container : Container;
@@ -271,6 +250,7 @@ ExitStatusType pluginMain(GraphMLFrontend variant, in string[] in_cflags,
     }
 
     ExitStatusType analyzeFiles(T)(ref T files, const size_t total_files, ref string[] skipped_files) {
+
         foreach (idx, file; files) {
             auto status = analyze(file, idx, total_files);
             if (status == ExitStatusType.Errors && skipFileError) {
@@ -283,8 +263,15 @@ ExitStatusType pluginMain(GraphMLFrontend variant, in string[] in_cflags,
         return ExitStatusType.Ok;
     }
 
+    import plugin.backend.graphml : xmlHeader, xmlFooter;
+
     string[] skipped_files;
     ExitStatusType exit_status;
+
+    auto stream = NullableRef!XmlStream(&xml_stream);
+    xmlHeader(stream);
+    scope (success)
+        xmlFooter(stream);
 
     if (in_files.length == 0) {
         auto range = compile_db.map!(a => a.absoluteFile).enumerate;
