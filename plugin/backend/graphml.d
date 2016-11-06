@@ -924,7 +924,7 @@ private struct Attr {
 
 /// Stream to put attribute data into for complex member methods that handle
 /// the serialization themself.
-private alias StreamAttr = void delegate(const(char)[]);
+private alias StreamChar = void delegate(const(char)[]);
 
 /** Serialize a struct's fields tagged with the UDA Attr to xml elements.
  *
@@ -962,23 +962,21 @@ private void nodeAttrToXml(RecvT, T)(ref RecvT recv, ref T bundle)
     foreach (member_name; __traits(allMembers, T)) {
         alias memberType = Alias!(__traits(getMember, T, member_name));
         alias res = getUDAs!(memberType, Attr);
-        // lazy helper for retrieving the compoes `bundle.<field>`
+        // lazy helper for retrieving the compose `bundle.<field>`
         enum member = "__traits(getMember, bundle, member_name)";
 
         static if (res.length == 0) {
             // ignore those without the UDA Attr
-        } else static if (is(memberType)) {
-            // ignore types
         } else static if (isSomeFunction!memberType) {
             // process functions
-            // may only have one parameter and it must accept the delegate StreamAttr
+            // may only have one parameter and it must accept the delegate StreamChar
             static if (std.traits.Parameters!(memberType).length == 1
-                    && is(std.traits.Parameters!(memberType)[0] == StreamAttr)) {
+                    && is(std.traits.Parameters!(memberType)[0] == StreamChar)) {
                 dataTag(recv, res[0], &mixin(member));
             } else {
                 static assert(0,
                         "member function tagged with Attr may only take one argument. The argument must be of type "
-                        ~ typeof(StreamAttr).stringof ~ " but is of type " ~ std.traits.Parameters!(memberType)
+                        ~ typeof(StreamChar).stringof ~ " but is of type " ~ std.traits.Parameters!(memberType)
                         .stringof);
             }
         } else static if (is(typeof(memberType.init))) {
@@ -988,12 +986,12 @@ private void nodeAttrToXml(RecvT, T)(ref RecvT recv, ref T bundle)
     }
 }
 
-@Name("Should serialize those fields and methods of the struct that has the UDA Attr")
+@("Should serialize those fields and methods of the struct that has the UDA Attr")
 unittest {
     static struct Foo {
         int ignore;
         @Attr(IdT.kind) string value;
-        void f(StreamAttr stream) @Attr(IdT.url) {
+        void f(StreamChar stream) @Attr(IdT.url) {
             stream("f");
         }
     }
@@ -1010,6 +1008,83 @@ unittest {
     nodeAttrToXml(recv, s);
     (cast(string) buf).shouldEqual(
             `<data key="d5"><![CDATA[value]]></data><data key="d3">f</data>`);
+}
+
+private enum NodeId;
+private enum NodeExtra;
+
+private void nodeToXml(RecvT, T)(ref RecvT recv, ref T bundle)
+        if (isOutputRange!(RecvT, char)) {
+    import std.format : formattedWrite;
+    import std.range.primitives : put;
+    import std.traits;
+    import std.meta;
+
+    // lazy helper for retrieving the compose `bundle.<field>`
+    enum member = "__traits(getMember, bundle, member_name)";
+
+    put(recv, "<node ");
+    scope (success)
+        put(recv, "</node>\n");
+
+    // ID
+    foreach (member_name; __traits(allMembers, T)) {
+        alias memberType = Alias!(__traits(getMember, T, member_name));
+        alias res = getUDAs!(memberType, NodeId);
+
+        static if (res.length == 0) {
+            // ignore those without the UDA Attr
+        } else {
+            formattedWrite(recv, `id="%s"`, mixin(member));
+        }
+    }
+    put(recv, ">");
+
+    nodeAttrToXml(recv, bundle);
+
+    // Extra
+    foreach (member_name; __traits(allMembers, T)) {
+        alias memberType = Alias!(__traits(getMember, T, member_name));
+        alias res = getUDAs!(memberType, NodeId);
+
+        static if (res.length == 0) {
+            // ignore those without the UDA Attr
+        } else static if (isSomeFunction!memberType) {
+            mixin(member)((scope const(char)[] buf) { put(recv, buf); });
+        } else {
+            static if (isSomeString!(typeof(memberType))) {
+                ccdataWrap(recv, mixin(member));
+            } else {
+                import std.conv : to;
+
+                ccdataWrap(recv, mixin(member).to!string());
+            }
+        }
+    }
+}
+
+@("Should serialize a node by the UDA's")
+unittest {
+    static struct Foo {
+        @NodeId int id;
+        @Attr(IdT.description) string desc;
+
+        @NodeExtra void extra(StreamChar s) {
+            s("extra");
+        }
+    }
+
+    char[] buf;
+    struct Recv {
+        void put(const(char)[] s) {
+            buf ~= s;
+        }
+    }
+
+    Recv recv;
+    auto s = Foo(3, "desc");
+    nodeToXml(recv, s);
+    (cast(string) buf).shouldEqual("");
 }
 
 private enum EdgeKind {
