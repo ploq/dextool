@@ -67,7 +67,7 @@ unittest {
     format("%s", cast(int) IdT.edgegraphics).shouldEqual("9");
 }
 
-/// Finish the graphml.
+/// Write the xml footer as required by GraphML.
 void xmlFooter(RecvT)(ref RecvT recv) {
     import std.range.primitives : put;
 

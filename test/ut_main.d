@@ -40,8 +40,7 @@ int main(string[] args) {
                           "cpptooling.utility.virtualfilesystem",
                           "plugin.loader",
                           "plugin.utility",
-                          "plugin.backend.graphml",
-                          "plugin.backend.graphml.graphml",
+                          "plugin.backend.graphml.base",
                           "plugin.backend.graphml.xml",
                           "plugin.backend.plantuml",
                           // component tests

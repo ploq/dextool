@@ -9,5 +9,5 @@ one at http://mozilla.org/MPL/2.0/.
 */
 module plugin.backend.graphml;
 
-public import plugin.backend.graphml.graphml;
+public import plugin.backend.graphml.base;
 public import plugin.backend.graphml.xml;
