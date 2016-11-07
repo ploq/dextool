@@ -10,9 +10,9 @@ one at http://mozilla.org/MPL/2.0/.
 module plugin.backend.graphml.graphml;
 
 import std.format : FormatSpec;
-import std.range : isOutputRange, isInputRange;
+import std.range : isOutputRange;
 import std.traits : isSomeString;
-import std.typecons : scoped, Tuple, Nullable, Flag, Yes;
+import std.typecons : scoped, Nullable, Flag, Yes;
 import logger = std.experimental.logger;
 
 import cpptooling.analyzer.kind : resolveCanonicalType, resolvePointeeType;
@@ -22,7 +22,6 @@ import cpptooling.analyzer.clang.ast : Visitor;
 import cpptooling.data.symbol.container : Container;
 import cpptooling.data.type : CppAccess;
 import cpptooling.utility.unqual : Unqual;
-import cpptooling.utility.hash : makeHash;
 
 import plugin.backend.graphml.xml;
 
@@ -645,8 +644,6 @@ private bool isPrimitive(LookupT)(const TypeKind type, LookupT lookup) @safe not
         return false;
     }
 }
-
-import std.range : isOutputRange;
 
 /** Transform analyze data to a xml stream.
  *

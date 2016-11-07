@@ -10,18 +10,8 @@ one at http://mozilla.org/MPL/2.0/.
 module plugin.backend.graphml.xml;
 
 import std.format : FormatSpec;
-import std.range : isOutputRange, isInputRange;
-import std.traits : isSomeString;
-import std.typecons : scoped, Tuple, Nullable, Flag, Yes;
 import logger = std.experimental.logger;
 
-import cpptooling.analyzer.kind : resolveCanonicalType, resolvePointeeType;
-import cpptooling.analyzer.type : TypeKindAttr, TypeKind, TypeAttr,
-    toStringDecl;
-import cpptooling.analyzer.clang.ast : Visitor;
-import cpptooling.data.symbol.container : Container;
-import cpptooling.data.type : CppAccess;
-import cpptooling.utility.unqual : Unqual;
 import cpptooling.utility.hash : makeHash;
 
 version (unittest) {
@@ -222,7 +212,6 @@ package struct NodeStyle(PayloadT) {
     import std.format : formattedWrite;
 
     PayloadT payload;
-
     alias payload this;
 
     void toString(Writer, Char)(scope Writer w, FormatSpec!Char spec) const {
@@ -234,7 +223,6 @@ package struct NodeStyle(PayloadT) {
         formattedWrite(w, "<y:%s>%s</y:%s>", graph_node, payload, graph_node);
         put(w, "</data>");
     }
-
 }
 
 package void ccdataWrap(Writer, ARGS...)(scope Writer w, auto ref ARGS args) {
