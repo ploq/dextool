@@ -10,7 +10,7 @@ one at http://mozilla.org/MPL/2.0/.
 module plugin.backend.graphml;
 
 import std.format : FormatSpec;
-import std.range : isOutputRange;
+import std.range : isOutputRange, isInputRange;
 import std.traits : isSomeString;
 import std.typecons : scoped, Tuple, Nullable, Flag, Yes;
 import logger = std.experimental.logger;
@@ -991,7 +991,7 @@ unittest {
     static struct Foo {
         int ignore;
         @Attr(IdT.kind) string value;
-        void f(StreamChar stream) @Attr(IdT.url) {
+        @Attr(IdT.url) void f(StreamChar stream) {
             stream("f");
         }
     }
