@@ -926,7 +926,11 @@ private struct Attr {
 /// the serialization themself.
 private alias StreamChar = void delegate(const(char)[]);
 
-/** Serialize a struct's fields tagged with the UDA Attr to xml elements.
+/** Serialize a struct into the writer.
+ *
+ * Only those fields and functions tagged with the UDA Attr are serialized into
+ * xml elements.
+ * The "id" as required by GraphML for custom data is derived from Attr.
  *
  * Params:
  *  RecvT = an OutputRange of char
@@ -934,15 +938,14 @@ private alias StreamChar = void delegate(const(char)[]);
  *  recv = ?
  *  bundle = ?
  */
-private void nodeAttrToXml(RecvT, T)(ref RecvT recv, ref T bundle)
-        if (isOutputRange!(RecvT, char)) {
+private void attrToXml(T, Writer)(ref T bundle, scope Writer recv) {
     import std.conv : to;
     import std.format : formattedWrite;
     import std.range.primitives : put;
     import std.traits;
     import std.meta;
 
-    static void dataTag(RecvT, T)(ref RecvT recv, Attr attr, T data) {
+    static void dataTag(Writer, T)(scope Writer recv, Attr attr, T data) {
         formattedWrite(recv, `<data key="d%s">`, cast(int) attr.id);
 
         static if (isSomeFunction!T) {
@@ -1004,17 +1007,16 @@ unittest {
     }
 
     Recv recv;
-    auto s = Foo(1, "value");
-    nodeAttrToXml(recv, s);
+    auto s = Foo(1, "value_");
+    attrToXml(s, recv);
     (cast(string) buf).shouldEqual(
-            `<data key="d5"><![CDATA[value]]></data><data key="d3">f</data>`);
+            `<data key="d5"><![CDATA[value_]]></data><data key="d3">f</data>`);
 }
 
 private enum NodeId;
 private enum NodeExtra;
 
-private void nodeToXml(RecvT, T)(ref RecvT recv, ref T bundle)
-        if (isOutputRange!(RecvT, char)) {
+private void nodeToXml(T, Writer)(ref T bundle, scope Writer recv) {
     import std.format : formattedWrite;
     import std.range.primitives : put;
     import std.traits;
@@ -1040,12 +1042,12 @@ private void nodeToXml(RecvT, T)(ref RecvT recv, ref T bundle)
     }
     put(recv, ">");
 
-    nodeAttrToXml(recv, bundle);
+    attrToXml(bundle, recv);
 
     // Extra
     foreach (member_name; __traits(allMembers, T)) {
         alias memberType = Alias!(__traits(getMember, T, member_name));
-        alias res = getUDAs!(memberType, NodeId);
+        alias res = getUDAs!(memberType, NodeExtra);
 
         static if (res.length == 0) {
             // ignore those without the UDA Attr
@@ -1083,8 +1085,10 @@ unittest {
 
     Recv recv;
     auto s = Foo(3, "desc");
-    nodeToXml(recv, s);
-    (cast(string) buf).shouldEqual("");
+    nodeToXml(s, recv);
+    (cast(string) buf).shouldEqual(
+            `<node id="3"><data key="d4"><![CDATA[desc]]></data>extra</node>
+`);
 }
 
 private enum EdgeKind {
