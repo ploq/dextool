@@ -50,45 +50,53 @@ mixin template MakerInitializingClassMembers(T, alias postInit = function void(r
 /** Convenient array with support for marking of elements for later removal.
  */
 struct MarkArray(T) {
-    alias Range = T[];
-    private T[] arr;
-    private size_t[] remove_;
+    import std.array : Appender;
 
-    alias arr this;
+    alias Range = T[];
+    private Appender!(size_t[]) remove_;
+    private Appender!(T*[]) arr;
 
     /// Store e in the cache.
     void put(T e) {
-        arr ~= e;
+        auto item = new T;
+        *item = e;
+        arr.put(item);
     }
 
     /// Retrieve a slice of the stored data.
-    T[] data() {
-        return arr[];
+    auto data() {
+        import std.algorithm : map;
+
+        return arr.data.map!(a => *a);
     }
 
-    /** Mark index `i` for removal.
+    /** Mark index `idx` for removal.
      *
      * Later as in calling $(D doRemoval).
      */
-    void markForRemoval(size_t i) @safe pure {
-        remove_ ~= i;
+    void markForRemoval(size_t idx) @safe pure {
+        remove_.put(idx);
     }
 
     /// Remove all items that has been marked.
     void doRemoval() {
-        import std.algorithm : canFind, filter, cache, copy, map;
-        import std.array : array;
+        import std.algorithm : canFind, filter, map;
         import std.range : enumerate;
 
         // naive implementation. Should use swapping instead.
-        arr = arr[].enumerate.filter!(a => !canFind(remove_, a.index)).map!(a => a.value).array();
-        remove_.length = 0;
+        typeof(arr) new_;
+        new_.put(arr.data.enumerate.filter!(a => !canFind(remove_.data,
+                a.index)).map!(a => a.value));
+        arr.clear;
+        remove_.clear;
+
+        arr = new_;
     }
 
     /// Clear the $(D MarkArray).
     void clear() {
-        arr.length = 0;
-        remove_.length = 0;
+        arr.clear;
+        remove_.clear;
     }
 }
 
@@ -96,10 +104,10 @@ struct MarkArray(T) {
 unittest {
     MarkArray!int arr;
 
-    arr ~= 10;
+    arr.put(10);
 
-    arr[].length.shouldEqual(1);
-    arr[0].shouldEqual(10);
+    arr.data.length.shouldEqual(1);
+    arr.data[0].shouldEqual(10);
 }
 
 @Name("Should mark and remove items")
