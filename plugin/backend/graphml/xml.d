@@ -6,6 +6,9 @@ Author: Joakim Brännström (joakim.brannstrom@gmx.com)
 This Source Code Form is subject to the terms of the Mozilla Public License,
 v.2.0. If a copy of the MPL was not distributed with this file, You can obtain
 one at http://mozilla.org/MPL/2.0/.
+
+XML utility for generating GraphML content.
+Contains data structures and serializers.
 */
 module plugin.backend.graphml.xml;
 
@@ -42,6 +45,8 @@ void xmlHeader(RecvT)(ref RecvT recv) {
     formattedWrite(recv,
             `<key for="node" attr.name="url" attr.type="string" id="d%s"/>` ~ "\n",
             cast(int) IdT.url);
+    formattedWrite(recv, `<key for="node" attr.name="position" attr.type="string" id="d%s"/>` ~ "\n",
+            cast(int) IdT.position);
     formattedWrite(recv, `<key for="node" attr.name="description" attr.type="string" id="d%s"/>` ~ "\n",
             cast(int) IdT.description);
     formattedWrite(recv, `<key for="node" attr.name="kind" attr.type="string" id="d%s"/>` ~ "\n",
@@ -64,7 +69,7 @@ unittest {
     import std.format : format;
 
     format("%s", cast(int) IdT.url).shouldEqual("3");
-    format("%s", cast(int) IdT.edgegraphics).shouldEqual("9");
+    format("%s", cast(int) IdT.edgegraphics).shouldEqual("10");
 }
 
 /// Write the xml footer as required by GraphML.
@@ -86,14 +91,57 @@ package enum ColorKind {
     class_
 }
 
+private struct FillColor {
+    string color1;
+    string color2;
+
+    void toString(Writer, Char)(scope Writer w, FormatSpec!Char fmt) const {
+        import std.format : formattedWrite;
+
+        if (color1.length > 0) {
+            formattedWrite(w, `color="#%s"`, color1);
+        }
+
+        if (color2.length > 0) {
+            formattedWrite(w, ` color2="#%s"`, color2);
+        }
+    }
+}
+
+private FillColor toInternal(ColorKind kind) @safe pure nothrow @nogc {
+    final switch (kind) {
+    case ColorKind.none:
+        return FillColor(null, null);
+    case ColorKind.file:
+        return FillColor("CCFFCC", null);
+    case ColorKind.global:
+        return FillColor("FF33FF", null);
+    case ColorKind.globalConst:
+        return FillColor("FFCCFF", null);
+    case ColorKind.globalStatic:
+        return FillColor("FFD9D2", "FF66FF");
+    case ColorKind.namespace:
+        return FillColor("FFCCCC", null);
+    case ColorKind.func:
+        return FillColor("FF6600", null);
+    case ColorKind.class_:
+        return FillColor("FFCC33", null);
+    }
+}
+
 package @safe struct ValidNodeId {
     import cpptooling.data.type : USRType;
 
     size_t payload;
     alias payload this;
 
+    this(size_t id) {
+        payload = id;
+    }
+
     this(string usr) {
         payload = makeHash(cast(string) usr);
+        debug logger.tracef("usr:%s -> hash:%s", usr, payload);
     }
 
     this(USRType usr) {
@@ -103,7 +151,7 @@ package @safe struct ValidNodeId {
     void toString(Writer, Char)(scope Writer w, FormatSpec!Char fmt) const {
         import std.format : formatValue;
 
-        formatValue(w, payload, formatSpec);
+        formatValue(w, payload, fmt);
     }
 }
 
@@ -120,7 +168,7 @@ package struct ShapeNode {
     private enum baseHeight = 20;
     private enum baseWidth = 140;
 
-    void toString(Writer, Char)(scope Writer w, FormatSpec!Char = "%s") const {
+    void toString(Writer, Char)(scope Writer w, FormatSpec!Char = "%s") const @safe {
         import std.format : formattedWrite;
 
         formattedWrite(w, `<y:Geometry height="%s" width="%s"/>`, baseHeight, baseWidth);
@@ -170,7 +218,7 @@ package struct UMLClassNode {
             put(w, `<y:MethodLabel>`);
         }
         foreach (method; methods) {
-            ccdataWrap(w, method);
+            ccdataWrap(w, methods);
             put(w, "\n");
         }
         if (methods.length > 0) {
@@ -209,19 +257,17 @@ package auto makeUMLClassNode(string label) {
  * Intented to carry metadata and formatting besides a generic label.
  */
 package struct NodeStyle(PayloadT) {
-    import std.format : formattedWrite;
-
     PayloadT payload;
     alias payload this;
 
     void toString(Writer, Char)(scope Writer w, FormatSpec!Char spec) const {
-        import std.range.primitives : put;
+        import std.format : formattedWrite, formatValue;
 
         enum graph_node = PayloadT.stringof;
 
-        put(w, `<data key="d5">`);
-        formattedWrite(w, "<y:%s>%s</y:%s>", graph_node, payload, graph_node);
-        put(w, "</data>");
+        formattedWrite(w, "<y:%s>", graph_node);
+        formatValue(w, payload, spec);
+        formattedWrite(w, "</y:%s>", graph_node);
     }
 }
 
@@ -245,80 +291,12 @@ package void xmlComment(RecvT, CharT)(ref RecvT recv, CharT v) {
     formattedWrite(recv, "<!-- %s -->\n", v);
 }
 
-package struct XmlNode(UrlT, StyleT) {
-    import std.typecons : Nullable;
-    import cpptooling.analyzer.kind : TypeAttr;
-
-    Nullable!UrlT url;
-    Nullable!string kind;
-    Nullable!TypeAttr typeAttr;
-    Nullable!string signature;
-    Nullable!StyleT style;
-
-    void renderOpen(RecvT, IdT)(ref RecvT recv, IdT id) {
-        import std.conv : to;
-        import std.format : formattedWrite;
-        import std.range.primitives : put;
-
-        auto id_ = ValidNodeId(id);
-
-        debug {
-            // printing the raw identifiers to make it easier to debug
-            formattedWrite(recv, `<!-- %s -->`, cast(string) id);
-        }
-
-        formattedWrite(recv, `<node id="%s">`, id_);
-
-        if (!url.isNull) {
-            put(recv, `<data key="d3">`);
-            ccdataWrap(recv, url.file);
-            put(recv, "</data>");
-
-            put(recv, `<data key="d4">`);
-            ccdataWrap(recv, "Line:", url.line.to!string, " Column:", url.column.to!string);
-            put(recv, "</data>");
-        }
-
-        if (!kind.isNull) {
-            put(recv, `<data key="d6">`);
-            ccdataWrap(recv, kind.get);
-            put(recv, "</data>");
-        }
-
-        if (!typeAttr.isNull) {
-            put(recv, `<data key="d7">`);
-            typeAttr.get.toString(recv, FormatSpec!char("%s"));
-            put(recv, "</data>");
-        }
-
-        if (!signature.isNull) {
-            put(recv, `<data key="d8">`);
-            ccdataWrap(recv, signature.get);
-            put(recv, "</data>");
-        }
-
-        if (!style.isNull) {
-            style.get.toString(recv, FormatSpec!char("%s"));
-        }
-    }
-
-    void renderClose(RecvT)(ref RecvT recv) {
-        import std.range.primitives : put;
-
-        put(recv, "</node>\n");
-    }
-
-    void render(RecvT, IdT)(ref RecvT recv, IdT id) {
-        renderOpen(recv, id);
-        renderClose(recv);
-    }
-}
-
 package enum IdT {
     dummy0,
     dummy1,
     dummy2,
-    url,
+    url, /// URL such as a path
+    position, /// position in a file
     description,
     kind,
     typeAttr,
@@ -333,7 +311,7 @@ package struct Attr {
 
 /// Stream to put attribute data into for complex member methods that handle
 /// the serialization themself.
-package alias StreamChar = void delegate(const(char)[]);
+package alias StreamChar = void delegate(const(char)[]) @safe;
 
 /** Serialize a struct into the writer.
  *
@@ -358,7 +336,7 @@ package void attrToXml(T, Writer)(ref T bundle, scope Writer recv) {
         formattedWrite(recv, `<data key="d%s">`, cast(int) attr.id);
 
         static if (isSomeFunction!T) {
-            data((scope const(char)[] buf) { put(recv, buf); });
+            data((const(char)[] buf) @trusted{ put(recv, buf); });
         } else static if (__traits(hasMember, T, "get")) {
             // for Nullable etc
             ccdataWrap(recv, data.get);
@@ -419,7 +397,7 @@ unittest {
     auto s = Foo(1, "value_");
     attrToXml(s, recv);
     (cast(string) buf).shouldEqual(
-            `<data key="d5"><![CDATA[value_]]></data><data key="d3">f</data>`);
+            `<data key="d6"><![CDATA[value_]]></data><data key="d3">f</data>`);
 }
 
 package enum NodeId;
@@ -438,13 +416,17 @@ package void nodeToXml(T, Writer)(ref T bundle, scope Writer recv) {
     scope (success)
         put(recv, "</node>\n");
 
-    // ID
+    // Node ID
     foreach (member_name; __traits(allMembers, T)) {
         alias memberType = Alias!(__traits(getMember, T, member_name));
         alias res = getUDAs!(memberType, NodeId);
 
         static if (res.length == 0) {
             // ignore those without the UDA Attr
+        } else static if (isSomeFunction!memberType) {
+            put(recv, `id="`);
+            mixin(member)((const(char)[] buf) @trusted{ put(recv, buf); });
+            put(recv, `"`);
         } else {
             formattedWrite(recv, `id="%s"`, mixin(member));
         }
@@ -453,7 +435,7 @@ package void nodeToXml(T, Writer)(ref T bundle, scope Writer recv) {
 
     attrToXml(bundle, recv);
 
-    // Extra
+    // Extra node stuff after the attributes
     foreach (member_name; __traits(allMembers, T)) {
         alias memberType = Alias!(__traits(getMember, T, member_name));
         alias res = getUDAs!(memberType, NodeExtra);
@@ -461,8 +443,8 @@ package void nodeToXml(T, Writer)(ref T bundle, scope Writer recv) {
         static if (res.length == 0) {
             // ignore those without the UDA Attr
         } else static if (isSomeFunction!memberType) {
-            mixin(member)((scope const(char)[] buf) { put(recv, buf); });
-        } else {
+            mixin(member)((const(char)[] buf) @trusted{ put(recv, buf); });
+        } else static if (is(typeof(memberType.init))) {
             static if (isSomeString!(typeof(memberType))) {
                 ccdataWrap(recv, mixin(member));
             } else {
@@ -496,7 +478,7 @@ unittest {
     auto s = Foo(3, "desc");
     nodeToXml(s, recv);
     (cast(string) buf).shouldEqual(
-            `<node id="3"><data key="d4"><![CDATA[desc]]></data>extra</node>
+            `<node id="3"><data key="d5"><![CDATA[desc]]></data>extra</node>
 `);
 }
 
@@ -527,8 +509,9 @@ package void xmlEdge(RecvT, SourceT, TargetT)(ref RecvT recv, SourceT src,
     case Generalization:
         formattedWrite(recv, `<edge id="e%s" source="%s" target="%s">`,
                 nextEdgeId.to!string, src_, target_);
-        put(recv,
-                `<data key="d9"><y:PolyLineEdge><y:Arrows source="none" target="white_delta"/></y:PolyLineEdge></data>`);
+        formattedWrite(recv,
+                `<data key="d%s"><y:PolyLineEdge><y:Arrows source="none" target="white_delta"/></y:PolyLineEdge></data>`,
+                cast(int) IdT.edgegraphics);
         put(recv, `</edge>`);
         break;
     }
