@@ -68,7 +68,7 @@ AccessType toAccessType(CX_CXXAccessSpecifier accessSpec) @safe {
     }
 }
 
-StorageClass toStorageClass(CX_StorageClass storageClass) {
+StorageClass toStorageClass(CX_StorageClass storageClass) @safe pure nothrow @nogc {
     switch (storageClass) with (CX_StorageClass) {
     case CX_SC_Extern:
         return StorageClass.Extern;
@@ -152,7 +152,7 @@ FunctionDeclResult analyzeFunctionDecl(const(FunctionDecl) v, ref Container cont
     return analyzeFunctionDecl(v.cursor, container, indent);
 }
 
-FunctionDeclResult analyzeFunctionDecl(const(Cursor) c_in, ref Container container, in uint indent) @trusted
+FunctionDeclResult analyzeFunctionDecl(const(Cursor) c_in, ref Container container, in uint indent) @safe
 in {
     import deimos.clang.index : CXCursorKind;
 
@@ -174,8 +174,8 @@ body {
     // hint, start reading the function from the bottom up.
     // design is pipe and data transformation
 
-    Nullable!TypeResults extractAndStoreRawType(const(Cursor) c) {
-        auto tr = retrieveType(c, container, indent);
+    Nullable!TypeResults extractAndStoreRawType(const(Cursor) c) @safe {
+        auto tr = () @trusted{ return retrieveType(c, container, indent); }();
         if (tr.isNull) {
             return tr;
         }
@@ -187,7 +187,7 @@ body {
         return tr;
     }
 
-    Nullable!TypeResults lookupRefToConcreteType(Nullable!TypeResults tr) {
+    Nullable!TypeResults lookupRefToConcreteType(Nullable!TypeResults tr) @safe {
         if (tr.isNull) {
             return tr;
         }
@@ -213,10 +213,11 @@ body {
         Flag!"isDefinition" is_definition;
     }
 
-    ComposeData getCursorData(TypeResults tr) {
+    ComposeData getCursorData(TypeResults tr) @safe {
         auto data = ComposeData(tr);
 
         data.name = CFunctionName(c_in.spelling);
+        //data.name = CFunctionName("foo");
         data.loc = locToTag(c_in.location());
         data.is_definition = cast(Flag!"isDefinition") c_in.isDefinition;
         data.storageClass = c_in.storageClass().toStorageClass;
@@ -224,7 +225,7 @@ body {
         return data;
     }
 
-    FunctionDeclResult composeFunc(ComposeData data) {
+    FunctionDeclResult composeFunc(ComposeData data) @safe {
         Nullable!CFunction rval;
 
         auto return_type = container.find!TypeKind(data.tr.primary.type.kind.info.return_);
@@ -238,8 +239,10 @@ body {
         // according to C/C++ standard the last parameter is the only one
         // that can be a variadic, therefor only needing to peek at that
         // one.
-        if (params.length > 0 && params[$ - 1].peek!VariadicType) {
-            is_variadic = Yes.isVariadic;
+        if (params.length > 0) {
+            is_variadic = cast(VariadicType)() @trusted{
+                return params[$ - 1].peek!VariadicType;
+            }();
         }
 
         return FunctionDeclResult(Yes.isValid, data.tr.primary.type, data.name,
