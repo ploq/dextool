@@ -894,9 +894,10 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
         import std.algorithm : map, filter, joiner;
         import cpptooling.data.representation : unpackParam;
 
-        auto src = resolveCanonicalType(result.type.kind, result.type.attr, lookup).front;
+        auto src = result.type;
+
         {
-            auto node = NodeFunction(result.type.kind.usr,
+            auto node = NodeFunction(src.kind.usr,
                     result.type.toStringDecl(result.name).idup, result.name, result.location);
             putToCache(TypeData(TypeData.Tag(node)));
         }
@@ -928,13 +929,11 @@ class TransformToXmlStream(RecvXmlT, LookupT) if (isOutputRange!(RecvXmlT, char)
      *
      * Only interested in the relation from src to the function.
      */
-    void put(ref const(TypeKindAttr) in_src, ref const(FunctionDeclResult) result) {
-        auto src = resolveCanonicalType(in_src.kind, in_src.attr, lookup).front;
-
+    void put(ref const(TypeKindAttr) src, ref const(FunctionDeclResult) result) {
         // TODO investigate if the resolve is needed. I don't think so.
         auto target = resolveCanonicalType(result.type.kind, result.type.attr, lookup).front;
 
-        auto node = NodeFunction(src.kind.usr,
+        auto node = NodeFunction(result.type.kind.usr,
                 result.type.toStringDecl(result.name), result.name, result.location);
         putToCache(TypeData(TypeData.Tag(node)));
 
@@ -1348,13 +1347,11 @@ private @safe struct NodeType {
     @Attr(IdT.kind) enum kind = "type";
 
     @Attr(IdT.typeAttr) void typeAttr(scope StreamChar stream) {
-        type.attr.toString(stream, FormatSpec!char("%s"));
+        ccdataWrap(stream, type.attr.toString());
     }
 
     @Attr(IdT.signature) void signature(scope StreamChar stream) {
-        import std.range.primitives : put;
-
-        put(stream, type.toStringDecl);
+        ccdataWrap(stream, type.toStringDecl);
     }
 
     @Attr(IdT.nodegraphics) void graphics(scope StreamChar stream) {
@@ -1380,13 +1377,11 @@ private @safe struct NodeVariable {
     @Attr(IdT.kind) enum kind = "variable";
 
     @Attr(IdT.signature) void signature(scope StreamChar stream) {
-        import std.range.primitives : put;
-
-        put(stream, type.toStringDecl(identifier));
+        ccdataWrap(stream, type.toStringDecl(identifier));
     }
 
     @Attr(IdT.typeAttr) void typeAttr(scope StreamChar stream) {
-        type.attr.toString(stream, FormatSpec!char("%s"));
+        ccdataWrap(stream, type.attr.toString());
     }
 
     @Attr(IdT.nodegraphics) void graphics(scope StreamChar stream) {
@@ -1403,14 +1398,14 @@ private @safe struct NodeDefault {
 
     mixin NodeLocationMixin;
 
+    @Attr(IdT.kind) enum kind = "default";
+
     @Attr(IdT.typeAttr) void typeAttr(scope StreamChar stream) {
-        type.attr.toString(stream, FormatSpec!char("%s"));
+        ccdataWrap(stream, type.attr.toString());
     }
 
     @Attr(IdT.signature) void signature(scope StreamChar stream) {
-        import std.range.primitives : put;
-
-        put(stream, type.toStringDecl);
+        ccdataWrap(stream, type.toStringDecl);
     }
 
     @Attr(IdT.nodegraphics) void graphics(scope StreamChar stream) {
@@ -1424,19 +1419,20 @@ private @safe struct NodeDefault {
 private @safe struct NodeFile {
     USRType usr;
 
+    @Attr(IdT.kind) enum kind = "file";
+
     @Attr(IdT.url) void url(scope StreamChar stream) {
         ccdataWrap(stream, cast(string) usr);
     }
 
     @Attr(IdT.signature) void signature(scope StreamChar stream) {
-        import std.range.primitives : put;
-        import std.path : baseName;
-
-        put(stream, (cast(string) usr).baseName);
+        ccdataWrap(stream, cast(string) usr);
     }
 
     @Attr(IdT.nodegraphics) void graphics(scope StreamChar stream) {
-        auto style = makeShapeNode(cast(string) usr, ColorKind.file);
+        import std.path : baseName;
+
+        auto style = makeShapeNode((cast(string) usr).baseName, ColorKind.file);
         style.toString(stream, FormatSpec!char("%s"));
     }
 
@@ -1446,10 +1442,10 @@ private @safe struct NodeFile {
 private @safe struct NodeNamespace {
     USRType usr;
 
-    @Attr(IdT.signature) void signature(scope StreamChar stream) {
-        import std.range.primitives : put;
+    @Attr(IdT.kind) enum kind = "namespace";
 
-        put(stream, cast(string) usr);
+    @Attr(IdT.signature) void signature(scope StreamChar stream) {
+        ccdataWrap(stream, cast(string) usr);
     }
 
     @Attr(IdT.nodegraphics) void graphics(scope StreamChar stream) {

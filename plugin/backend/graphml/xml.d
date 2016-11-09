@@ -40,25 +40,33 @@ void xmlHeader(RecvT)(ref RecvT recv) {
     put(recv, `   http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd"` ~ "\n");
     put(recv, ` xmlns:y="http://www.yworks.com/xml/graphml">` ~ "\n");
 
-    put(recv, `<graph id="G" edgedefault="directed">` ~ "\n");
-
+    formattedWrite(recv, `<key for="port" id="d%s" yfiles.type="portgraphics"/>` ~ "\n",
+            cast(int) IdT.portgraphics);
+    formattedWrite(recv, `<key for="port" id="d%s" yfiles.type="portgeometry"/>` ~ "\n",
+            cast(int) IdT.portgeometry);
+    formattedWrite(recv, `<key for="port" id="d%s" yfiles.type="portuserdata"/>` ~ "\n",
+            cast(int) IdT.portuserdata);
     formattedWrite(recv,
             `<key for="node" attr.name="url" attr.type="string" id="d%s"/>` ~ "\n",
             cast(int) IdT.url);
-    formattedWrite(recv, `<key for="node" attr.name="position" attr.type="string" id="d%s"/>` ~ "\n",
-            cast(int) IdT.position);
     formattedWrite(recv, `<key for="node" attr.name="description" attr.type="string" id="d%s"/>` ~ "\n",
             cast(int) IdT.description);
+    formattedWrite(recv, `<key for="node" yfiles.type="nodegraphics" id="d%s"/>` ~ "\n",
+            cast(int) IdT.nodegraphics);
+    formattedWrite(recv, `<key for="graphml" id="d%s" yfiles.type="resources"/>` ~ "\n",
+            cast(int) IdT.graphml);
+    formattedWrite(recv, `<key for="edge" yfiles.type="edgegraphics" id="d%s"/>` ~ "\n",
+            cast(int) IdT.edgegraphics);
+    formattedWrite(recv, `<key for="node" attr.name="position" attr.type="string" id="d%s"/>` ~ "\n",
+            cast(int) IdT.position);
     formattedWrite(recv, `<key for="node" attr.name="kind" attr.type="string" id="d%s"/>` ~ "\n",
             cast(int) IdT.kind);
     formattedWrite(recv, `<key for="node" attr.name="typeAttr" attr.type="string" id="d%s"/>` ~ "\n",
             cast(int) IdT.typeAttr);
     formattedWrite(recv, `<key for="node" attr.name="signature" attr.type="string" id="d%s"/>` ~ "\n",
             cast(int) IdT.signature);
-    formattedWrite(recv, `<key for="edge" yfiles.type="nodegraphics" id="d%s"/>` ~ "\n",
-            cast(int) IdT.nodegraphics);
-    formattedWrite(recv, `<key for="node" yfiles.type="edgegraphics" id="d%s"/>` ~ "\n",
-            cast(int) IdT.edgegraphics);
+
+    put(recv, `<graph id="G" edgedefault="directed">` ~ "\n");
 }
 
 @("Should be enum IDs converted to int strings")
@@ -292,17 +300,18 @@ package void xmlComment(RecvT, CharT)(ref RecvT recv, CharT v) {
 }
 
 package enum IdT {
-    dummy0,
-    dummy1,
-    dummy2,
+    portgraphics,
+    portgeometry,
+    portuserdata,
     url, /// URL such as a path
-    position, /// position in a file
     description,
+    nodegraphics,
+    graphml,
+    edgegraphics,
+    position, /// position in a file
     kind,
     typeAttr,
     signature,
-    nodegraphics,
-    edgegraphics,
 }
 
 package struct Attr {
