@@ -1,3 +1,4 @@
+// Written in the D programming language.
 /**
 Copyright: Copyright (c) 2016, Joakim Brännström. All rights reserved.
 License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
@@ -33,20 +34,23 @@ shared static this() {
     // if any of these are undesired remove the registration.
     import plugin.frontend.ctestdouble;
 
-    registerPlugin(CliCategory("ctestdouble"), CliCategoryInfo(
-            "generate a C test double. Language is set to C"),
-            &plugin.frontend.ctestdouble.runPlugin);
+    registerPlugin(CliCategory("ctestdouble"), CliCategoryInfo("generate a C test double. Language is set to C"),
+            ctestdouble_opt, &plugin.frontend.ctestdouble.runPlugin);
 
     import plugin.frontend.cpptestdouble;
 
-    registerPlugin(CliCategory("cpptestdouble"), CliCategoryInfo(
-            "generate a C++ test double. Language is set to C++"),
-            &plugin.frontend.cpptestdouble.runPlugin);
+    registerPlugin(CliCategory("cpptestdouble"), CliCategoryInfo("generate a C++ test double. Language is set to C++"),
+            cpptestdouble_opt, &plugin.frontend.cpptestdouble.runPlugin);
 
     import plugin.frontend.plantuml;
 
     registerPlugin(CliCategory("uml"), CliCategoryInfo("generate PlantUML diagrams"),
-            &plugin.frontend.plantuml.runPlugin);
+            plantuml_opt, &plugin.frontend.plantuml.runPlugin);
+
+    import plugin.frontend.iptest;
+        registerPlugin(CliCategory("iptest"), CliCategoryInfo("generate PlantUML diagrams"),
+            iptest_opt, &plugin.frontend.iptest.runPlugin);
+
 }
 
 version (unittest) {
