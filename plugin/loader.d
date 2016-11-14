@@ -50,7 +50,7 @@ shared static this() {
 &plugin.frontend.plantuml.runPlugin);
 
     import plugin.frontend.iptest;
-        registerPlugin(CliCategory("iptest"), CliCategoryInfo("generate ip stuff"),
+        registerPlugin(CliCategory("iptest"), CliCategoryInfo("dksopfk ip stuff"),
            &plugin.frontend.iptest.runPlugin);
 
 }

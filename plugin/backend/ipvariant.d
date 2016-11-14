@@ -7,6 +7,7 @@ Variant of C++ test double.
 */
 module plugin.backend.ipvariant;
 
+import std.stdio;
 import std.typecons : No, Flag, Nullable;
 import logger = std.experimental.logger;
 
@@ -319,6 +320,7 @@ final class CppVisitor(RootT, ControllerT, ProductT) : Visitor {
 
         auto result = analyzeFunctionDecl(v, container, indent);
         if (result.isValid) {
+
             auto func = CFunction(result.type.kind.usr, result.name, result.params,
                     CxReturnType(result.returnType), result.isVariadic, result.storageClass);
             root.put(func);
@@ -485,6 +487,9 @@ CppT rawFilter(CppT, LookupT)(CppT input, Controller ctrl, Products prod, Lookup
         .map!(a => rawFilter(a, ctrl, prod, lookup))
         .each!(a => filtered.put(a));
 
+    input.classRange
+        .each!(a => filtered.put(a));
+
     if (ctrl.doGoogleMock) {
         input.classRange
             // only classes with virtual functions are mocked
@@ -603,8 +608,11 @@ body {
     import cpptooling.generator.func : generateFuncImpl;
     import cpptooling.generator.gmock : generateGmock;
     import cpptooling.generator.includes : generateIncludes;
+    import cpptooling.data.representation;
+    import cpptooling.analyzer.type;
 
     generateIncludes(ctrl, params, modules.hdr);
+    writeln("Inside generate");
 
     static void gmockGlobal(T)(T r, CppModule gmock, Parameters params) {
         foreach (a; r.filter!(a => cast(ClassType) a.kind == ClassType.Gmock)) {
@@ -620,7 +628,6 @@ body {
 
         auto inner = modules;
         CppModule inner_impl_singleton;
-
         final switch (cast(NamespaceType) ns.kind) with (NamespaceType) {
         case Normal:
             //TODO how to do this with meta-programming?
@@ -647,7 +654,27 @@ body {
         foreach (a; ns.funcRange) {
             generateFuncImpl(a, inner.impl);
         }
-        foreach (a; ns.namespaceRange) {
+
+        foreach (a; ns.classRange) {
+            //a.dumpMethods(10, "jisdf");
+            foreach (b; a.methodPublicRange) { 
+                () @trusted {
+                    auto cppm = b.peek!(CppMethod);
+                    if (cppm !is null) {
+                        with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
+                            if (cppm.returnType.toStringDecl == "void") {
+                                stmt(E("iptest->thisisatest")(E("ppop, PPAPS")));
+                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
+                            } else {
+                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
+                                return_(E("iptest->" ~ getName(b))(E("llll")));
+                            }
+                        }                        
+                    }
+                }();                
+            }
+        }
+        foreach (a; ns.namespaceRange) { 
             eachNs(a, params, inner, inner_impl_singleton, lookup);
         }
     }
