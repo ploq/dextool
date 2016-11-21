@@ -1,8 +1,8 @@
-module ipxmlparser.documentbuilder;
+module ipxmlparser.xml_documentbuilder;
 
-import ipxmlparser.document;
-import ipxmlparser.lexer;
-import ipxmlparser.parser;
+import ipxmlparser.xml_document;
+import ipxmlparser.xml_lexer;
+import ipxmlparser.xml_parser;
 
 class XMLDocumentBuilder
 {
@@ -19,7 +19,6 @@ public:
 	    if (!lexer.LoadAndParseFile(filename))
 	    {
 		throw new Exception("Could not build XMLDocument out of " ~ filename);
-		return null;
 	    }
 
 	    auto tokenqueue = lexer.GetTokenQueue();
@@ -51,7 +50,6 @@ public:
 	catch (Exception e)
 	{
 	    throw new Exception("Could not build XMLDocument out of " ~ filename);
-	    return null;
 	}
     }	
 

@@ -1,6 +1,9 @@
-module ipxmlparser.elementqueue;
+module ipxmlparser.xml_elementqueue;
 
-import ipxmlparser.element;
+import std.algorithm.mutation;
+
+import ipxmlparser.xml_element;
+
 class XMLElementQueue
 {
 public:
@@ -21,10 +24,10 @@ public:
 	{
 	    return new XMLElement();
 	}
-	elementList = elementList.reverse;
+    reverse(elementList);
 	XMLElement returnElement = elementList[elementList.length-1];
 	elementList.length--;
-	elementList = elementList.reverse;
+	reverse(elementList);
 	return returnElement;
     }
 

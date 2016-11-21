@@ -1,6 +1,6 @@
-module ipxmlparser.element;
+module ipxmlparser.xml_element;
 
-import ipxmlparser.attributelist;
+import ipxmlparser.xml_attributelist;
 
 import std.stdio;
 

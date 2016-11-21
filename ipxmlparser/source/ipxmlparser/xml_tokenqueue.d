@@ -1,6 +1,8 @@
-module ipxmlparser.tokenqueue;
+module ipxmlparser.xml_tokenqueue;
 
-import ipxmlparser.token;
+import std.algorithm.mutation;
+
+import ipxmlparser.xml_token;
 
 class XMLTokenQueue
 {
@@ -22,10 +24,10 @@ public:
 	{
 	    return new XMLToken("");
 	}
-	tokenList = tokenList.reverse;
+    reverse(tokenList);
 	XMLToken returnToken = tokenList[tokenList.length-1];
 	tokenList.length--;
-	tokenList = tokenList.reverse;
+    reverse(tokenList);
 	return returnToken;
     }
 

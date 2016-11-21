@@ -11,11 +11,13 @@ dependency "dextool:docopt" version="*"
 dependency "dextool:dsrcgen" version="*"
 dependency "dextool:libclang" version="*"
 dependency "dextool:clang" version="*"
+dependency "dextool:ipxmlparser" version="*"
 
 subPackage "./docopt/"
 subPackage "./dsrcgen/"
 subPackage "./clang/"
 subPackage "./libclang/"
+subPackage "./ipxmlparser/"
 
 // use a local configuration of unit-threaded to exclude the builtin unittests
 subPackage {

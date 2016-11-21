@@ -1,4 +1,4 @@
-module ipxmlparser.fundamentals;
+module ipxmlparser.xml_fundamentals;
 
 import std.container.array;
 import std.typecons;

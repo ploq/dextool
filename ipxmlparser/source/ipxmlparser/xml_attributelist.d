@@ -1,4 +1,4 @@
-module ipxmlparser.attributelist;
+module ipxmlparser.xml_attributelist;
 
 class XMLAttributeList
 {

@@ -1,4 +1,4 @@
-module ipxmlparser.interfaceparser;
+module ipxmlparser.xml_interface;
 
 import std.stdio;
 import std.string;
@@ -7,10 +7,10 @@ import std.conv;
 import std.container.array;
 import std.typecons;
 
-import ipxmlparser.documentbuilder;
-import ipxmlparser.document;
+import ipxmlparser.xml_documentbuilder;
+import ipxmlparser.xml_document;
 
-import ipxmlparser.fundamentals;
+import ipxmlparser.xml_fundamentals;
 
 class XML_Interface_Parser
 {

@@ -1,10 +1,10 @@
-module ipxmlparser.parser;
+module ipxmlparser.xml_parser;
 
-import ipxmlparser.token;
-import ipxmlparser.element;
-import ipxmlparser.tokenqueue;
-import ipxmlparser.elementqueue;
-import ipxmlparser.attributelist;
+import ipxmlparser.xml_token;
+import ipxmlparser.xml_element;
+import ipxmlparser.xml_tokenqueue;
+import ipxmlparser.xml_elementqueue;
+import ipxmlparser.xml_attributelist;
 
 class XMLParser
 {

@@ -1,7 +1,7 @@
-module ipxmlparser.document;
+module ipxmlparser.xml_document;
 
-import ipxmlparser.attributelist;
-import ipxmlparser.node;
+import ipxmlparser.xml_attributelist;
+import ipxmlparser.xml_node;
 
 class XMLDocument
 {

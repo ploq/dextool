@@ -1,7 +1,7 @@
-module ipxmlparser.lexer;
+module ipxmlparser.xml_lexer;
 
-import ipxmlparser.token;
-import ipxmlparser.tokenqueue;
+import ipxmlparser.xml_token;
+import ipxmlparser.xml_tokenqueue;
 
 import std.stdio;
 import std.uni;
