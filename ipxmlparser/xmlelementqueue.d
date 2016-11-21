@@ -1,6 +1,6 @@
-module b0h.xml.elementqueue;
+module ipxmlparser.elementqueue;
 
-import b0h.xml.element;
+import ipxmlparser.element;
 class XMLElementQueue
 {
 public:

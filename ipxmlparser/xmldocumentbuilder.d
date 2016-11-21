@@ -1,8 +1,8 @@
-module b0h.xml.documentbuilder;
+module ipxmlparser.documentbuilder;
 
-import b0h.xml.document;
-import b0h.xml.lexer;
-import b0h.xml.parser;
+import ipxmlparser.document;
+import ipxmlparser.lexer;
+import ipxmlparser.parser;
 
 class XMLDocumentBuilder
 {

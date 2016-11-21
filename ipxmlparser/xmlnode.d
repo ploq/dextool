@@ -1,6 +1,6 @@
-module b0h.xml.node;
+module ipxmlparser.node;
 
-import b0h.xml.attributelist;
+import ipxmlparser.attributelist;
 
 import std.stdio;
 

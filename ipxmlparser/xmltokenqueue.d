@@ -1,6 +1,6 @@
-module b0h.xml.tokenqueue;
+module ipxmlparser.tokenqueue;
 
-import b0h.xml.token;
+import ipxmlparser.token;
 
 class XMLTokenQueue
 {

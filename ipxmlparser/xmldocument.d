@@ -1,7 +1,7 @@
-module b0h.xml.document;
+module ipxmlparser.document;
 
-import b0h.xml.attributelist;
-import b0h.xml.node;
+import ipxmlparser.attributelist;
+import ipxmlparser.node;
 
 class XMLDocument
 {

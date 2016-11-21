@@ -1,7 +1,7 @@
-module b0h.xml.lexer;
+module ipxmlparser.lexer;
 
-import b0h.xml.token;
-import b0h.xml.tokenqueue;
+import ipxmlparser.token;
+import ipxmlparser.tokenqueue;
 
 import std.stdio;
 import std.uni;

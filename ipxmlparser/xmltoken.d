@@ -1,4 +1,4 @@
-module b0h.xml.token;
+module ipxmlparser.token;
 
 import std.stdio;
 import std.string;

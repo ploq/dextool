@@ -7,8 +7,8 @@ import std.conv;
 import std.container.array;
 import std.typecons;
 
-import b0h.xml.documentbuilder;
-import b0h.xml.document;
+import ipxmlparser.documentbuilder;
+import ipxmlparser.document;
 
 import ipxmlparser.fundamentals;
 
@@ -77,7 +77,7 @@ private:
     string filename;
 }
 
-void main(string[] args)
+/*void main(string[] args)
 {
     XML_Interface_Parser ifaceparser = new XML_Interface_Parser(args[1]);
     auto iface = ifaceparser.GetInterface();
@@ -90,4 +90,4 @@ void main(string[] args)
     }
     
     return;
-}
+}*/
