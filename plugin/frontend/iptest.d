@@ -31,7 +31,7 @@ auto runPlugin(CliBasicOption opt, CliArgs args) {
 
     printArgs(parsed);
 
-    auto variant = CppTestDoubleVariant.makeVariant(parsed);
+    auto variant = IpTestVariant.makeVariant(parsed);
 
     CompileCommandDB compile_db;
     if (!parsed["--compile-db"].isEmpty) {
@@ -44,8 +44,8 @@ auto runPlugin(CliBasicOption opt, CliArgs args) {
 // dfmt off
 static auto iptest_opt = CliOptionParts(
     "usage:
- dextool iptest [options] [--compile-db=...] [--file-exclude=...] [--td-include=...] --inx=... --inh=... [--] [CFLAGS...]
- dextool iptest [options] [--compile-db=...] [--file-restrict=...] [--td-include=...] --inx=... --inh=... [--] [CFLAGS...]",
+ dextool iptest [options] [--file-restrict=...] [--td-include=...] --compile-db=... --inx=... [--] [CFLAGS...]
+ dextool iptest [options] [--file-restrict=...] [--td-include=...] --compile-db=... --inx=... [--] [CFLAGS...]",
     // -------------
     " --out=dir          directory for generated files [default: ./]
  --main=name        Used as part of interface, namespace etc [default: TestDouble]
@@ -59,11 +59,10 @@ static auto iptest_opt = CliOptionParts(
  --header-file=f    Prepend generated files with the header read from the file",
     // -------------
 "others:
- --inh=             Input header files to parse
  --inx=             Input xml files to parse
  --compile-db=j     Retrieve compilation parameters from the file
- --file-exclude=    Exclude files from generation matching the regex
- --file-restrict=   Restrict the scope of the test double to those files
+ --file-exclude=s    Exclude files from generation matching the regex
+ --file-restrict=a   Restrict the scope of the test double to those files
                     matching the regex.
  --td-include=      User supplied includes used instead of those found
 REGEX
@@ -90,7 +89,7 @@ Information about --file-restrict.
  * TODO Describe the options.
  * TODO implement --in=...
  */
-class CppTestDoubleVariant : Controller, Parameters, Products {
+class IpTestVariant : Controller, Parameters, Products {
     import std.string : toLower;
     import std.regex : regex, Regex;
     import std.typecons : Flag;
@@ -110,7 +109,6 @@ class CppTestDoubleVariant : Controller, Parameters, Products {
     immutable StubPrefix prefix;
     immutable StubPrefix file_prefix;
 
-    FileNames input_files;
     FileNames input_xfiles;
     immutable DirName output_dir;
     immutable FileName main_file_hdr;
@@ -140,7 +138,7 @@ class CppTestDoubleVariant : Controller, Parameters, Products {
         import std.array : array;
         import std.algorithm : map;
 
-        Regex!char[] exclude = parsed["--file-exclude"].asList.map!(a => regex(a)).array();
+        //Regex!char[] exclude = parsed["--file-exclude"].asList.map!(a => regex(a)).array();
         Regex!char[] restrict = parsed["--file-restrict"].asList.map!(a => regex(a)).array();
         Regex!char strip_incl;
         Flag!"Gmock" gmock = cast(Flag!"Gmock") parsed["--gmock"].isTrue;
@@ -166,8 +164,8 @@ class CppTestDoubleVariant : Controller, Parameters, Products {
             custom_hdr = CustomHeader(content);
         }
 
-        auto variant = new CppTestDoubleVariant(StubPrefix(parsed["--prefix"].toString), StubPrefix("Not used"),
-                FileNames(parsed["--inh"].asList), FileNames(parsed["--inx"].asList), MainFileName(parsed["--main-fname"].toString),
+        auto variant = new IpTestVariant(StubPrefix(parsed["--prefix"].toString), StubPrefix("Not used"),
+                FileNames(parsed["--inx"].asList), MainFileName(parsed["--main-fname"].toString),
                 MainName(parsed["--main"].toString), DirName(parsed["--out"].toString),
                 gmock, pre_incl, post_incl, strip_incl, custom_hdr);
 
@@ -175,7 +173,7 @@ class CppTestDoubleVariant : Controller, Parameters, Products {
             variant.forceIncludes(parsed["--td-include"].asList);
         }
 
-        variant.exclude = exclude;
+        //variant.exclude = exclude;
         variant.restrict = restrict;
 
         return variant;
@@ -190,12 +188,11 @@ class CppTestDoubleVariant : Controller, Parameters, Products {
      *
      * TODO document the parameters.
      */
-    this(StubPrefix prefix, StubPrefix file_prefix, FileNames input_files,FileNames input_xfiles, MainFileName main_fname, MainName main_name,
+    this(StubPrefix prefix, StubPrefix file_prefix, FileNames input_xfiles, MainFileName main_fname, MainName main_name,
             DirName output_dir, Flag!"Gmock" gmock, Flag!"PreInclude" pre_incl,
             Flag!"PostInclude" post_incl, Regex!char strip_incl, CustomHeader custom_hdr) {
         this.prefix = prefix;
         this.file_prefix = file_prefix;
-        this.input_files = input_files;
         this.input_xfiles = input_xfiles;
         this.main_name = main_name;
         this.main_ns = MainNs(cast(string) main_name);
@@ -226,11 +223,6 @@ class CppTestDoubleVariant : Controller, Parameters, Products {
     /// Force the includes to be those supplied by the user.
     void forceIncludes(string[] incls) {
         td_includes.forceIncludes(incls);
-    }
-
-    /// User supplied files used as input.
-    FileNames getInputFile() {
-        return input_files;
     }
 
     FileNames getInputXFile() {
@@ -353,10 +345,12 @@ class CppTestDoubleVariant : Controller, Parameters, Products {
 }
 
 /// TODO refactor, doing too many things.
-ExitStatusType genCpp(CppTestDoubleVariant variant, string[] in_cflags, CompileCommandDB compile_db) {
+ExitStatusType genCpp(IpTestVariant variant, string[] in_cflags, CompileCommandDB compile_db) {
     import std.conv : text;
     import std.path : buildNormalizedPath, asAbsolutePath;
     import std.typecons : Yes;
+    import std.file : read, write;
+    import std.stdio;
 
     import cpptooling.analyzer.clang.context : ClangContext;
     import cpptooling.data.representation : CppRoot;
@@ -364,34 +358,31 @@ ExitStatusType genCpp(CppTestDoubleVariant variant, string[] in_cflags, CompileC
 
     auto visitor = new CppVisitor!(CppRoot, Controller, Products)(variant, variant);
     const auto user_cflags = prependDefaultFlags(in_cflags, "-xc++");
-    auto in_file = cast(string) variant.getInputFile[0];
-    logger.trace("Input file: ", in_file);
+    //auto in_file = cast(string) variant.getInputFile[0];
+    //logger.trace("Input file: ", in_file);
     string[] use_cflags;
     string abs_in_file;
 
-    if (compile_db.length > 0) {
-        auto db_search_result = compile_db.appendOrError(user_cflags, in_file);
-        if (db_search_result.isNull) {
+
+    auto hfiles = compile_db.getHeaderFiles();
+    string res;
+    foreach(hfile ; hfiles) {
+        writeln(hfile);
+        abs_in_file = hfile;
+        auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
+        if (analyzeFile(abs_in_file, use_cflags, visitor, ctx) == ExitStatusType.Errors) {
             return ExitStatusType.Errors;
         }
-        use_cflags = db_search_result.get.cflags;
-        abs_in_file = db_search_result.get.absoluteFile;
-    } else {
-        use_cflags = user_cflags.dup;
-        abs_in_file = buildNormalizedPath(in_file).asAbsolutePath.text;
+
+        // process and put the data in variant.
+        Generator(variant, variant, variant).process(visitor.root, visitor.container);
+
+        debug {
+            logger.trace(visitor);
+        }
+
+        writeFileData(variant.file_data); 
     }
 
-    auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
-    if (analyzeFile(abs_in_file, use_cflags, visitor, ctx) == ExitStatusType.Errors) {
-        return ExitStatusType.Errors;
-    }
-
-    // process and put the data in variant.
-    Generator(variant, variant, variant).process(visitor.root, visitor.container);
-
-    debug {
-        logger.trace(visitor);
-    }
-
-    return writeFileData(variant.file_data);
+    return ExitStatusType.Ok;
 }

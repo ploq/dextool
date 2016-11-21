@@ -656,7 +656,6 @@ body {
         }
 
         foreach (a; ns.classRange) {
-            //a.dumpMethods(10, "jisdf");
             foreach (b; a.methodPublicRange) { 
                 () @trusted {
                     auto cppm = b.peek!(CppMethod);
