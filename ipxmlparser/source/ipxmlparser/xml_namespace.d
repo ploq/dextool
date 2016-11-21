@@ -41,7 +41,7 @@ private:
     string filename;
 }
 
-void main(string[] args)
+/*void main(string[] args)
 {
     XML_Namespace_Parser namespaceparser = new XML_Namespace_Parser(args[1]);
     auto namespace = namespaceparser.GetNamespace();
@@ -53,5 +53,5 @@ void main(string[] args)
     foreach (i ; iface.interfaces[0].ditems)
     {
 	writeln(i);
-    }*/
-}
+    }
+}*/
