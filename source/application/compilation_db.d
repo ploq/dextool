@@ -479,6 +479,29 @@ string[] parseFlag(CompileCommand cmd) @safe pure {
     return filterPair(pass1, cmd.directory);
 }
 
+string[] getHeaderFiles(CompileCommandDB compile_db)
+{
+    import std.algorithm: canFind, filter, each;
+    import std.range : chain;
+    import std.file : dirEntries, SpanMode;
+    import std.array : appender;
+
+    auto rval = appender!(string[])();
+    auto directories = new string[0];
+//    fromFile(CompileDbFile(compile_db), app);
+    for (int i = 0 ; i < compile_db.capacity; i++)
+    {
+         auto flags = parseFlag(compile_db[i]);
+         flags.filter!(a => a != "-I" && !directories.canFind(a))
+            .each!(dir => (dirEntries(dir, "*.{h,hpp}", SpanMode.depth))
+                .each!(file => rval.put(file)));
+        
+        directories ~= flags;
+    }
+
+    return rval.data;
+}
+
 @("Should be cflags with all unnecessary flags removed")
 unittest {
     auto cmd = toCompileCommand("/home", "file1.cpp",
