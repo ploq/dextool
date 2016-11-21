@@ -23,11 +23,12 @@ import cpptooling.analyzer.clang.analyze_helper;
 import cpptooling.analyzer.clang.context : ClangContext;
 import cpptooling.analyzer.clang.type;
 import cpptooling.data.symbol.container : Container;
-import cpptooling.data.type : TypeKindVariable, VariadicType;
+import cpptooling.data.type : TypeKindVariable, VariadicType, Location;
 import cpptooling.utility.clang : logNode, mixinNodeLog;
 import cpptooling.utility.virtualfilesystem : FileName, Content;
 
-/* These two lines are useful when debugging.
+/* These lines are useful when debugging.
+import unit_threaded;
 writelnUt(visitor.container.toString);
 */
 
@@ -83,33 +84,94 @@ final class TestVisitor : Visitor {
     }
 }
 
-@Name("Should be a type of kind 'func'")
-unittest {
-    enum code = `
-#include <clocale>
+final class TestRecordVisitor : Visitor {
+    import cpptooling.analyzer.clang.ast;
 
-namespace dextool__gnu_cxx {
-  extern "C" __typeof(uselocale) __uselocale;
+    alias visit = Visitor.visit;
+    mixin generateIndentIncrDecr;
+
+    Container container;
+
+    ClassStructDeclResult record;
+
+    override void visit(const(TranslationUnit) v) {
+        mixin(mixinNodeLog!());
+        v.accept(this);
+    }
+
+    override void visit(const(Namespace) v) {
+        mixin(mixinNodeLog!());
+        v.accept(this);
+    }
+
+    override void visit(const(ClassDecl) v) {
+        mixin(mixinNodeLog!());
+
+        record = analyzeClassStructDecl(v, container, indent);
+        v.accept(this);
+    }
+
+    override void visit(const(Constructor) v) {
+        mixin(mixinNodeLog!());
+
+        analyzeConstructor(v, container, indent);
+    }
 }
-`;
 
-    // arrange
-    auto visitor = new TestVisitor;
-    visitor.find = "c:@F@__uselocale";
+final class TestDeclVisitor : Visitor {
+    import cpptooling.analyzer.clang.ast;
 
-    auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
-    ctx.virtualFileSystem.openAndWrite(cast(FileName) "issue.hpp", cast(Content) code);
-    auto tu = ctx.makeTranslationUnit("issue.hpp");
+    alias visit = Visitor.visit;
+    mixin generateIndentIncrDecr;
 
-    // act
-    auto ast = ClangAST!(typeof(visitor))(tu.cursor);
-    ast.accept(visitor);
+    Container container;
 
-    // assert
-    checkForCompilerErrors(tu).shouldBeFalse;
-    visitor.found.shouldBeTrue;
-    visitor.funcs[0].type.kind.info.kind.shouldEqual(TypeKind.Info.Kind.func);
-    (cast(string) visitor.funcs[0].name).shouldEqual("__uselocale");
+    override void visit(const(TranslationUnit) v) {
+        mixin(mixinNodeLog!());
+        v.accept(this);
+    }
+
+    override void visit(const(Declaration) v) {
+        mixin(mixinNodeLog!());
+        import cpptooling.analyzer.clang.utility : put;
+
+        auto type = () @trusted{
+            return retrieveType(v.cursor, container, indent);
+        }();
+        put(type, container, indent);
+        v.accept(this);
+    }
+}
+
+version (Linux) {
+    @Name("Should be a type of kind 'func'")
+    unittest {
+        enum code = `
+        #include <clocale>
+
+        namespace dextool__gnu_cxx {
+        extern "C" __typeof(uselocale) __uselocale;
+        }
+        `;
+
+        // arrange
+        auto visitor = new TestVisitor;
+        visitor.find = "c:@F@__uselocale";
+
+        auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
+        ctx.virtualFileSystem.openAndWrite(cast(FileName) "issue.hpp", cast(Content) code);
+        auto tu = ctx.makeTranslationUnit("issue.hpp");
+
+        // act
+        auto ast = ClangAST!(typeof(visitor))(tu.cursor);
+        ast.accept(visitor);
+
+        // assert
+        checkForCompilerErrors(tu).shouldBeFalse;
+        visitor.found.shouldBeTrue;
+        visitor.funcs[0].type.kind.info.kind.shouldEqual(TypeKind.Info.Kind.func);
+        (cast(string) visitor.funcs[0].name).shouldEqual("__uselocale");
+    }
 }
 
 @Name("Should be parameters and return type that are of primitive type")
@@ -283,7 +345,7 @@ const void* const func(const MadeUp** const zzzz, const Struct** const yyyy);
 
     { // assert that the type pointed at is a typedef
         auto res = visitor.container.find!TypeKind(param0.info.pointee).front;
-        res.usr.to!string().shouldNotEqual("File:issue.hpp Line:7 Column:45$1zzzz");
+        res.usr.to!string().shouldNotEqual("File:issue.hpp Line:7 Column:45§1zzzz");
         res.info.kind.shouldEqual(TypeKind.Info.Kind.typeRef);
     }
 }
@@ -341,13 +403,67 @@ fun_ptr *f;
     checkForCompilerErrors(tu).shouldBeFalse;
     { // ptr to typedef
         auto r = visitor.container.find!TypeKind(
-                USRType("File:issue.hpp Line:3 Column:9$1y")).front;
+                USRType("File:issue.hpp Line:3 Column:9§1y")).front;
         r.info.kind.shouldEqual(TypeKind.Info.Kind.pointer);
     }
 
     { // ptr to typedef of func prototype
         auto r = visitor.container.find!TypeKind(
-                USRType("File:issue.hpp Line:6 Column:10$1f")).front;
+                USRType("File:issue.hpp Line:6 Column:10§1f")).front;
         r.info.kind.shouldEqual(TypeKind.Info.Kind.funcPtr);
     }
+}
+
+@("Should be a forward declaration and definition separated")
+unittest {
+    import cpptooling.data.type : LocationTag;
+
+    enum code = "class A;
+class A_ByCtor { A_ByCtor(A a); };";
+    enum code_def = `class A {};`;
+
+    // arrange
+    auto visitor = new TestRecordVisitor;
+
+    auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
+    ctx.virtualFileSystem.openAndWrite(cast(FileName) "/issue.hpp", cast(Content) code);
+    ctx.virtualFileSystem.openAndWrite(cast(FileName) "/def.hpp", cast(Content) code_def);
+    auto tu0 = ctx.makeTranslationUnit("/issue.hpp");
+    auto tu1 = ctx.makeTranslationUnit("/def.hpp");
+
+    // act
+    auto ast0 = ClangAST!(typeof(visitor))(tu0.cursor);
+    ast0.accept(visitor);
+    auto ast1 = ClangAST!(typeof(visitor))(tu1.cursor);
+    ast1.accept(visitor);
+
+    // assert
+    checkForCompilerErrors(tu0).shouldBeFalse;
+    checkForCompilerErrors(tu1).shouldBeFalse;
+
+    auto loc = visitor.container.find!LocationTag(visitor.record.type.kind.usr).front.get;
+
+    loc.hasDeclaration.shouldBeTrue;
+    loc.declaration.shouldEqual(LocationTag(Location("/issue.hpp", 1, 7)));
+
+    loc.hasDefinition.shouldBeTrue;
+    loc.definition.shouldEqual(LocationTag(Location("/def.hpp", 1, 7)));
+}
+
+@("Should not crash on an anonymous type")
+@Values("struct A { union { int x; }; };", "struct A { struct { int x; }; };")
+unittest {
+    // arrange
+    auto visitor = new TestDeclVisitor;
+    auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
+    ctx.virtualFileSystem.openAndWrite(cast(FileName) "/issue.hpp", cast(Content) getValue!string);
+    auto tu = ctx.makeTranslationUnit("/issue.hpp");
+
+    // act
+    auto ast = ClangAST!(typeof(visitor))(tu.cursor);
+    ast.accept(visitor);
+
+    // assert
+    checkForCompilerErrors(tu).shouldBeFalse;
+    // didn't crash
 }
