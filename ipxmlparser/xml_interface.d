@@ -1,4 +1,4 @@
-module ipxmlparser;
+module ipxmlparser.interfaceparser;
 
 import std.stdio;
 import std.string;
@@ -10,99 +10,26 @@ import std.typecons;
 import b0h.xml.documentbuilder;
 import b0h.xml.document;
 
-struct XML_Interface
-{
-    string name;
-    XML_Types types;
-    Array!XML_ContInterface interfaces;
-}
+import ipxmlparser.fundamentals;
 
-struct XML_ContInterface 
+class XML_Interface_Parser
 {
-    string name;
-    string direction;
-    Array!XML_DataItem ditems;
-}
-
-struct XML_Types
-{
-    Array!XML_SubType subTypes;
-    Array!XML_Enum enums;
-    Array!XML_Record records;
-}
-
-struct XML_SubType
-{
-    string name;
-    string type;
-    long min;
-    long max;
-    string unit;
-}
-
-struct XML_Enum
-{
-    Array!(Tuple!(string, Array!int)) values;
-}
-
-struct XML_Record
-{
-    Array!XML_Variable vars;
-}
-
-struct XML_Variable
-{
-    string name;
-    int value;
-}
-
-struct XML_DataItem 
-{
-    string name;
-    string type;
-    string default_val;
-    string startup_val;
-}
-
-void getSubTypes(string xml_data) 
-{
-    /*auto xml = new DocumentParser(xml_data);
-    SubType[] subTypes;
+public:
+    this(string filename)
+    {	
+	XMLDocumentBuilder builder = new XMLDocumentBuilder();
+	XMLDocument xmldoc;
+	try
+	{
+	    xmldoc = builder.Build(filename);
+	}
+	catch (Exception e)
+	{
+	    throw new Exception("Could not find file " ~ filename);
+	}
     
-    xml.onStartTag["SubType"] = (ElementParser xml)
-    {
-        XML_SubType subType;
-        subType.name = xml.tag.attr["name"];
-        subType.unit = xml.tag.attr["unit"];
-        subType.type = xml.tag.attr["type"];
-        subType.min = xml.tag.attr["min"];
-        subType.max = xml.tag.attr["max"];
+	auto root = xmldoc.GetRoot();
 
-        xml.parse();
-    };
-
-    xml.parse();*/
-}
-
-void main(string[] args)
-{
-    XMLDocumentBuilder builder = new XMLDocumentBuilder();
-    XMLDocument xmldoc;
-    try
-    {
-	xmldoc = builder.Build(args[1]);
-    }
-    catch (Exception e)
-    {
-	writeln("Could not find file " ~ args[1]);
-    }
-    
-    auto root = xmldoc.GetRoot();
-
-    switch(root.GetName())
-    {
-    case "Interface":
-	XML_Interface iface;
 	iface.name = root.GetAttribute("name");
 	auto ifacetypes = root.SearchFirstChild("Types");
 	foreach (type ; ifacetypes.GetChilds())
@@ -139,27 +66,28 @@ void main(string[] args)
 		iface.interfaces.back().ditems.insertBack(XML_DataItem(dname, dtype, dstartup, ddefault));
 	    }
 	}
+    }
 
-	writeln(iface.name);
-	writeln(iface.types);
-	foreach (i ; iface.interfaces[0].ditems)
-	{
-	    writeln(i);
-	}
+    XML_Interface GetInterface()
+    {
+	return iface;
+    }
+private:
+    XML_Interface iface;
+    string filename;
+}
 
-	break;
-    default:
-	writeln("NEJ");
-	break;
+void main(string[] args)
+{
+    XML_Interface_Parser ifaceparser = new XML_Interface_Parser(args[1]);
+    auto iface = ifaceparser.GetInterface();
+
+    writeln(iface.name);
+    writeln(iface.types);
+    foreach (i ; iface.interfaces[0].ditems)
+    {
+	writeln(i);
     }
     
     return;
 }
-
-/*struct XML_DataItem 
-{
-    string name;
-    string type;
-    str default_val;
-    str startup_val;
-    }*/
