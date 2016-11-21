@@ -4,6 +4,7 @@ import std.file;
 import std.algorithm: canFind;
 
 import application.compilation_db;
+import ipxmlparser.xml_interface;
 
 string[] getHeaders()
 {
@@ -11,7 +12,7 @@ string[] getHeaders()
     auto app = appender!(CompileCommand[])();
     auto rval = appender!(string[])();
     auto directories = appender!(string[])();
-    fromFile(CompileDbJsonPath(dummy_path), app);
+    fromFile(CompileDbFile(dummy_path), app);
     for (int i = 0 ; i < app.capacity; i++)
     {
         auto flags = parseFlag(app.data[i]);
@@ -31,6 +32,6 @@ string[] getHeaders()
     return rval.data;
 }
 
-void main() {
+/*void main() {
     getHeaders;
-}
+}*/
