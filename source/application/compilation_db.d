@@ -489,9 +489,9 @@ string[] getHeaderFiles(CompileCommandDB compile_db)
     auto rval = appender!(string[])();
     auto directories = new string[0];
 //    fromFile(CompileDbFile(compile_db), app);
-    for (int i = 0 ; i < compile_db.capacity; i++)
+    foreach (cmd ; compile_db)
     {
-         auto flags = parseFlag(compile_db[i]);
+         auto flags = parseFlag(cmd);
          flags.filter!(a => a != "-I" && !directories.canFind(a))
             .each!(dir => (dirEntries(dir, "*.{h,hpp}", SpanMode.depth))
                 .each!(file => rval.put(file)));
