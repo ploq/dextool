@@ -48,7 +48,7 @@ void main(string[] args)
 
     writeln(namespace.ToString());
 
-    /*writeln(iface.name);
+    /*writeln(iface.name);  
     writeln(iface.types);
     foreach (i ; iface.interfaces[0].ditems)
     {
