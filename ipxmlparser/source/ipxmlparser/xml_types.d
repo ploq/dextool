@@ -79,7 +79,7 @@ private:
     string filename;
 }
 
-void main(string[] args)
+/*void main(string[] args)
 {
     XML_Types_Parser typesparser = new XML_Types_Parser(args[1]);
     auto types = typesparser.GetTypes();
@@ -91,5 +91,5 @@ void main(string[] args)
     foreach (i ; iface.interfaces[0].ditems)
     {
 	writeln(i);
+    }
     }*/
-}

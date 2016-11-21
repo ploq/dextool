@@ -4,6 +4,16 @@ import std.container.array;
 import std.typecons;
 import std.conv;
 
+struct XML_Namespace
+{
+    string name;
+
+    string ToString()
+    {
+	return "XML_Namespace:[name=" ~ name ~ "]";
+    }
+}
+
 struct XML_Interface
 {
     string name;
