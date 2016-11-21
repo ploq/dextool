@@ -1,10 +1,14 @@
 module ipxmlparser;
 
-import std.experimental.xml;
+import std.stdio;
 import std.string;
 import std.file;
+import std.conv;
 import std.container.array;
 import std.typecons;
+
+import b0h.xml.documentbuilder;
+import b0h.xml.document;
 
 struct XML_Interface
 {
@@ -56,13 +60,13 @@ struct XML_DataItem
 {
     string name;
     string type;
-    int default_val;
-    int startup_val;
+    string default_val;
+    string startup_val;
 }
 
 void getSubTypes(string xml_data) 
 {
-    auto xml = new DocumentParser(xml_data);
+    /*auto xml = new DocumentParser(xml_data);
     SubType[] subTypes;
     
     xml.onStartTag["SubType"] = (ElementParser xml)
@@ -77,18 +81,85 @@ void getSubTypes(string xml_data)
         xml.parse();
     };
 
-    xml.parse();
+    xml.parse();*/
 }
 
-void main(string[] args) {
-    file = args[1];
-    string s = cast(string)std.file.read(file);
-    check(s);
+void main(string[] args)
+{
+    XMLDocumentBuilder builder = new XMLDocumentBuilder();
+    XMLDocument xmldoc;
+    try
+    {
+	xmldoc = builder.Build(args[1]);
+    }
+    catch (Exception e)
+    {
+	writeln("Could not find file " ~ args[1]);
+    }
+    
+    auto root = xmldoc.GetRoot();
 
-        auto cursor = 
-         chooseLexer!string
-        .parser
-.cursor(&uselessCallback); // If an index is not well-formed, just tell us but continue parsing
+    switch(root.GetName())
+    {
+    case "Interface":
+	XML_Interface iface;
+	iface.name = root.GetAttribute("name");
+	auto ifacetypes = root.SearchFirstChild("Types");
+	foreach (type ; ifacetypes.GetChilds())
+	{
+	    switch(type.GetName())
+	    {
+	    case "SubType":
+		string tname = type.GetAttribute("name");
+		string ttype = type.GetAttribute("type");
+		long tmin = to!int(type.GetAttribute("min"));
+		long tmax = to!int(type.GetAttribute("max"));
+		string tunit = type.GetAttribute("unit");
+		iface.types.subTypes.insertBack(XML_SubType(tname, ttype, tmin, tmax, tunit));
+		break;
+	    default:
+		break;
+	    }
+	}
 
+	auto cifaces = root.SearchChilds("ContinuesInterface");
+	foreach (ciface ; cifaces)
+	{
+	    string ciname = ciface.GetAttribute("name");
+	    string cidirection = ciface.GetAttribute("direction");
+	    iface.interfaces.insertBack(XML_ContInterface(ciname, cidirection, Array!XML_DataItem()));
+	    
+	    auto dataitems = ciface.SearchChilds("DataItem");
+	    foreach (dataitem ; dataitems)
+	    {
+		string dname = dataitem.GetAttribute("name");
+		string dtype = dataitem.GetAttribute("type");
+		string dstartup = dataitem.GetAttribute("startupValue");
+		string ddefault = dataitem.GetAttribute("defaultValue");
+		iface.interfaces.back().ditems.insertBack(XML_DataItem(dname, dtype, dstartup, ddefault));
+	    }
+	}
+
+	writeln(iface.name);
+	writeln(iface.types);
+	foreach (i ; iface.interfaces[0].ditems)
+	{
+	    writeln(i);
+	}
+
+	break;
+    default:
+	writeln("NEJ");
+	break;
+    }
+    
     return;
 }
+
+/*struct XML_DataItem 
+{
+    string name;
+    string type;
+    str default_val;
+    str startup_val;
+    }*/
