@@ -657,8 +657,8 @@ body {
 
         foreach (a; ns.classRange) {
             foreach (b; a.methodPublicRange) { 
-                () @trusted {
-                    auto cppm = b.peek!(CppMethod);
+                () {
+		  auto cppm = ( () @trusted => b.peek!(CppMethod) )();
                     if (cppm !is null) {
                         with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
                             if (cppm.returnType.toStringDecl == "void") {
