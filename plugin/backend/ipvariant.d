@@ -665,26 +665,6 @@ body {
                 generateFuncImpl(a, inner.impl);
             }
 
-<<<<<<< HEAD
-            foreach (a; ns.classRange) {
-                foreach (b; a.methodPublicRange) { 
-                    () @trusted {
-                        auto cppm = b.peek!(CppMethod);
-                        if (cppm !is null) {
-                            with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
-                                if (cppm.returnType.toStringDecl == "void") {
-                                    stmt(E("iptest->thisisatest")(E("ppop, PPAPS")));
-                                    stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                                } else {
-                                    stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                                    return_(E("iptest->" ~ getName(b))(E("llll")));
-                                }
-                            }                        
-                        }
-                    }();              
-                }
-=======
-        foreach (a; ns.classRange) {
             foreach (b; a.methodPublicRange) { 
                 () {
 		  auto cppm = ( () @trusted => b.peek!(CppMethod) )();
@@ -700,7 +680,6 @@ body {
                         }                        
                     }
                 }();                
->>>>>>> fdeb4e9dd55ca66053dc4e44361a2aa7b8560eee
             }
         }
   
