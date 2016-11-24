@@ -15,6 +15,10 @@ struct SUTEnv
     XML_Interface iface;
     XML_Types types;
 
+    bool valid;
+    bool hasinterface;
+    bool hastypes;
+
     string ToString()
     {
 	string returnstr;
@@ -42,7 +46,15 @@ public:
 
     @trusted SUTEnv GetSUTFromNamespace(string namespace)
     {
-		return map[namespace];
+	import std.algorithm: canFind;
+
+	if (map.keys.canFind(namespace))
+	{
+	    return map[namespace];
+	}
+	SUTEnv env;
+	env.valid = false;
+	return env;
     }
 
     @trusted string ToString()
@@ -53,6 +65,11 @@ public:
 			returnstr ~= entry ~ ": \n" ~ map[entry].ToString() ~ "\n\n\n\n\n";
 		}
 		return returnstr;
+    }
+
+    @trusted string[] GetSUTList()
+    {
+		return map.keys;
     }
 
 private:
@@ -101,18 +118,26 @@ private:
 		}
 
 		map[key] = SUTEnv();
+		map[key].valid = false;
 		foreach (file ; files)
 		{
 			if (indexOf(file, "types.xml") != -1)
 			{
 			XML_Types_Parser parser = new XML_Types_Parser(file);
 			map[key].types = parser.GetTypes();
+			map[key].valid = true;
+			map[key].hastypes = true;
+			map[key].hasinterface = false;
 			}
 			else if (indexOf(file, "namespace.xml") == -1)
 			{
 			XML_Interface_Parser parser = new XML_Interface_Parser(file);
 			auto iface = parser.GetInterface();
-			map[key ~ "::" ~ iface.name] = SUTEnv(iface);
+			string newkey = key ~ "::" ~ iface.name;
+			map[newkey] = SUTEnv(iface);
+			map[newkey].valid = true;
+			map[newkey].hasinterface = true;
+			map[newkey].hastypes = false;
 			}
 		}
     }
