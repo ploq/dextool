@@ -59,6 +59,11 @@ public:
 	return token == "!";
     }
 
+    bool IsQuestionMark()
+    {
+	return token == "?";
+    }
+
     bool IsLine()
     {
 	return token == "-";
@@ -79,7 +84,7 @@ public:
 	return token.length > 0;
     }
 
-    XMLToken copy()
+    XMLToken CreateCopy()
     {
 	return new XMLToken(token);
     }

@@ -50,7 +50,11 @@ private:
 	}
 	else if (token.IsExclamation())
 	{
-	    ParseComment(tokenQueue);
+	    ParseExclamationTag(tokenQueue);
+	}
+	else if (token.IsQuestionMark())
+	{
+	    ParseQuestionMarkTag(tokenQueue);
 	}
 	else
 	{
@@ -58,15 +62,48 @@ private:
 	}
     }
 
+    void ParseExclamationTag(XMLTokenQueue tokenQueue)
+    {
+	XMLToken token = tokenQueue.Pull();
+	if (!token.IsLine())
+	{
+	    while (!tokenQueue.Pull().IsTagEnd() && tokenQueue.Length() > 0) {}
+	}
+	else
+	{
+	    token = tokenQueue.Pull();
+	    if (token.IsLine())
+	    {
+		ParseComment(tokenQueue);
+	    }
+	    else
+	    {
+		throw new Exception("Malformed start of comment.");
+	    }
+	}
+    }
+
     void ParseComment(XMLTokenQueue tokenQueue)
     {
-	XMLToken previousToken = tokenQueue.Pull();
-	XMLToken token = tokenQueue.Pull();
-	
-	while (!(previousToken.IsLine() && token.IsTagEnd()))
+	XMLToken t1 = tokenQueue.Pull();
+	XMLToken t2 = t1.CreateCopy();
+	XMLToken t3 = t2.CreateCopy();
+	while (!(t1.IsTagEnd() && t2.IsLine() && t3.IsLine()) && tokenQueue.Length() > 0)
 	{
-	    previousToken = token.copy();
-	    token = tokenQueue.Pull();
+	    t3 = t2.CreateCopy();
+	    t2 = t1.CreateCopy();
+	    t1 = tokenQueue.Pull();
+	}
+    }
+
+    void ParseQuestionMarkTag(XMLTokenQueue tokenQueue)
+    {
+	XMLToken t1 = tokenQueue.Pull();
+	XMLToken t2 = t1.CreateCopy();
+	while (!(t1.IsTagEnd() && t2.IsQuestionMark()) && tokenQueue.Length() > 0)
+	{
+	    t2 = t1.CreateCopy();
+	    t1 = tokenQueue.Pull();
 	}
     }
 
