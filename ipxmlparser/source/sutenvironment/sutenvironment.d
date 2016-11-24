@@ -1,17 +1,27 @@
 module sutenvironment.sutenvironment;
 
 import ipxmlparser.xml_fundamentals;
-import ipxmlparser.xml_interfaceparser;
+import ipxmlparser.xml_types;
+import ipxmlparser.xml_interface;
+
+import ipxmlparser.xml_documentbuilder;
 
 import std.container.array;
 import std.file;
 import std.string;
 import std.stdio;
 
-struct SUTSubEnv
+struct SUTEnv
 {
     XML_Interface iface;
     XML_Types types;
+
+    string ToString()
+    {
+	string returnstr;
+	returnstr ~= iface.ToString() ~ "\n\n" ~ types.ToString();
+	return returnstr;
+    }
 }
 
 class SUTEnvironment
@@ -25,19 +35,25 @@ public:
     {
 	foreach (subfolder ; GetSubFolders(folder))
 	{
+	    writeln("FOLDER:" ~ subfolder);
 	    ParseFiles(subfolder, GetFiles(subfolder));
 	}
 	return true;
     }
 
-    SUTSubEnv GetTypeFromNamespace(string namespace, string datatype)
+    SUTEnv GetTypeFromNamespace(string namespace, string datatype)
     {
-	return SUTSubEnv();
+	return SUTEnv();
     }
 
     string ToString()
     {
-	return "SUT";
+	string returnstr;
+	foreach (entry; map.keys)
+	{
+	    returnstr ~= entry ~ ": \n" ~ map[entry].ToString() ~ "\n\n\n\n\n";
+	}
+	return returnstr;
     }
 
     /*bool Build(string folder)
@@ -68,7 +84,7 @@ private:
 	return returnarray;
     }*/
 
-    
+    SUTEnv[string] map;
 
     Array!string GetSubFolders(string folder)
     {
@@ -88,6 +104,7 @@ private:
 	Array!string returnarray;
 	foreach (entry ; dirEntries(folder, "*.xml", SpanMode.shallow))
 	{
+	    writeln("FILE:" ~ entry);
 	    if (entry.isFile)
 	    {
 		returnarray.insertBack(entry);
@@ -98,10 +115,20 @@ private:
 
     void ParseFiles(string folder, Array!string files)
     {
+	map[folder] = SUTEnv();
 	foreach (file ; files)
 	{
-	    SUTSubEnv sss;
-//	    sss.
+	    if (indexOf(file, "types.xml") != -1)
+	    {
+		XML_Types_Parser parser = new XML_Types_Parser(file);
+		map[folder].types = parser.GetTypes();
+	    }
+	    else if (indexOf(file, "namespace.xml") == -1)
+	    {
+		XML_Interface_Parser parser = new XML_Interface_Parser(file);
+		auto iface = parser.GetInterface();
+		map[folder ~ "/" ~ iface.name] = SUTEnv(iface);
+	    }
 	}
     }
 }
@@ -109,8 +136,6 @@ private:
 
 void main(string[] args)
 {
-    import std.stdio;
-
     SUTEnvironment se = new SUTEnvironment();
     se.Build("namespaces");
     writeln(se.ToString());

@@ -1,4 +1,4 @@
-module ipxmlparser.xml_typesparser;
+module ipxmlparser.xml_types;
 
 import std.stdio;
 import std.string;
@@ -37,8 +37,8 @@ public:
 	    case "SubType":
 		string tname = type.GetAttribute("name");
 		string ttype = type.GetAttribute("type");
-		long tmin = to!int(type.GetAttribute("min"));
-		long tmax = to!int(type.GetAttribute("max"));
+		string tmin = type.GetAttribute("min");
+		string tmax = type.GetAttribute("max");
 		string tunit = type.GetAttribute("unit");
 		types.subTypes.insertBack(XML_SubType(tname, ttype, tmin, tmax, tunit));
 		break;
@@ -59,7 +59,7 @@ public:
 		foreach (enumitem ; type.GetChilds())
 		{
 		    string ename = enumitem.GetAttribute("name");
-		    long evalue = to!long(enumitem.GetAttribute("value"));
+		    string evalue = enumitem.GetAttribute("value");
 		    enumm.enumitems.insertBack(XML_EnumItem(ename, evalue));
 		}
 		types.enums.insertBack(enumm);

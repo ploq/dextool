@@ -85,13 +85,13 @@ struct XML_SubType
 {
     string name;
     string type;
-    long min;
-    long max;
+    string min;
+    string max;
     string unit;
 
     string ToString()
     {
-	return "XML_SubType:[name=" ~ name ~ ", type=" ~ type ~ ", min=" ~ text(min) ~ ", max=" ~ text(max) ~ ", unit=" ~ unit ~ "]";
+	return "XML_SubType:[name=" ~ name ~ ", type=" ~ type ~ ", min=" ~ min ~ ", max=" ~ max ~ ", unit=" ~ unit ~ "]";
     }
 }
 
@@ -116,11 +116,11 @@ struct XML_Enum
 struct XML_EnumItem
 {
     string name;
-    long value;
+    string value;
     
     string ToString()
     {
-	return "XML_EnumItem:[name=" ~ name ~ ", value=" ~ text(value) ~ "]";
+	return "XML_EnumItem:[name=" ~ name ~ ", value=" ~ value ~ "]";
     }
 }
 

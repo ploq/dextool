@@ -54,6 +54,16 @@ public:
 	return token == "=";
     }
 
+    bool IsExclamation()
+    {
+	return token == "!";
+    }
+
+    bool IsLine()
+    {
+	return token == "-";
+    }
+
     bool IsValue()
     {
 	return token.length > 1 && (token[0] == '"' || token[0] == '\'');
@@ -67,6 +77,11 @@ public:
     bool IsText() //TODO: Add more token info
     {
 	return token.length > 0;
+    }
+
+    XMLToken copy()
+    {
+	return new XMLToken(token);
     }
 
 private:

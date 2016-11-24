@@ -27,25 +27,28 @@ public:
 	{
 	    throw new Exception("Could not find file " ~ filename);
 	}
-    
 	auto root = xmldoc.GetRoot();
 
 	iface.name = root.GetAttribute("name");
 	auto ifacetypes = root.SearchFirstChild("Types");
-	foreach (type ; ifacetypes.GetChilds())
+	
+	if (ifacetypes !is null)
 	{
-	    switch(type.GetName())
+	    foreach (type ; ifacetypes.GetChilds())
 	    {
-	    case "SubType":
-		string tname = type.GetAttribute("name");
-		string ttype = type.GetAttribute("type");
-		long tmin = to!int(type.GetAttribute("min"));
-		long tmax = to!int(type.GetAttribute("max"));
-		string tunit = type.GetAttribute("unit");
-		iface.types.subTypes.insertBack(XML_SubType(tname, ttype, tmin, tmax, tunit));
-		break;
-	    default:
-		break;
+		switch(type.GetName())
+		{
+		case "SubType":
+		    string tname = type.GetAttribute("name");
+		    string ttype = type.GetAttribute("type");
+		    string tmin = type.GetAttribute("min");
+		    string tmax = type.GetAttribute("max");
+		    string tunit = type.GetAttribute("unit");
+		    iface.types.subTypes.insertBack(XML_SubType(tname, ttype, tmin, tmax, tunit));
+		    break;
+		default:
+		    break;
+		}
 	    }
 	}
 

@@ -48,9 +48,25 @@ private:
 	{
 	    ParseBeginTag(tokenQueue, token.ToString());
 	}
+	else if (token.IsExclamation())
+	{
+	    ParseComment(tokenQueue);
+	}
 	else
 	{
 	    throw new Exception("Start of tag <" ~ token.ToString() ~ " is not valid.");
+	}
+    }
+
+    void ParseComment(XMLTokenQueue tokenQueue)
+    {
+	XMLToken previousToken = tokenQueue.Pull();
+	XMLToken token = tokenQueue.Pull();
+	
+	while (!(previousToken.IsLine() && token.IsTagEnd()))
+	{
+	    previousToken = token.copy();
+	    token = tokenQueue.Pull();
 	}
     }
 

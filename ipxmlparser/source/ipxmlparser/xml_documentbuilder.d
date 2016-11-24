@@ -4,6 +4,8 @@ import ipxmlparser.xml_document;
 import ipxmlparser.xml_lexer;
 import ipxmlparser.xml_parser;
 
+import std.stdio;
+
 class XMLDocumentBuilder
 {
 public:
@@ -49,6 +51,7 @@ public:
 	}
 	catch (Exception e)
 	{
+	    writeln(e.msg);
 	    throw new Exception("Could not build XMLDocument out of " ~ filename);
 	}
     }	
