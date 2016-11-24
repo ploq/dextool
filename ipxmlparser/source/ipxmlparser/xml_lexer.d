@@ -108,7 +108,7 @@ private:
 		tokenQueue.Push(new XMLToken(text(c)));
 		continue;
 	    }
-	    if (insidetag && c == '=' || c == '/' || c == '!' || c == '-')
+	    if (insidetag && c == '=' || c == '/' || c == '!' || c == '-' || c == '?')
 	    {
 		if (currentelement.length > 0)
 		{

@@ -42,7 +42,7 @@ public:
 	    returnstr ~= "/";
 	}
 	returnstr ~= ">\n";
-
+	
 	for (ulong i = 0; i < innernodes.length; ++i)
 	{
 	    returnstr ~= innernodes[i].ToString(indent ~ "  "); 
