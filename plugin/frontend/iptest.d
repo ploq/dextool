@@ -15,6 +15,7 @@ import application.utility;
 
 import plugin.types;
 import plugin.backend.ipvariant : Controller, Parameters, Products;
+import sutenvironment.sutenvironment;
 
 auto runPlugin(CliBasicOption opt, CliArgs args) {
     import docopt;
@@ -44,8 +45,7 @@ auto runPlugin(CliBasicOption opt, CliArgs args) {
 // dfmt off
 static auto iptest_opt = CliOptionParts(
     "usage:
- dextool iptest [options] [--file-restrict=...] [--td-include=...] --compile-db=... --inx=... [--] [CFLAGS...]
- dextool iptest [options] [--file-restrict=...] [--td-include=...] --compile-db=... --inx=... [--] [CFLAGS...]",
+ dextool iptest [options] [--file-exclude=...] [--file-restrict=...] [--td-include=...] --compile-db=... --inx=... [--] [CFLAGS...]",
     // -------------
     " --out=dir          directory for generated files [default: ./]
  --main=name        Used as part of interface, namespace etc [default: TestDouble]
@@ -61,7 +61,7 @@ static auto iptest_opt = CliOptionParts(
 "others:
  --inx=             Input xml files to parse
  --compile-db=j     Retrieve compilation parameters from the file
- --file-exclude=s    Exclude files from generation matching the regex
+ --file-exclude=    Exclude files from generation matching the regex
  --file-restrict=a   Restrict the scope of the test double to those files
                     matching the regex.
  --td-include=      User supplied includes used instead of those found
@@ -109,7 +109,7 @@ class IpTestVariant : Controller, Parameters, Products {
     immutable StubPrefix prefix;
     immutable StubPrefix file_prefix;
 
-    FileNames input_xfiles;
+    FileName xml_interface;
     immutable DirName output_dir;
     immutable FileName main_file_hdr;
     immutable FileName main_file_impl;
@@ -138,7 +138,7 @@ class IpTestVariant : Controller, Parameters, Products {
         import std.array : array;
         import std.algorithm : map;
 
-        //Regex!char[] exclude = parsed["--file-exclude"].asList.map!(a => regex(a)).array();
+        Regex!char[] exclude = parsed["--file-exclude"].asList.map!(a => regex(a)).array();
         Regex!char[] restrict = parsed["--file-restrict"].asList.map!(a => regex(a)).array();
         Regex!char strip_incl;
         Flag!"Gmock" gmock = cast(Flag!"Gmock") parsed["--gmock"].isTrue;
@@ -165,7 +165,7 @@ class IpTestVariant : Controller, Parameters, Products {
         }
 
         auto variant = new IpTestVariant(StubPrefix(parsed["--prefix"].toString), StubPrefix("Not used"),
-                FileNames(parsed["--inx"].asList), MainFileName(parsed["--main-fname"].toString),
+                FileName(parsed["--inx"].toString), MainFileName(parsed["--main-fname"].toString),
                 MainName(parsed["--main"].toString), DirName(parsed["--out"].toString),
                 gmock, pre_incl, post_incl, strip_incl, custom_hdr);
 
@@ -188,12 +188,12 @@ class IpTestVariant : Controller, Parameters, Products {
      *
      * TODO document the parameters.
      */
-    this(StubPrefix prefix, StubPrefix file_prefix, FileNames input_xfiles, MainFileName main_fname, MainName main_name,
+    this(StubPrefix prefix, StubPrefix file_prefix, FileName input_xfiles, MainFileName main_fname, MainName main_name,
             DirName output_dir, Flag!"Gmock" gmock, Flag!"PreInclude" pre_incl,
             Flag!"PostInclude" post_incl, Regex!char strip_incl, CustomHeader custom_hdr) {
         this.prefix = prefix;
         this.file_prefix = file_prefix;
-        this.input_xfiles = input_xfiles;
+        this.xml_interface = input_xfiles;
         this.main_name = main_name;
         this.main_ns = MainNs(cast(string) main_name);
         this.main_if = MainInterface("I_" ~ cast(string) main_name);
@@ -225,8 +225,8 @@ class IpTestVariant : Controller, Parameters, Products {
         td_includes.forceIncludes(incls);
     }
 
-    FileNames getInputXFile() {
-        return input_xfiles;
+    FileName getInputXFile() {
+        return xml_interface;
     }
     // -- Controller --
 
@@ -296,7 +296,7 @@ class IpTestVariant : Controller, Parameters, Products {
 
     Parameters.Files getFiles() {
         return Parameters.Files(main_file_hdr, main_file_impl,
-                main_file_globals, gmock_file, pre_incl_file, post_incl_file);
+                main_file_globals, gmock_file, pre_incl_file, post_incl_file, xml_interface);
     }
 
     MainName getMainName() {
@@ -329,6 +329,16 @@ class IpTestVariant : Controller, Parameters, Products {
         return custom_hdr;
     }
 
+    SUTEnvironment getSut() {
+        import std.stdio;
+        SUTEnvironment se = new SUTEnvironment();
+        writeln(xml_interface[0]);
+        se.Build(xml_interface);
+
+        return se;
+
+    }
+
     // -- Products --
 
     void putFile(FileName fname, CppHModule hdr_data) {
@@ -358,8 +368,6 @@ ExitStatusType genCpp(IpTestVariant variant, string[] in_cflags, CompileCommandD
 
     auto visitor = new CppVisitor!(CppRoot, Controller, Products)(variant, variant);
     const auto user_cflags = prependDefaultFlags(in_cflags, "-xc++");
-    //auto in_file = cast(string) variant.getInputFile[0];
-    //logger.trace("Input file: ", in_file);
     string[] use_cflags;
     string abs_in_file;
 
@@ -367,10 +375,8 @@ ExitStatusType genCpp(IpTestVariant variant, string[] in_cflags, CompileCommandD
     auto hfiles = compile_db.getHeaderFiles();
     string res;
     foreach(hfile ; hfiles) {
-        writeln(hfile);
-        abs_in_file = hfile;
         auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
-        if (analyzeFile(abs_in_file, use_cflags, visitor, ctx) == ExitStatusType.Errors) {
+        if (analyzeFile(hfile, use_cflags, visitor, ctx) == ExitStatusType.Errors) {
             return ExitStatusType.Errors;
         }
 

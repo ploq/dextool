@@ -15,6 +15,7 @@ import dsrcgen.cpp : CppModule, CppHModule;
 
 import application.types;
 import cpptooling.analyzer.clang.ast : Visitor;
+import sutenvironment.sutenvironment;
 
 /** Control various aspectes of the analyze and generation like what nodes to
  * process.
@@ -61,6 +62,7 @@ import cpptooling.analyzer.clang.ast : Visitor;
         FileName gmock;
         FileName pre_incl;
         FileName post_incl;
+        FileName xml_interface;
     }
 
     /// Source files used to generate the stub.
@@ -101,6 +103,9 @@ import cpptooling.analyzer.clang.ast : Visitor;
 
     /// Custom header to prepend generated files with.
     CustomHeader getCustomHeader();
+
+    SUTEnvironment getSut();
+
 }
 
 /// Data produced by the generator like files.
@@ -612,7 +617,6 @@ body {
     import cpptooling.analyzer.type;
 
     generateIncludes(ctrl, params, modules.hdr);
-    writeln("Inside generate");
 
     static void gmockGlobal(T)(T r, CppModule gmock, Parameters params) {
         foreach (a; r.filter!(a => cast(ClassType) a.kind == ClassType.Gmock)) {
@@ -625,56 +629,66 @@ body {
     // use the instance.
     static void eachNs(LookupT)(CppNamespace ns, Parameters params,
             Generator.Modules modules, CppModule impl_singleton, LookupT lookup) {
-
+        
+        params.getSut;
+        //writeln("XML file " ~ params.getFiles.xml_interface);
+        auto currns =  ns.name;
         auto inner = modules;
         CppModule inner_impl_singleton;
-        final switch (cast(NamespaceType) ns.kind) with (NamespaceType) {
-        case Normal:
-            //TODO how to do this with meta-programming?
-            inner.hdr = modules.hdr.namespace(ns.name);
-            inner.hdr.suppressIndent(1);
-            inner.impl = modules.impl.namespace(ns.name);
-            inner.impl.suppressIndent(1);
-            inner.gmock = modules.gmock.namespace(ns.name);
-            inner.gmock.suppressIndent(1);
-            inner_impl_singleton = inner.impl.base;
-            inner_impl_singleton.suppressIndent(1);
-            break;
-        case TestDoubleSingleton:
-            import cpptooling.generator.adapter : generateSingleton;
 
-            generateSingleton(ns, impl_singleton);
-            break;
-        case TestDouble:
-            generateNsTestDoubleHdr(ns, params, modules.hdr, modules.gmock, lookup);
-            generateNsTestDoubleImpl(ns, modules.impl);
-            break;
-        }
+        if (currns != "std")
+        {
 
-        foreach (a; ns.funcRange) {
-            generateFuncImpl(a, inner.impl);
-        }
+            final switch (cast(NamespaceType) ns.kind) with (NamespaceType) {
+            case Normal:
+                //TODO how to do this with meta-programming?
+                inner.hdr = modules.hdr.namespace(ns.name);
+                inner.hdr.suppressIndent(1);
+                inner.impl = modules.impl.namespace(ns.name);
+                inner.impl.suppressIndent(1);
+                inner.gmock = modules.gmock.namespace(ns.name);
+                inner.gmock.suppressIndent(1);
+                inner_impl_singleton = inner.impl.base;
+                inner_impl_singleton.suppressIndent(1);
+                break;
+            case TestDoubleSingleton:
+                /*import cpptooling.generator.adapter : generateSingleton;
 
-        foreach (a; ns.classRange) {
-            foreach (b; a.methodPublicRange) { 
-                () @trusted {
-                    auto cppm = b.peek!(CppMethod);
-                    if (cppm !is null) {
-                        with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
-                            if (cppm.returnType.toStringDecl == "void") {
-                                stmt(E("iptest->thisisatest")(E("ppop, PPAPS")));
-                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                            } else {
-                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                                return_(E("iptest->" ~ getName(b))(E("llll")));
-                            }
-                        }                        
-                    }
-                }();                
+                generateSingleton(ns, impl_singleton);*/
+                break;
+            case TestDouble:
+                generateNsTestDoubleHdr(ns, params, modules.hdr, modules.gmock, lookup);
+                //generateNsTestDoubleImpl(ns, modules.impl);
+                break;
+            }
+            foreach (a; ns.funcRange) {
+                generateFuncImpl(a, inner.impl);
+            }
+
+            foreach (a; ns.classRange) {
+                foreach (b; a.methodPublicRange) { 
+                    () @trusted {
+                        auto cppm = b.peek!(CppMethod);
+                        if (cppm !is null) {
+                            with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
+                                if (cppm.returnType.toStringDecl == "void") {
+                                    stmt(E("iptest->thisisatest")(E("ppop, PPAPS")));
+                                    stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
+                                } else {
+                                    stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
+                                    return_(E("iptest->" ~ getName(b))(E("llll")));
+                                }
+                            }                        
+                        }
+                    }();              
+                }
             }
         }
+  
         foreach (a; ns.namespaceRange) { 
-            eachNs(a, params, inner, inner_impl_singleton, lookup);
+            //writeln("namespace "~currns~"::"~a.name);
+            if(a.name != "std" || currns != "std")
+                eachNs(a, params, inner, inner_impl_singleton, lookup);
         }
     }
 

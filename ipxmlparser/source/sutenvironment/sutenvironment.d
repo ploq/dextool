@@ -23,97 +23,98 @@ struct SUTEnv
     }
 }
 
-class SUTEnvironment
+@safe class SUTEnvironment
 {
 public:
     this()
     {
     }
 
-    bool Build(string folder)
+    @trusted bool Build(string folder)
     {
-	foreach (subfolder ; GetSubFolders(folder))
-	{
-	    ParseFiles(subfolder, GetFiles(subfolder));
+		foreach (subfolder ; GetSubFolders(folder))
+		{
+			ParseFiles(subfolder, GetFiles(subfolder));
+		}
+		return true;
 	}
-	return true;
+
+
+    @trusted SUTEnv GetSUTFromNamespace(string namespace)
+    {
+		return map[namespace];
     }
 
-    SUTEnv GetSUTFromNamespace(string namespace)
+    @trusted string ToString()
     {
-	return map[namespace];
-    }
-
-    string ToString()
-    {
-	string returnstr;
-	foreach (entry; map.keys)
-	{
-	    returnstr ~= entry ~ ": \n" ~ map[entry].ToString() ~ "\n\n\n\n\n";
-	}
-	return returnstr;
+		string returnstr;
+		foreach (entry; map.keys)
+		{
+			returnstr ~= entry ~ ": \n" ~ map[entry].ToString() ~ "\n\n\n\n\n";
+		}
+		return returnstr;
     }
 
 private:
     SUTEnv[string] map;
 
-    Array!string GetSubFolders(string folder)
+    @trusted Array!string GetSubFolders(string folder)
     {
-	Array!string returnarray;
-	foreach (entry ; dirEntries(folder, SpanMode.depth))
-	{
-	    if (entry.isDir)
-	    {
-		returnarray.insertBack(entry);
-	    }
-	}
-	return returnarray;
+		Array!string returnarray;
+		foreach (entry ; dirEntries(folder, SpanMode.depth))
+		{
+			if (entry.isDir)
+			{
+			returnarray.insertBack(entry);
+			}
+		}
+		return returnarray;
     }
 
-    Array!string GetFiles(string folder)
+    @trusted Array!string GetFiles(string folder)
     {
-	Array!string returnarray;
-	foreach (entry ; dirEntries(folder, "*.xml", SpanMode.shallow))
-	{
-	    if (entry.isFile)
-	    {
-		returnarray.insertBack(entry);
-	    }
-	}
-	return returnarray;
+		Array!string returnarray;
+		foreach (entry ; dirEntries(folder, "*.xml", SpanMode.shallow))
+		{
+			if (entry.isFile)
+			{
+			returnarray.insertBack(entry);
+			}
+		}
+		return returnarray;
     }
 
-    void ParseFiles(string folder, Array!string files)
+    @trusted void ParseFiles(string folder, Array!string files)
     {
-	string key = chompPrefix(folder, "namespaces/");
-	key = replace(key, "/", "::");
-	key = capitalize(key);
+		string key = chompPrefix(folder, "namespaces/");
+		key = replace(key, "/", "::");
+		key = capitalize(key);
 
-	auto prev = key[0];
-	for (long i = 1; i < key.length; ++i)
-	{
-	    if (prev == ':' && key[i] != ':')
-	    {
-		cast(char)key[i] = capitalize(text(key[i]))[0];
-	    }
-	    cast(char)prev = key[i];
-	}
+		auto prev = key[0];
+		for (long i = 1; i < key.length; ++i)
+		{
+			if (prev == ':' && key[i] != ':')
+			{
+			cast(char)key[i] = capitalize(text(key[i]))[0];
+			}
+			cast(char)prev = key[i];
+		}
 
-	map[key] = SUTEnv();
-	foreach (file ; files)
-	{
-	    if (indexOf(file, "types.xml") != -1)
-	    {
-		XML_Types_Parser parser = new XML_Types_Parser(file);
-		map[key].types = parser.GetTypes();
-	    }
-	    else if (indexOf(file, "namespace.xml") == -1)
-	    {
-		XML_Interface_Parser parser = new XML_Interface_Parser(file);
-		auto iface = parser.GetInterface();
-		map[key ~ "::" ~ iface.name] = SUTEnv(iface);
-	    }
-	}
+		map[key] = SUTEnv();
+		foreach (file ; files)
+		{
+			if (indexOf(file, "types.xml") != -1)
+			{
+			XML_Types_Parser parser = new XML_Types_Parser(file);
+			map[key].types = parser.GetTypes();
+			}
+			else if (indexOf(file, "namespace.xml") == -1)
+			{
+			XML_Interface_Parser parser = new XML_Interface_Parser(file);
+			auto iface = parser.GetInterface();
+			map[key ~ "::" ~ iface.name] = SUTEnv(iface);
+			}
+		}
     }
 }
 
