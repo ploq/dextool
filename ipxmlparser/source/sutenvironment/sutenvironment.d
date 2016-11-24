@@ -4,12 +4,11 @@ import ipxmlparser.xml_fundamentals;
 import ipxmlparser.xml_types;
 import ipxmlparser.xml_interface;
 
-import ipxmlparser.xml_documentbuilder;
-
 import std.container.array;
 import std.file;
 import std.string;
 import std.stdio;
+import std.conv;
 
 struct SUTEnv
 {
@@ -40,9 +39,9 @@ public:
 	return true;
     }
 
-    SUTEnv GetTypeFromNamespace(string namespace, string datatype)
+    SUTEnv GetSUTFromNamespace(string namespace)
     {
-	return SUTEnv();
+	return map[namespace];
     }
 
     string ToString()
@@ -86,19 +85,33 @@ private:
 
     void ParseFiles(string folder, Array!string files)
     {
-	map[folder] = SUTEnv();
+	string key = chompPrefix(folder, "namespaces/");
+	key = replace(key, "/", "::");
+	key = capitalize(key);
+
+	auto prev = key[0];
+	for (long i = 1; i < key.length; ++i)
+	{
+	    if (prev == ':' && key[i] != ':')
+	    {
+		cast(char)key[i] = capitalize(text(key[i]))[0];
+	    }
+	    cast(char)prev = key[i];
+	}
+
+	map[key] = SUTEnv();
 	foreach (file ; files)
 	{
 	    if (indexOf(file, "types.xml") != -1)
 	    {
 		XML_Types_Parser parser = new XML_Types_Parser(file);
-		map[folder].types = parser.GetTypes();
+		map[key].types = parser.GetTypes();
 	    }
 	    else if (indexOf(file, "namespace.xml") == -1)
 	    {
 		XML_Interface_Parser parser = new XML_Interface_Parser(file);
 		auto iface = parser.GetInterface();
-		map[folder ~ "/" ~ iface.name] = SUTEnv(iface);
+		map[key ~ "::" ~ iface.name] = SUTEnv(iface);
 	    }
 	}
     }
