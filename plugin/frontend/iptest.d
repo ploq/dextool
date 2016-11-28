@@ -333,7 +333,7 @@ class IpTestVariant : Controller, Parameters, Products {
         import std.stdio;
         SUTEnvironment se = new SUTEnvironment();
         writeln(xml_interface[0]);
-        se.Build(xml_interface);
+        se.Build(xml_interface); 
 
         return se;
 
