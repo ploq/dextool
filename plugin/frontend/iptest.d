@@ -45,7 +45,7 @@ auto runPlugin(CliBasicOption opt, CliArgs args) {
 // dfmt off
 static auto iptest_opt = CliOptionParts(
     "usage:
- dextool iptest [options] [--file-exclude=...] [--file-restrict=...] [--td-include=...] --compile-db=... --inx=... [--] [CFLAGS...]",
+ dextool iptest [options] [--file-exclude=...] [--file-restrict=...] [--td-include=...] --compile-db=... --inx= [--] [CFLAGS...]",
     // -------------
     " --out=dir          directory for generated files [default: ./]
  --main=name        Used as part of interface, namespace etc [default: TestDouble]
@@ -173,7 +173,7 @@ class IpTestVariant : Controller, Parameters, Products {
             variant.forceIncludes(parsed["--td-include"].asList);
         }
 
-        //variant.exclude = exclude;
+        variant.exclude = exclude;
         variant.restrict = restrict;
 
         return variant;
@@ -332,7 +332,7 @@ class IpTestVariant : Controller, Parameters, Products {
     SUTEnvironment getSut() {
         import std.stdio;
         SUTEnvironment se = new SUTEnvironment();
-        writeln(xml_interface[0]);
+        writeln(xml_interface);
         se.Build(xml_interface); 
 
         return se;
