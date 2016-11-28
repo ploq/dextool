@@ -1,21 +1,23 @@
 module ipxmlparser.xml_attributelist;
 
+import std.container.array;
+
 class XMLAttributeList
 {
 public:
     this()
     {
-	attributeList = new string[0];
+	//attributeList = new string[0];
     }
 
     bool Push(string name, string value)
     {
-	attributeList[attributeList.length++] = name;
-	attributeList[attributeList.length++] = value;
+	attributeList.insertBack(name);
+	attributeList.insertBack(value);
 	return true;
     }
 
-    string[] GetAttributeList()
+    Array!string GetAttributeList()
     {
 	return attributeList;
     }
@@ -46,6 +48,6 @@ public:
     }
 
 private:
-    string[] attributeList;
+    Array!string attributeList;
 }
  

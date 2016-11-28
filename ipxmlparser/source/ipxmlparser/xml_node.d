@@ -3,6 +3,7 @@ module ipxmlparser.xml_node;
 import ipxmlparser.xml_attributelist;
 
 import std.stdio;
+import std.container.array;
 
 class XMLNode
 {
@@ -11,7 +12,7 @@ public:
     {
 	this.name = "";
 	this.attrlist = null;
-	innernodes = new XMLNode[0];
+	//innernodes = new XMLNode[0];
 	this.prev = null;
 	terminating = false;
 	textcontent = "";
@@ -22,7 +23,7 @@ public:
     {
 	this.name = name;
 	this.attrlist = attrlist;
-	innernodes = new XMLNode[0];
+	//innernodes = new XMLNode[0];
 	this.prev = prev;
 	terminating = isterminating;
 	textcontent = "";
@@ -58,7 +59,7 @@ public:
 
     bool AddNode(XMLNode node)
     {
-	innernodes[innernodes.length++] = node;
+	innernodes.insertBack(node);
 	return true;
     }
 
@@ -76,7 +77,7 @@ public:
 	return prev;
     }
 
-    XMLNode[] GetChilds()
+    Array!XMLNode GetChilds()
     {
 	return innernodes;
     }
@@ -114,14 +115,14 @@ public:
 	return null;
     }
 
-    XMLNode[] SearchChilds(string childname)
+    Array!XMLNode SearchChilds(string childname)
     {
-	XMLNode[] foundnodes = new XMLNode[0];
+	Array!XMLNode foundnodes;
 	for (ulong i = 0; i < innernodes.length; ++i)
 	{
 	    if (innernodes[i].GetName() == childname)
 	    {
-		foundnodes[foundnodes.length++] = innernodes[i];
+		foundnodes.insertBack(innernodes[i]);
 	    }
 	    foundnodes ~= innernodes[i].SearchChilds(childname);
 	}
@@ -136,7 +137,7 @@ public:
 private:
     string name;
     XMLAttributeList attrlist;
-    XMLNode[] innernodes;
+    Array!XMLNode innernodes;
     XMLNode prev;
     bool terminating;
     string textcontent;

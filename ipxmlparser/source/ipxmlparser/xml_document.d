@@ -3,6 +3,8 @@ module ipxmlparser.xml_document;
 import ipxmlparser.xml_attributelist;
 import ipxmlparser.xml_node;
 
+import std.container.array;
+
 class XMLDocument
 {
 public:
@@ -39,7 +41,7 @@ public:
     string ToString()
     {
 	string returnstr;
-	XMLNode[] childs = root.GetChilds();
+	Array!XMLNode childs = root.GetChilds();
 	for (ulong i = 0; i < childs.length; ++i)
 	{
 	    returnstr ~= childs[i].ToString("");

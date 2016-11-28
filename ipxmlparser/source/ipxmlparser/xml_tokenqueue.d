@@ -1,6 +1,7 @@
 module ipxmlparser.xml_tokenqueue;
 
 import std.algorithm.mutation;
+import std.container.array;
 
 import ipxmlparser.xml_token;
 
@@ -9,12 +10,13 @@ class XMLTokenQueue
 public:
     this()
     {
-	tokenList = new XMLToken[0];
+	//tokenList = new XMLToken[0];
     }
 
     bool Push(XMLToken t)
     {
-	tokenList[tokenList.length++] = t;
+	//tokenList[tokenList.length++] = t;
+	tokenList.insertBack(t);
 	return true;
     }
 
@@ -24,10 +26,11 @@ public:
 	{
 	    return new XMLToken("");
 	}
-    reverse(tokenList);
-	XMLToken returnToken = tokenList[tokenList.length-1];
-	tokenList.length--;
-    reverse(tokenList);
+	//reverse(tokenList);
+	XMLToken returnToken = tokenList.front();//tokenList[tokenList.length-1];
+	tokenList = Array!XMLToken(tokenList[1..$]);
+	//tokenList.length--;
+	//reverse(tokenList);
 	return returnToken;
     }
 
@@ -37,5 +40,5 @@ public:
     }
 
 private:
-    XMLToken[] tokenList;
+    Array!XMLToken tokenList;
 }
