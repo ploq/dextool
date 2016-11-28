@@ -9,6 +9,7 @@ import std.file;
 import std.string;
 import std.stdio;
 import std.conv;
+import std.path;
 
 struct SUTEnv
 {
@@ -36,6 +37,7 @@ public:
 
     @trusted bool Build(string folder)
     {
+	folder = buildNormalizedPath(folder);
 		foreach (subfolder ; GetSubFolders(folder))
 		{
 			ParseFiles(subfolder, GetFiles(subfolder));
