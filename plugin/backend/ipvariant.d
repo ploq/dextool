@@ -179,11 +179,11 @@ struct Generator {
         auto fl = rawFilter(root, ctrl, products, (USRType usr) => container.find!LocationTag(usr));
         logger.trace("Filtered:\n", fl.toString());
 
-        auto tr = translate(fl, container, ctrl, params);
-        logger.trace("Translated to implementation:\n", tr.toString());
+        /*auto tr = translate(fl, container, ctrl, params);
+        logger.trace("Translated to implementation:\n", tr.toString());*/
 
         auto modules = Modules.make();
-        generate(tr, ctrl, params, modules, container);
+        generate(fl, ctrl, params, modules, container);
         postProcess(ctrl, params, products, modules);
     }
 
@@ -492,7 +492,7 @@ CppT rawFilter(CppT, LookupT)(CppT input, Controller ctrl, Products prod, Lookup
         .filter!(a => !a.isAnonymous)
         .map!(a => rawFilter(a, ctrl, prod, lookup))
         .each!(a => filtered.put(a));
-
+    
     input.classRange
         .each!(a => filtered.put(a));
 
@@ -508,7 +508,6 @@ CppT rawFilter(CppT, LookupT)(CppT input, Controller ctrl, Products prod, Lookup
             .each!(a => filtered.put(a.value));
     }
     // dfmt on
-
     return filtered;
 }
 
@@ -522,6 +521,7 @@ CppRoot translate(CppRoot root, ref Container container, Controller ctrl, Parame
         .map!(a => translate(a, container, ctrl, params))
         .filter!(a => !a.isNull)
         .each!(a => r.put(a.get));
+
 
     root.classRange
         .map!(a => mergeClassInherit(a, container))
@@ -556,7 +556,7 @@ Nullable!CppNamespace translate(CppNamespace input, ref Container container,
     auto ns = CppNamespace.make(input.name);
 
     if (!input.funcRange.empty) {
-        ns.put(makeSingleton!NamespaceType(params.getMainNs, params.getMainInterface));
+        //ns.put(makeSingleton!NamespaceType(params.getMainNs, params.getMainInterface));
         input.funcRange.each!(a => ns.put(a));
 
         auto td_ns = CppNamespace.make(CppNs(cast(string) params.getMainNs));
@@ -570,7 +570,7 @@ Nullable!CppNamespace translate(CppNamespace input, ref Container container,
             td_ns.put(makeGmock!ClassType(i_free_func));
         }
 
-        ns.put(td_ns);
+        //ns.put(td_ns);
     }
 
     //dfmt off
@@ -610,6 +610,7 @@ in {
 }
 body {
     import std.algorithm : each, filter;
+    import std.array;
     import cpptooling.data.symbol.types : USRType;
     import cpptooling.generator.func : generateFuncImpl;
     import cpptooling.generator.gmock : generateGmock;
@@ -628,18 +629,39 @@ body {
     // recursive to handle nested namespaces.
     // the singleton ns must be the first code generate or the impl can't
     // use the instance.
-    static void eachNs(LookupT)(CppNamespace ns, Parameters params,
-            Generator.Modules modules, CppModule impl_singleton, LookupT lookup) {
+    @trusted static void eachNs(LookupT)(CppNamespace ns, Parameters params,
+            Generator.Modules modules, CppModule impl_singleton, LookupT lookup, string lastns) {
         
-        params.getSut;
-        //writeln("XML file " ~ params.getFiles.xml_interface);
-        auto currns =  ns.name;
+        string currns, currnsrp; 
+        if (ns.name != lastns) 
+        {
+            currns = lastns ~ "::" ~ ns.name;
+        }
+        else 
+        {
+            currns = ns.name;
+        }
+
+        auto currns_spl = currns.split("::");
+        if (currns_spl[$-1] == "Requirer" ||  currns_spl[$-1] == "Provider")
+        {
+            currnsrp = join(currns_spl[0..$-1], "::");
+        }
+        else 
+        {
+            currnsrp = currns;
+        }
+
+        SUTEnv sut = params.getSut.GetSUTFromNamespace(currnsrp);
+        //writeln("XML file " ~ params.getFiles.xml_interface)
         auto inner = modules;
         CppModule inner_impl_singleton;
-
-        if (currns != "std")
+        writeln(currns);
+        writeln(sut.ToString);
+        writeln(sut.valid);
+        if (sut.valid)
         {
-
+            
             final switch (cast(NamespaceType) ns.kind) with (NamespaceType) {
             case Normal:
                 //TODO how to do this with meta-programming?
@@ -667,6 +689,7 @@ body {
             }
 
         foreach (a; ns.classRange) {
+            writeln(a);
             foreach (b; a.methodPublicRange) { 
                 () {
                 auto cppm = ( () @trusted => b.peek!(CppMethod) )();
@@ -689,14 +712,14 @@ body {
         foreach (a; ns.namespaceRange) { 
             //writeln("namespace "~currns~"::"~a.name);
             if(a.name != "std" || currns != "std")
-                eachNs(a, params, inner, inner_impl_singleton, lookup);
+                eachNs(a, params, inner, inner_impl_singleton, lookup, currns);
         }
     }
 
     gmockGlobal(r.classRange, modules.gmock, params);
     // no singleton in global namespace thus null
     foreach (a; r.namespaceRange()) {
-        eachNs(a, params, modules, null, (USRType usr) => container.find!LocationTag(usr));
+        eachNs(a, params, modules, null, (USRType usr) => container.find!LocationTag(usr), a.name);
     }
 }
 

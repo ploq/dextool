@@ -97,6 +97,7 @@ class IpTestVariant : Controller, Parameters, Products {
     import application.types : StubPrefix, FileName, MainInterface, DirName;
     import application.utility;
     import dsrcgen.cpp;
+    import sutenvironment.sutenvironment;
 
     static struct FileData {
         FileName filename;
@@ -110,6 +111,7 @@ class IpTestVariant : Controller, Parameters, Products {
     immutable StubPrefix file_prefix;
 
     FileName xml_interface;
+    SUTEnvironment sut;
     immutable DirName output_dir;
     immutable FileName main_file_hdr;
     immutable FileName main_file_impl;
@@ -203,6 +205,8 @@ class IpTestVariant : Controller, Parameters, Products {
         this.post_incl = post_incl;
         this.td_includes = TestDoubleIncludes(strip_incl);
         this.custom_hdr = custom_hdr;
+        this.sut = new SUTEnvironment();
+        this.sut.Build(this.xml_interface);
 
         import std.path : baseName, buildPath, stripExtension;
 
@@ -330,12 +334,7 @@ class IpTestVariant : Controller, Parameters, Products {
     }
 
     SUTEnvironment getSut() {
-        import std.stdio;
-        SUTEnvironment se = new SUTEnvironment();
-        writeln(xml_interface);
-        se.Build(xml_interface); 
-
-        return se;
+        return sut;
 
     }
 
