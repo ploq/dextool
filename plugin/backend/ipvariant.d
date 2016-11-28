@@ -481,6 +481,7 @@ CppT rawFilter(CppT, LookupT)(CppT input, Controller ctrl, Products prod, Lookup
             .tee!(a => prod.putLocation(FileName(a.location.file), LocationType.Leaf))
             .each!(a => filtered.put(a.value));
         // dfmt on
+
     }
 
     // Assuming that namespaces are never duplicated at this stage.
@@ -665,22 +666,24 @@ body {
                 generateFuncImpl(a, inner.impl);
             }
 
+        foreach (a; ns.classRange) {
             foreach (b; a.methodPublicRange) { 
                 () {
-		  auto cppm = ( () @trusted => b.peek!(CppMethod) )();
-                    if (cppm !is null) {
-                        with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
-                            if (cppm.returnType.toStringDecl == "void") {
-                                stmt(E("iptest->thisisatest")(E("ppop, PPAPS")));
-                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                            } else {
-                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                                return_(E("iptest->" ~ getName(b))(E("llll")));
+                auto cppm = ( () @trusted => b.peek!(CppMethod) )();
+                            if (cppm !is null) {
+                                with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
+                                    if (cppm.returnType.toStringDecl == "void") {
+                                        stmt(E("iptest->thisisatest")(E("ppop, PPAPS")));
+                                        stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
+                                    } else {
+                                        stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
+                                        return_(E("iptest->" ~ getName(b))(E("llll")));
+                                    }
+                                }                        
                             }
-                        }                        
+                        }();                
                     }
-                }();                
-            }
+                }
         }
   
         foreach (a; ns.namespaceRange) { 
