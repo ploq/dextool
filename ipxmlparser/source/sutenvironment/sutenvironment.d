@@ -40,7 +40,7 @@ public:
 	folder = buildNormalizedPath(folder);
 		foreach (subfolder ; GetSubFolders(folder))
 		{
-			ParseFiles(subfolder, GetFiles(subfolder));
+		    ParseFiles(folder, subfolder, GetFiles(subfolder));
 		}
 		return true;
 	}
@@ -103,9 +103,9 @@ private:
 		return returnarray;
     }
 
-    @trusted void ParseFiles(string folder, Array!string files)
+    @trusted void ParseFiles(string namespacefolder, string folder, Array!string files)
     {
-		string key = chompPrefix(folder, "namespaces/");
+	string key = chompPrefix(folder, namespacefolder ~ "/");
 		key = replace(key, "/", "::");
 		key = capitalize(key);
 
@@ -149,6 +149,6 @@ private:
 void main(string[] args)
 {
     SUTEnvironment se = new SUTEnvironment();
-    se.Build("namespaces");
+    se.Build("../../dextool/ipxmlparser/namespaces/");
     writeln(se.ToString());
 }
