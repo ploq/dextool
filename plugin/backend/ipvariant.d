@@ -629,7 +629,7 @@ body {
     // recursive to handle nested namespaces.
     // the singleton ns must be the first code generate or the impl can't
     // use the instance.
-    @trusted static void eachNs(LookupT)(CppNamespace ns, Parameters params,
+    @safe static void eachNs(LookupT)(CppNamespace ns, Parameters params,
             Generator.Modules modules, CppModule impl_singleton, LookupT lookup, string lastns) {
         
         string currns, currnsrp; 
@@ -656,9 +656,7 @@ body {
         //writeln("XML file " ~ params.getFiles.xml_interface)
         auto inner = modules;
         CppModule inner_impl_singleton;
-        writeln(currns);
-        writeln(sut.ToString);
-        writeln(sut.valid);
+
         if (sut.valid)
         {
             
@@ -688,25 +686,22 @@ body {
                 generateFuncImpl(a, inner.impl);
             }
 
-        foreach (a; ns.classRange) {
-            writeln(a);
-            foreach (b; a.methodPublicRange) { 
-                () {
-                auto cppm = ( () @trusted => b.peek!(CppMethod) )();
-                            if (cppm !is null) {
-                                with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
-                                    if (cppm.returnType.toStringDecl == "void") {
-                                        stmt(E("iptest->thisisatest")(E("ppop, PPAPS")));
-                                        stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                                    } else {
-                                        stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                                        return_(E("iptest->" ~ getName(b))(E("llll")));
-                                    }
-                                }                        
+            foreach (a; ns.classRange) {
+                foreach (b; a.methodPublicRange) { 
+                    auto cppm = ( () @trusted => b.peek!(CppMethod) )();
+                    if (cppm !is null) {
+                        with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
+                            if (cppm.returnType.toStringDecl == "void") {
+                                stmt(E("iptest->thisisatest")(E("ppop, PPAPS")));
+                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
+                            } else {
+                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
+                                return_(E("iptest->" ~ getName(b))(E("llll")));
                             }
-                        }();                
+                        }                        
                     }
-                }
+                }          
+            }
         }
   
         foreach (a; ns.namespaceRange) { 

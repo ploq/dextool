@@ -357,7 +357,7 @@ class IpTestVariant : Controller, Parameters, Products {
 ExitStatusType genCpp(IpTestVariant variant, string[] in_cflags, CompileCommandDB compile_db) {
     import std.conv : text;
     import std.path : buildNormalizedPath, asAbsolutePath;
-    import std.typecons : Yes;
+    import std.typecons : Yes, No;
     import std.file : read, write;
     import std.stdio;
 
@@ -372,6 +372,7 @@ ExitStatusType genCpp(IpTestVariant variant, string[] in_cflags, CompileCommandD
 
 
     auto hfiles = compile_db.getHeaderFiles();
+    writeln(hfiles);
     string res;
     foreach(hfile ; hfiles) {
         auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);
