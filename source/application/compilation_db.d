@@ -493,7 +493,7 @@ string[] getHeaderFiles(CompileCommandDB compile_db)
     {
          auto flags = parseFlag(cmd);
          flags.filter!(a => a != "-I" && !directories.canFind(a))
-            .each!(dir => (dirEntries(dir, "*.{h,hpp}", SpanMode.depth))
+            .each!(dir => (dirEntries(dir, "*_factory.{h,hpp}", SpanMode.depth))
                 .each!(file => rval.put(file)));
         
         directories ~= flags;

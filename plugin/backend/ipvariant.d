@@ -629,9 +629,9 @@ body {
     // recursive to handle nested namespaces.
     // the singleton ns must be the first code generate or the impl can't
     // use the instance.
-    @safe static void eachNs(LookupT)(CppNamespace ns, Parameters params,
+    @trusted static void eachNs(LookupT)(CppNamespace ns, Parameters params,
             Generator.Modules modules, CppModule impl_singleton, LookupT lookup, string lastns) {
-        
+        import std.variant;
         string currns, currnsrp; 
         if (ns.name != lastns) 
         {
@@ -651,9 +651,7 @@ body {
         {
             currnsrp = currns;
         }
-
         SUTEnv sut = params.getSut.GetSUTFromNamespace(currnsrp);
-        //writeln("XML file " ~ params.getFiles.xml_interface)
         auto inner = modules;
         CppModule inner_impl_singleton;
 
@@ -688,26 +686,21 @@ body {
 
             foreach (a; ns.classRange) {
                 foreach (b; a.methodPublicRange) { 
-                    auto cppm = ( () @trusted => b.peek!(CppMethod) )();
-                    if (cppm !is null) {
-                        with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
-                            if (cppm.returnType.toStringDecl == "void") {
-                                stmt(E("iptest->thisisatest")(E("ppop, PPAPS")));
-                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                            } else {
-                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                                return_(E("iptest->" ~ getName(b))(E("llll")));
-                            }
-                        }                        
-                    }
+                    writeln("func: " ~ getName(b));
+                    //auto cppm = ( () @trusted => b.peek!(CppMethod) )();
+                    b.visit!((const CppMethod a) => generateCppMeth(a, inner, currns),
+                            (const CppMethodOp a) => writeln(""),
+                            (const CppCtor a) => generateCtor(a, inner),
+                            (const CppDtor a) => generateDtor(a, inner));
                 }          
             }
+            if (ns.namespaceRange.length == 0 && (currns_spl[$-1] == "Requirer" ||  currns_spl[$-1] == "Provider"))
+                generateClass(inner_impl_singleton);
         }
   
         foreach (a; ns.namespaceRange) { 
             //writeln("namespace "~currns~"::"~a.name);
-            if(a.name != "std" || currns != "std")
-                eachNs(a, params, inner, inner_impl_singleton, lookup, currns);
+            eachNs(a, params, inner, inner_impl_singleton, lookup, currns);
         }
     }
 
@@ -715,6 +708,42 @@ body {
     // no singleton in global namespace thus null
     foreach (a; r.namespaceRange()) {
         eachNs(a, params, modules, null, (USRType usr) => container.find!LocationTag(usr), a.name);
+    }
+}
+
+void generateClass(CppModule inner) {
+    with(inner) {
+        with (class_("Bar_Impl", "I_Bar")) {
+            with (ctor_body("Bar_Impl")) {
+                stmt(E("randomGenerator") = E("AFL::getRandomGenerator()"));
+            }
+        }
+
+    }
+}
+
+void generateCtor(const CppCtor a, Generator.Modules inner) {
+    with (inner.impl.ctor_body(a.name)) {
+        inner.impl.suppressIndent(1);
+    }                        
+}   
+
+void generateDtor(const CppDtor a, Generator.Modules inner) {
+    with (inner.impl.dtor_body(a.name)) {
+        inner.impl.suppressIndent(1);
+    }                        
+}
+
+void generateCppMeth(const CppMethod a, Generator.Modules inner, string nsname) {
+    import std.array;
+    import cpptooling.analyzer.type;
+    if((cast(string)(a.name)).split("_")[$-1] == "V0") {
+        with (inner.impl.func_body(a.returnType.toStringDecl, nsname ~ "::" ~ a.name, "")) {
+            return_("foo.V0");
+        }
+    }
+    with (inner.impl.func_body(a.returnType.toStringDecl, nsname ~ "::" ~ a.name, "")) {
+        stmt(E("iptest->testing()"));
     }
 }
 

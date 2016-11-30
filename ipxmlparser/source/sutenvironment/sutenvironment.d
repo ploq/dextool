@@ -11,7 +11,7 @@ import std.stdio;
 import std.conv;
 import std.path;
 
-struct SUTEnv
+@trusted struct SUTEnv
 {
     XML_Interface iface;
     XML_Types types;
@@ -20,7 +20,7 @@ struct SUTEnv
     bool hasinterface;
     bool hastypes;
 
-    string ToString()
+    @trusted string ToString()
     {
 	string returnstr;
 	returnstr ~= iface.ToString() ~ "\n\n" ~ types.ToString();
