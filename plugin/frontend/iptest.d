@@ -381,6 +381,7 @@ ExitStatusType genCpp(IpTestVariant variant, string[] in_cflags, CompileCommandD
         }
 
         // process and put the data in variant.
+
         Generator(variant, variant, variant).process(visitor.root, visitor.container);
 
         debug {
@@ -388,7 +389,7 @@ ExitStatusType genCpp(IpTestVariant variant, string[] in_cflags, CompileCommandD
         }
 
         writeFileData(variant.file_data); 
-    }
+   }
 
     return ExitStatusType.Ok;
 }
