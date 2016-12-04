@@ -176,10 +176,10 @@ struct Generator {
     auto process(ref CppRoot root, ref Container container) {
         import cpptooling.data.symbol.types : USRType;
 
-        auto fl = rawFilter(root, ctrl, products, (USRType usr) => container.find!LocationTag(usr));
-        logger.trace("Filtered:\n", fl.toString());
+        //auto fl = rawFilter(root, ctrl, products, (USRType usr) => container.find!LocationTag(usr));
+        //logger.trace("Filtered:\n", fl.toString());
 
-        auto tr = translate(fl, container, ctrl, params);
+        auto tr = translate(root, container, ctrl, params);
         logger.trace("Translated to implementation:\n", tr.toString());
 
         auto modules = Modules.make();
@@ -591,6 +591,7 @@ in {
 body {
     import std.algorithm : each, filter;
     import std.array;
+    import std.typecons;
     import cpptooling.data.symbol.types : USRType;
     import cpptooling.generator.func : generateFuncImpl;
     import cpptooling.generator.gmock : generateGmock;
@@ -610,14 +611,14 @@ body {
     // the singleton ns must be the first code generate or the impl can't
     // use the instance.
     @trusted static void eachNs(LookupT)(CppNamespace ns, Parameters params,
-            Generator.Modules modules, CppModule impl_singleton, LookupT lookup) {
+            Generator.Modules modules, CppModule impl_singleton, LookupT lookup, ref string[] cifaces) {
         import std.variant;
-	
-	string currnsrp;	
+        import std.algorithm : canFind;	
+	    string currnsrp;	
         string currns = ns.fullyQualifiedName;
 
         auto currns_spl = (cast(string)(currns)).split("::");
-	bool isReqOrPro = currns_spl[$-1] == "Requirer" ||  currns_spl[$-1] == "Provider";
+	    bool isReqOrPro = currns_spl[$-1] == "Requirer" ||  currns_spl[$-1] == "Provider";
         if (isReqOrPro)
         {
             currnsrp = join(currns_spl[0..$-1], "::");
@@ -626,12 +627,14 @@ body {
         {
             currnsrp = currns;
         }
+        
         SUTEnv sut = params.getSut.GetSUTFromNamespace(currnsrp);
         auto inner = modules;
         CppModule inner_impl_singleton;
-	//iif(sut.valid) {
-		writeln("poop " ~ currns);
-		final switch(cast(NamespaceType) ns.kind) with (NamespaceType) {
+	    
+        if(sut.valid) {
+		
+		    final switch(cast(NamespaceType) ns.kind) with (NamespaceType) {
 	             case Normal:
                          inner.hdr = modules.hdr.namespace(ns.name);
                          inner.hdr.suppressIndent(1);
@@ -643,32 +646,10 @@ body {
                      case TestDouble:
                          break;
                  }
-	//}
+	    }
+        
         if (sut.valid && isReqOrPro)
         {
-            writeln(currns); 
-            /*final switch (cast(NamespaceType) ns.kind) with (NamespaceType) {
-            case Normal:
-                //TODO how to do this with meta-programming?
-                inner.hdr = modules.hdr.namespace(ns.name);
-                inner.hdr.suppressIndent(1);
-                inner.impl = modules.impl.namespace(ns.name);
-                inner.impl.suppressIndent(1);
-                /*inner.gmock = modules.gmock.namespace(ns.name);
-                inner.gmock.suppressIndent(1);
-                inner_impl_singleton = inner.impl.base;
-                inner_impl_singleton.suppressIndent(1);
-                break;
-            case TestDoubleSingleton:
-                /*import cpptooling.generator.adapter : generateSingleton;
-
-                generateSingleton(ns, impl_singleton);
-                break;
-            case TestDouble:
-                //generateNsTestDoubleHdr(ns, params, modules.hdr, modules.gmock, lookup);
-                //generateNsTestDoubleImpl(ns, modules.impl);
-                break;
-            }*/
             foreach (a; ns.funcRange) {
                 generateFuncImpl(a, inner.impl);
             }
@@ -681,20 +662,27 @@ body {
                             (const CppDtor a) => generateDtor(a, inner));
                 }          
             }
-            if (ns.namespaceRange.length == 0 && (currns_spl[$-1] == "Requirer" ||  currns_spl[$-1] == "Provider"))
-                generateClass(inner, currns_spl[$-2], currns_spl[$-1]);
+
+            if (!cifaces.canFind(currns) && ns.namespaceRange.length == 0 &&
+                    (currns_spl[$-1] == "Requirer" ||  currns_spl[$-1] == "Provider")) {
+
+                generateClass(inner, currns_spl[0..$-1], currns_spl[$-1], sut);
+                cifaces ~= currns;
+                writeln(cifaces);
+            }
         }
   
         foreach (a; ns.namespaceRange) { 
             //writeln("namespace "~currns~"::"~a.name);
-            eachNs(a, params, inner, inner_impl_singleton, lookup);
+            eachNs(a, params, inner, inner_impl_singleton, lookup, cifaces);
         }
     }
 
    //gmockGlobal(r.classRange, modules.gmock, params);
     // no singleton in global namespace thus null
+    string[] cifaces;
     foreach (a; r.namespaceRange()) {
-        eachNs(a, params, modules, null, (USRType usr) => container.find!LocationTag(usr));
+        eachNs(a, params, modules, null, (USRType usr) => container.find!LocationTag(usr), cifaces);
     }
 }
 
@@ -710,22 +698,38 @@ import std.container.array;
     return rarr;
 }
 
-void generateClass(Generator.Modules inner, string ns, string type) {
-    with(inner.impl) {
-	suppressIndent(1);
-        
-	with(ctor_body("I_" ~ ns)) {sep;} //Generates empty ctors and dtors for implementation of interface
-	with(dtor_body("I_" ~ ns)) {sep;}
-	with(ctor_body("I_" ~ ns ~ "_" ~ type)) {sep;}
-	with(dtor_body("I_" ~ ns ~ "_" ~ type)) {sep;}
 
-        with (class_(ns ~ "_Impl", "I_" ~ ns)) {
-            with (ctor_body("Bar_Impl")) { //Generate constructor
-                stmt(E("randomGenerator") = E("AFL::getRandomGenerator()"));
+@trusted void generateClass(Generator.Modules inner, string[] ns, string type, SUTEnv sut) {
+    import std.array;
+    import std.string : toLower; 
+    
+    string fqn_ns = ns.join("::"); 
+    string impl_nsname = ns[$-1];
+    
+    with(inner.impl) {
+	    suppressIndent(1);
+        
+        
+	    with(ctor_body("I_" ~ impl_nsname)) {sep;} //Generates empty ctors and dtors for implementation of interface
+	    with(dtor_body("I_" ~ impl_nsname)) {sep;}
+	    with(ctor_body("I_" ~ impl_nsname ~ "_" ~ type)) {sep;}
+	    with(dtor_body("I_" ~ impl_nsname ~ "_" ~ type)) {sep;}
+
+        with (class_(impl_nsname ~ "_Impl", "I_" ~ impl_nsname)) {
+            with(private_) {
+                foreach(ciface; sut.iface.interfaces) {
+                    stmt(E(fqn_ns ~ "::" ~ ciface.name ~ "T " ~ toLower(ciface.name)));
+                }
             }
+            with(public_) {
+
+                with (ctor_body(impl_nsname ~ "_Impl")) { //Generate constructor
+                    stmt(E("randomGenerator") = E("AFL::getRandomGenerator()"));
+                }
 	    
-            with (dtor_body(ns ~"_Impl")) { //Generate destructor
-            	sep;
+                with (dtor_body(impl_nsname ~"_Impl")) { //Generate destructor
+             	    sep;
+                }
             }
         }
     }
@@ -751,23 +755,26 @@ void generateDtor(const CppDtor a, Generator.Modules inner) {
 
     auto ditems = getDataItems(sut);
     auto cppm_type = (cast(string)(a.name)).split("_")[0];
-    auto cppm_ditem = (cast(string)(a.name)).split("_")[$-1];
+    auto cppm_ditem = (cast(string)(a.name)).split("_")[$-1];  
+
     if(cppm_type  == "Put") {
 	//Put something in something
     }
     else if(cppm_type == "Get" && ditems.array.canFind(cppm_ditem)) {
+        auto cppm_ret_type = (cast(string)(a.name)).split("_")[$-2];
+        
         with (inner.impl.func_body(a.returnType.toStringDecl, nsname ~ "::" ~ a.name, "")) {
             suppressIndent(1);
-            return_("foo." ~ (cast(string)(a.name)).split("_")[$-1]);
+            return_(toLower(cppm_ret_type) ~ "." ~ cppm_ditem);
         }
     }
 
     else if(cppm_type == "Get") {
         //Can we guess that this will always return a full struct (or somehting like that)
         with(inner.impl.func_body(a.returnType.toStringDecl, nsname ~ "::" ~ a.name, "")) {
-                suppressIndent(1);
-		return_(toLower(cppm_ditem));
-	}
+            suppressIndent(1);
+    		return_(toLower(cppm_ditem));
+	    }
     }
 }
 
