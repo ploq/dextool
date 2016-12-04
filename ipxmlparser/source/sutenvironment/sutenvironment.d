@@ -145,10 +145,3 @@ private:
     }
 }
 
-
-void main(string[] args)
-{
-    SUTEnvironment se = new SUTEnvironment();
-    se.Build("../../dextool/ipxmlparser/namespaces/");
-    writeln(se.ToString());
-}
