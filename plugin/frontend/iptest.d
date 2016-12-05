@@ -1,9 +1,9 @@
 // Written in the D programming language.
 /**
-Date: 2015-2016, Joakim Brännström
+Date: 2016, Team Death Knight
 License: MPL-2, Mozilla Public License 2.0
-Author: Joakim Brännström (joakim.brannstrom@gmx.com)
-Generation of C++ test doubles.
+Author: Team Death Knight (nonexistent@none.com)
+Generation of C++
 */
 module plugin.frontend.iptest;
 
@@ -372,7 +372,7 @@ ExitStatusType genCpp(IpTestVariant variant, string[] in_cflags, CompileCommandD
 
 
     auto hfiles = compile_db.getHeaderFiles();
-    writeln(hfiles);
+    
     string res;
     foreach(hfile ; hfiles) {
         auto ctx = ClangContext(Yes.useInternalHeaders, Yes.prependParamSyntaxOnly);

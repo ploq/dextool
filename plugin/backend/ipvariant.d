@@ -1,9 +1,9 @@
 // Written in the D programming language.
 /**
-Date: 2016, Joakim Brännström
+Date: 2016, Team Death Knight 
 License: MPL-2, Mozilla Public License 2.0
-Author: Joakim Brännström (joakim.brannstrom@gmx.com)
-Variant of C++ test double.
+Author: Team Death Knight (nonexistent@none.com)
+Cpp generator
 */
 module plugin.backend.ipvariant;
 
@@ -342,7 +342,7 @@ final class CppVisitor(RootT, ControllerT, ProductT) : Visitor {
         ///TODO add metadata to the class if it is a definition or declaration
 
         mixin(mixinNodeLog!());
-        logger.info("class: ", v.cursor.spelling);
+        
 
         if (v.cursor.isDefinition) {
             auto visitor = scoped!ClassVisitor(v, ns_stack, container, indent + 1);
@@ -507,9 +507,7 @@ CppT rawFilter(CppT, LookupT)(CppT input, Controller ctrl, Products prod, Lookup
             .each!(a => filtered.put(a.value));
     }
     // dfmt oni
-    foreach(a; filtered.namespaceRange) {
-        writeln(a.nsNestingRange());
-    }
+    
     return filtered;
 }
 
@@ -546,14 +544,6 @@ Nullable!CppNamespace translate(CppNamespace input, ref Container container,
     import cpptooling.generator.func : makeFuncInterface;
     import cpptooling.generator.gmock : makeGmock;
 
-    static auto makeGmockInNs(CppClass c, Parameters params) {
-        import cpptooling.data.representation : CppNs;
-
-        auto ns = CppNamespace.make(CppNs(cast(string) params.getMainNs));
-        ns.setKind(NamespaceType.TestDouble);
-        ns.put(makeGmock!ClassType(c));
-        return ns;
-    }
 
     auto ns = input.dup;
     //dfmt off
@@ -613,7 +603,7 @@ body {
     @trusted static void eachNs(LookupT)(CppNamespace ns, Parameters params,
             Generator.Modules modules, CppModule impl_singleton, LookupT lookup, ref string[] cifaces) {
         import std.variant;
-        import std.algorithm : canFind;	
+        import std.algorithm : canFind, map, joiner;	
 	    string currnsrp;	
         string currns = ns.fullyQualifiedName;
 
@@ -649,17 +639,14 @@ body {
         
         if (sut.valid && isReqOrPro)
         {
-            foreach (a; ns.funcRange) {
-                generateFuncImpl(a, inner.impl);
-            }
-
-            foreach (a; ns.classRange) {
-                foreach (b; a.methodPublicRange) { 
+            //foreach (a; ns.funcRange) {
+            //    generateFuncImpl(a, inner.impl);
+            //}
+            foreach(b; ns.classRange.map!(a => a.methodPublicRange.array).joiner) { 
                     b.visit!((const CppMethod a) => generateCppMeth(a, inner, ns.fullyQualifiedName, sut),
                             (const CppMethodOp a) => writeln(""),
                             (const CppCtor a) => generateCtor(a, inner),
                             (const CppDtor a) => generateDtor(a, inner));
-                }          
             }
 
             if (!cifaces.canFind(currns) && ns.namespaceRange.length == 0 &&
@@ -667,12 +654,10 @@ body {
 
                 generateClass(inner, currns_spl[0..$-1], currns_spl[$-1], sut);
                 cifaces ~= currns;
-                writeln(cifaces);
             }
         }
   
         foreach (a; ns.namespaceRange) { 
-            //writeln("namespace "~currns~"::"~a.name);
             eachNs(a, params, inner, inner_impl_singleton, lookup, cifaces);
         }
     }
@@ -685,16 +670,11 @@ body {
     }
 }
 
-import std.container.array;
-@trusted Array!string getDataItems(SUTEnv sut) {
-    Array!string rarr; 
-    foreach(ciface; sut.iface.interfaces) {
-        foreach(ditem; ciface.ditems) {
-                rarr ~= ditem.name;
-        }
-    }
+@trusted string[] getDataItems(SUTEnv sut) {
+    import std.algorithm : map, joiner, each; 
+    import std.array;
 
-    return rarr;
+    return sut.iface.interfaces.array.map!(a => map!(b => b.name)(a.ditems.array)).joiner.array;
 }
 
 
@@ -715,21 +695,23 @@ import std.container.array;
                 stmt(E("RandomGenerator* randomGenerator"));
             }
             with(public_) {
-
-                with (ctor_body(impl_nsname ~ "_Impl")) { //Generate constructor
+                with (func_body("", impl_nsname ~ "_Impl")) { //Generate constructor
                     stmt(E("randomGenerator") = E("AFL::getRandomGenerator()"));
                 }
 	    
-                with (dtor_body(impl_nsname ~"_Impl")) { //Generate destructor
-             	    sep;
+                with (func_body("", "~" ~ impl_nsname ~"_Impl")) { //Generate destructor
+             	    
                 }
 
                 with(func_body("void", "Regenerate")) {
-                    stmt(E("fum.V0") = E("randomGenerator->generate(\"Requirer fum V0\")"));
-                    stmt(E("fum.V1") = E("randomGenerator->generate(\"Requirer fum V1\")"));
-                    stmt(E("fum.V2") = E("randomGenerator->generate(\"Requirer fum V2\")"));
-                    stmt(E("fum.V3") = E("randomGenerator->generate(\"Requirer fum V3\")"));
-                    stmt(E("fum.V4") = E("randomGenerator->generate(\"Requirer fum V4\")"));
+                    foreach(ciface; sut.iface.interfaces) {
+                        foreach(ditem; ciface.ditems) {
+                            //Add ranges here, non existent in current xml parser?
+                            stmt(E(toLower(ciface.name) ~ "." ~ ditem.name) =
+                                    E(`randomGenerator->generate("` ~
+                                                type ~ ` ` ~ ciface.name ~ ` ` ~ ditem.name ~ `")`));
+                        }
+                    }
                 }
             }
         }
@@ -737,11 +719,13 @@ import std.container.array;
 }
 
 void generateCtor(const CppCtor a, Generator.Modules inner) {
+    import std.array : split;
     with (inner.impl.ctor_body(a.name)) {
     }                        
 }   
 
 void generateDtor(const CppDtor a, Generator.Modules inner) {
+    import std.array : split;
     with (inner.impl.dtor_body(a.name)) {
     }                        
 }
@@ -773,59 +757,6 @@ void generateDtor(const CppDtor a, Generator.Modules inner) {
     		return_(toLower(cppm_ditem));
 	    }
     }
-}
-
-void generateClassHdr(LookupT)(CppClass c, CppModule hdr, CppModule gmock,
-        Parameters params, LookupT lookup) {
-    import cpptooling.generator.classes : generateHdr;
-    import cpptooling.generator.gmock : generateGmock;
-
-    final switch (cast(ClassType) c.kind()) {
-    case ClassType.Normal:
-    case ClassType.Adapter:
-        generateHdr(c, hdr, No.locationAsComment, lookup);
-        break;
-    case ClassType.Gmock:
-        generateGmock(c, gmock, params);
-        break;
-    }
-}
-
-void generateClassImpl(CppClass c, CppModule impl) {
-    import cpptooling.generator.adapter : generateImplAdapter = generateImpl;
-
-    final switch (cast(ClassType) c.kind()) {
-    case ClassType.Normal:
-        break;
-    case ClassType.Adapter:
-        generateImplAdapter(c, impl);
-        break;
-    case ClassType.Gmock:
-        break;
-    }
-}
-
-void generateNsTestDoubleHdr(LookupT)(CppNamespace ns, Parameters params,
-        CppModule hdr, CppModule gmock, LookupT lookup) {
-    import std.algorithm : each;
-
-    auto cpp_ns = hdr.namespace(ns.name);
-    cpp_ns.suppressIndent(1);
-    hdr.sep(2);
-
-    foreach (a; ns.classRange()) {
-        generateClassHdr(a, cpp_ns, gmock, params, lookup);
-    }
-}
-
-void generateNsTestDoubleImpl(CppNamespace ns, CppModule impl) {
-    import std.algorithm : each;
-
-    auto cpp_ns = impl.namespace(ns.name);
-    cpp_ns.suppressIndent(1);
-    impl.sep(2);
-
-    ns.classRange().each!((a) { generateClassImpl(a, cpp_ns); });
 }
 
 CppClass mergeClassInherit(ref CppClass class_, ref Container container) {
