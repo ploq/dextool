@@ -639,7 +639,6 @@ body {
                          inner.hdr = modules.hdr.namespace(ns.name);
                          inner.hdr.suppressIndent(1);
                          inner.impl = modules.impl.namespace(ns.name);
-                         inner.impl.suppressIndent(1);
                          break;
                      case TestDoubleSingleton:
                          break;
@@ -706,20 +705,14 @@ import std.container.array;
     string fqn_ns = ns.join("::"); 
     string impl_nsname = ns[$-1];
     
-    with(inner.impl) {
-	    suppressIndent(1);
-        
-        
-	    //with(ctor_body("I_" ~ impl_nsname)) {sep;} //Generates empty ctors and dtors for implementation of interface
-	    //with(dtor_body("I_" ~ impl_nsname)) {sep;}
-	    with(ctor_body("I_" ~ impl_nsname ~ "_" ~ type)) {sep;}
-	    with(dtor_body("I_" ~ impl_nsname ~ "_" ~ type)) {sep;}
-
+    with(inner.impl) {        
         with (class_(impl_nsname ~ "_Impl", "I_" ~ impl_nsname)) {
             with(private_) {
                 foreach(ciface; sut.iface.interfaces) {
                     stmt(E(fqn_ns ~ "::" ~ ciface.name ~ "T " ~ toLower(ciface.name)));
                 }
+
+                stmt(E("RandomGenerator* randomGenerator"));
             }
             with(public_) {
 
@@ -730,6 +723,14 @@ import std.container.array;
                 with (dtor_body(impl_nsname ~"_Impl")) { //Generate destructor
              	    sep;
                 }
+
+                with(func_body("void", "Regenerate")) {
+                    stmt(E("fum.V0") = E("randomGenerator->generate(\"Requirer fum V0\")"));
+                    stmt(E("fum.V1") = E("randomGenerator->generate(\"Requirer fum V1\")"));
+                    stmt(E("fum.V2") = E("randomGenerator->generate(\"Requirer fum V2\")"));
+                    stmt(E("fum.V3") = E("randomGenerator->generate(\"Requirer fum V3\")"));
+                    stmt(E("fum.V4") = E("randomGenerator->generate(\"Requirer fum V4\")"));
+                }
             }
         }
     }
@@ -737,13 +738,11 @@ import std.container.array;
 
 void generateCtor(const CppCtor a, Generator.Modules inner) {
     with (inner.impl.ctor_body(a.name)) {
-        inner.impl.suppressIndent(1);
     }                        
 }   
 
 void generateDtor(const CppDtor a, Generator.Modules inner) {
     with (inner.impl.dtor_body(a.name)) {
-        inner.impl.suppressIndent(1);
     }                        
 }
 
@@ -764,7 +763,6 @@ void generateDtor(const CppDtor a, Generator.Modules inner) {
         auto cppm_ret_type = (cast(string)(a.name)).split("_")[$-2];
         
         with (inner.impl.func_body(a.returnType.toStringDecl, nsname ~ "::" ~ a.name, "")) {
-            suppressIndent(1);
             return_(toLower(cppm_ret_type) ~ "." ~ cppm_ditem);
         }
     }
@@ -772,7 +770,6 @@ void generateDtor(const CppDtor a, Generator.Modules inner) {
     else if(cppm_type == "Get") {
         //Can we guess that this will always return a full struct (or somehting like that)
         with(inner.impl.func_body(a.returnType.toStringDecl, nsname ~ "::" ~ a.name, "")) {
-            suppressIndent(1);
     		return_(toLower(cppm_ditem));
 	    }
     }
