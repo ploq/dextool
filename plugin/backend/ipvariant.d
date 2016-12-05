@@ -690,8 +690,8 @@ import std.container.array;
 @trusted Array!string getDataItems(SUTEnv sut) {
     Array!string rarr; 
     foreach(ciface; sut.iface.interfaces) {
-	foreach(ditem; ciface.ditems) {
-            rarr ~= ditem.name;
+        foreach(ditem; ciface.ditems) {
+                rarr ~= ditem.name;
         }
     }
 
@@ -710,8 +710,8 @@ import std.container.array;
 	    suppressIndent(1);
         
         
-	    with(ctor_body("I_" ~ impl_nsname)) {sep;} //Generates empty ctors and dtors for implementation of interface
-	    with(dtor_body("I_" ~ impl_nsname)) {sep;}
+	    //with(ctor_body("I_" ~ impl_nsname)) {sep;} //Generates empty ctors and dtors for implementation of interface
+	    //with(dtor_body("I_" ~ impl_nsname)) {sep;}
 	    with(ctor_body("I_" ~ impl_nsname ~ "_" ~ type)) {sep;}
 	    with(dtor_body("I_" ~ impl_nsname ~ "_" ~ type)) {sep;}
 
