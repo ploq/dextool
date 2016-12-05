@@ -603,15 +603,16 @@ body {
     @trusted static void eachNs(LookupT)(CppNamespace ns, Parameters params,
             Generator.Modules modules, CppModule impl_singleton, LookupT lookup, ref string[] cifaces) {
         import std.variant;
-        import std.algorithm : canFind, map, joiner;	
+        import std.algorithm : canFind, map, joiner;
+        import std.range : retro;    
 	    string currnsrp;	
         string currns = ns.fullyQualifiedName;
 
-        auto currns_spl = (cast(string)(currns)).split("::");
-	    bool isReqOrPro = currns_spl[$-1] == "Requirer" ||  currns_spl[$-1] == "Provider";
+        
+	    bool isReqOrPro = ns.resideInNs[$-1] == "Requirer" ||  ns.resideInNs[$-1] == "Provider";
         if (isReqOrPro)
         {
-            currnsrp = join(currns_spl[0..$-1], "::");
+            currnsrp = join(ns.resideInNs[0..$-1], "::");
         }
         else 
         {
@@ -648,11 +649,10 @@ body {
                             (const CppCtor a) => generateCtor(a, inner),
                             (const CppDtor a) => generateDtor(a, inner));
             }
+       
+            if (!cifaces.canFind(currns) && ns.namespaceRange.length == 0 && isReqOrPro) {
 
-            if (!cifaces.canFind(currns) && ns.namespaceRange.length == 0 &&
-                    (currns_spl[$-1] == "Requirer" ||  currns_spl[$-1] == "Provider")) {
-
-                generateClass(inner, currns_spl[0..$-1], currns_spl[$-1], sut);
+                generateClass(inner, cast(string[])ns.resideInNs[0..$-1], ns.resideInNs[$-1].payload, sut);
                 cifaces ~= currns;
             }
         }
@@ -684,7 +684,6 @@ body {
     
     string fqn_ns = ns.join("::"); 
     string impl_nsname = ns[$-1];
-    
     with(inner.impl) {        
         with (class_(impl_nsname ~ "_Impl", "I_" ~ impl_nsname)) {
             with(private_) {
@@ -720,16 +719,20 @@ body {
 
 void generateCtor(const CppCtor a, Generator.Modules inner) {
     import std.array : split;
+    
     with (inner.impl.ctor_body(a.name)) {
     }                        
 }   
 
 void generateDtor(const CppDtor a, Generator.Modules inner) {
     import std.array : split;
-    with (inner.impl.dtor_body(a.name)) {
+    
+    with (inner.impl.dtor_body(a.name[1..$])) {
     }                        
 }
 
+
+//Should probably return a class for implementation
 @trusted void generateCppMeth(const CppMethod a, Generator.Modules inner, string nsname, SUTEnv sut) {
     import std.string;
     import std.array;
