@@ -590,7 +590,10 @@ body {
     import cpptooling.analyzer.type;
 
     generateIncludes(ctrl, params, modules.hdr);
-
+    
+    modules.hdr.include("testingenvironment.hpp");
+    modules.hdr.include("portenvironment.hpp");
+    
     static void gmockGlobal(T)(T r, CppModule gmock, Parameters params) {
         foreach (a; r.filter!(a => cast(ClassType) a.kind == ClassType.Gmock)) {
             generateGmock(a, gmock, params);
@@ -601,21 +604,18 @@ body {
     // the singleton ns must be the first code generate or the impl can't
     // use the instance.
     @trusted static void eachNs(LookupT)(CppNamespace ns, Parameters params,
-            Generator.Modules modules, CppModule impl_singleton, LookupT lookup, ref string[] cifaces) {
+            Generator.Modules modules, CppModule impl_singleton, LookupT lookup, ref CppModule[string] classes) {
         import std.variant;
         import std.algorithm : canFind, map, joiner;
-        import std.range : retro;    
-	    string currnsrp;	
+	    
+        string currnsrp;	
         string currns = ns.fullyQualifiedName;
 
         
 	    bool isReqOrPro = ns.resideInNs[$-1] == "Requirer" ||  ns.resideInNs[$-1] == "Provider";
-        if (isReqOrPro)
-        {
+        if (isReqOrPro) {
             currnsrp = join(ns.resideInNs[0..$-1], "::");
-        }
-        else 
-        {
+        } else {
             currnsrp = currns;
         }
         
@@ -624,49 +624,46 @@ body {
         CppModule inner_impl_singleton;
 	    
         if(sut.valid) {
-		
 		    final switch(cast(NamespaceType) ns.kind) with (NamespaceType) {
 	             case Normal:
                          inner.hdr = modules.hdr.namespace(ns.name);
-                         inner.hdr.suppressIndent(1);
+                         //inner.hdr.suppressIndent(1);
                          inner.impl = modules.impl.namespace(ns.name);
                          break;
                      case TestDoubleSingleton:
                          break;
                      case TestDouble:
                          break;
-                 }
+            }
 	    }
         
         if (sut.valid && isReqOrPro)
         {
-            //foreach (a; ns.funcRange) {
-            //    generateFuncImpl(a, inner.impl);
-            //}
-            foreach(b; ns.classRange.map!(a => a.methodPublicRange.array).joiner) { 
-                    b.visit!((const CppMethod a) => generateCppMeth(a, inner, ns.fullyQualifiedName, sut),
-                            (const CppMethodOp a) => writeln(""),
-                            (const CppCtor a) => generateCtor(a, inner),
-                            (const CppDtor a) => generateDtor(a, inner));
-            }
-       
-            if (!cifaces.canFind(currns) && ns.namespaceRange.length == 0 && isReqOrPro) {
-
-                generateClass(inner, cast(string[])ns.resideInNs[0..$-1], ns.resideInNs[$-1].payload, sut);
-                cifaces ~= currns;
+            foreach(a; ns.classRange) {
+                string class_name = a.name[2..$];
+                string fqn_class = ns.fullyQualifiedName ~ "::"  ~ class_name;
+                foreach (b; a.methodPublicRange) {
+                    if (!(fqn_class in classes)) {
+                        classes[fqn_class] = 
+                            generateClass(inner, class_name, cast(string[])ns.resideInNs[0..$-1], ns.resideInNs[$-1].payload, sut);
+                    } 
+                    
+                    b.visit!((const CppMethod a) => generateCppMeth(a, classes[fqn_class], class_name, ns.fullyQualifiedName, sut),
+                        (const CppMethodOp a) => writeln(""),
+                        (const CppCtor a) => generateCtor(a, inner),
+                        (const CppDtor a) => generateDtor(a, inner));
+                }
             }
         }
   
         foreach (a; ns.namespaceRange) { 
-            eachNs(a, params, inner, inner_impl_singleton, lookup, cifaces);
+            eachNs(a, params, inner, inner_impl_singleton, lookup, classes);
         }
     }
 
-   //gmockGlobal(r.classRange, modules.gmock, params);
-    // no singleton in global namespace thus null
-    string[] cifaces;
+    CppModule[string] classes;
     foreach (a; r.namespaceRange()) {
-        eachNs(a, params, modules, null, (USRType usr) => container.find!LocationTag(usr), cifaces);
+        eachNs(a, params, modules, null, (USRType usr) => container.find!LocationTag(usr), classes);
     }
 }
 
@@ -678,43 +675,66 @@ body {
 }
 
 
-@trusted void generateClass(Generator.Modules inner, string[] ns, string type, SUTEnv sut) {
+@trusted CppModule generateClass(Generator.Modules inner, string class_name, string[] ns, string type, SUTEnv sut) {
+    //Some assumptions are made. Does all interfaces start with I_? Does all providers and requirers end with Requirer or Provider?
     import std.array;
-    import std.string : toLower; 
+    import std.string : toLower, indexOf; 
+    import std.algorithm : endsWith;
     
+    string base_class; 
     string fqn_ns = ns.join("::"); 
-    string impl_nsname = ns[$-1];
-    with(inner.impl) {        
-        with (class_(impl_nsname ~ "_Impl", "I_" ~ impl_nsname)) {
-            with(private_) {
-                foreach(ciface; sut.iface.interfaces) {
-                    stmt(E(fqn_ns ~ "::" ~ ciface.name ~ "T " ~ toLower(ciface.name)));
-                }
+    
+    auto inner_class = inner.hdr.class_(class_name ~ "_Impl", "public I_" ~ class_name); 
+    if (class_name.endsWith("Requirer") || class_name.endsWith("Provider")) {
+        base_class = "I_" ~ class_name[0..class_name.indexOf(type)-1];
+    } else {
+        base_class = "";
+    }
 
+    with (inner_class) {
+        with(private_) {
+            foreach(ciface; sut.iface.interfaces) {
+                stmt(E(fqn_ns ~ "::" ~ ciface.name ~ "T " ~ toLower(ciface.name)));
+            }
+            if(class_name.endsWith("Requirer") || class_name.endsWith("Provider")) {
+                stmt(E(base_class ~ "* port"));
+            } else {
                 stmt(E("RandomGenerator* randomGenerator"));
             }
-            with(public_) {
-                with (func_body("", impl_nsname ~ "_Impl")) { //Generate constructor
-                    stmt(E("randomGenerator") = E("AFL::getRandomGenerator()"));
+        }
+        with(public_) {
+            with (func_body("", class_name ~ "_Impl")) { //Generate constructor
+                if (!(class_name.endsWith("Requirer") || class_name.endsWith("Provider"))) {
+                    stmt(E("randomGenerator") = E(`&TestingEnvironment::createRandomGenerator("`~ type  ~`")`));
                 }
+            }
+
+            if ((class_name.endsWith("Requirer") || class_name.endsWith("Provider"))) {
+                with (func_body("", class_name ~ "_Impl", base_class ~ "* p")) {
+                    stmt(E("port") = E("p"));
+                }
+            }
 	    
-                with (func_body("", "~" ~ impl_nsname ~"_Impl")) { //Generate destructor
+            with (func_body("", "~" ~ class_name ~"_Impl")) { //Generate destructor
              	    
-                }
+            }
+            if (!(class_name.endsWith("Requirer") || class_name.endsWith("Provider"))) {
 
                 with(func_body("void", "Regenerate")) {
                     foreach(ciface; sut.iface.interfaces) {
                         foreach(ditem; ciface.ditems) {
                             //Add ranges here, non existent in current xml parser?
-                            stmt(E(toLower(ciface.name) ~ "." ~ ditem.name) =
+                         
+                            stmt(E(toLower(ciface.name) ~ "." ~ ditem.name) =    
                                     E(`randomGenerator->generate("` ~
-                                                type ~ ` ` ~ ciface.name ~ ` ` ~ ditem.name ~ `")`));
+                                        type ~ ` ` ~ ciface.name ~ ` ` ~ ditem.name ~ `")`));
                         }
                     }
                 }
             }
         }
     }
+    return inner_class;
 }
 
 void generateCtor(const CppCtor a, Generator.Modules inner) {
@@ -733,7 +753,8 @@ void generateDtor(const CppDtor a, Generator.Modules inner) {
 
 
 //Should probably return a class for implementation
-@trusted void generateCppMeth(const CppMethod a, Generator.Modules inner, string nsname, SUTEnv sut) {
+@trusted void generateCppMeth(const CppMethod a, CppModule inner, string class_name, string nsname, SUTEnv sut) {
+    //Get_Port, does it always exist?
     import std.string;
     import std.array;
     import std.algorithm.searching : canFind;
@@ -742,21 +763,25 @@ void generateDtor(const CppDtor a, Generator.Modules inner) {
     auto ditems = getDataItems(sut);
     auto cppm_type = (cast(string)(a.name)).split("_")[0];
     auto cppm_ditem = (cast(string)(a.name)).split("_")[$-1];  
+    
 
     if(cppm_type  == "Put") {
 	//Put something in something
     }
-    else if(cppm_type == "Get" && ditems.array.canFind(cppm_ditem)) {
-        auto cppm_ret_type = (cast(string)(a.name)).split("_")[$-2];
+
+    with(inner.func_body(a.returnType.toStringDecl, a.name)) {
+
+        if(cppm_type == "Get" && ditems.array.canFind(cppm_ditem)) {
+            auto cppm_ret_type = (cast(string)(a.name)).split("_")[$-2];
         
-        with (inner.impl.func_body(a.returnType.toStringDecl, nsname ~ "::" ~ a.name, "")) {
             return_(toLower(cppm_ret_type) ~ "." ~ cppm_ditem);
         }
-    }
 
-    else if(cppm_type == "Get") {
-        //Can we guess that this will always return a full struct (or somehting like that)
-        with(inner.impl.func_body(a.returnType.toStringDecl, nsname ~ "::" ~ a.name, "")) {
+        else if (a.name == "Get_Port") {
+            return_("*port");
+        }
+
+        else if(cppm_type == "Get") {
     		return_(toLower(cppm_ditem));
 	    }
     }
