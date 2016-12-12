@@ -694,7 +694,7 @@ body {
     with (inner_class) {
         with(private_) {
             foreach(ciface; sut.iface.interfaces) {
-                stmt(E(fqn_ns ~ "::" ~ ciface.name ~ "T " ~ toLower(ciface.name)));
+                stmt(E(fqn_ns ~ "::" ~ ciface.name ~ "T " ~ ciface.name.toLower));
             }
             if(class_name.endsWith("Requirer") || class_name.endsWith("Provider")) {
                 stmt(E(base_class ~ "* port"));
@@ -725,7 +725,7 @@ body {
                         foreach(ditem; ciface.ditems) {
                             //Add ranges here, non existent in current xml parser?
                          
-                            stmt(E(toLower(ciface.name) ~ "." ~ ditem.name) =    
+                            stmt(E(ciface.name.toLower ~ "." ~ ditem.name) =    
                                     E(`randomGenerator->generate("` ~
                                         type ~ ` ` ~ ciface.name ~ ` ` ~ ditem.name ~ `")`));
                         }
@@ -774,7 +774,7 @@ void generateDtor(const CppDtor a, Generator.Modules inner) {
         if(cppm_type == "Get" && ditems.array.canFind(cppm_ditem)) {
             auto cppm_ret_type = (cast(string)(a.name)).split("_")[$-2];
         
-            return_(toLower(cppm_ret_type) ~ "." ~ cppm_ditem);
+            return_(cppm_ret_type.toLower ~ "." ~ cppm_ditem);
         }
 
         else if (a.name == "Get_Port") {
@@ -782,7 +782,7 @@ void generateDtor(const CppDtor a, Generator.Modules inner) {
         }
 
         else if(cppm_type == "Get") {
-    		return_(toLower(cppm_ditem));
+    		return_(cppm_ditem.toLower);
 	    }
     }
 }
