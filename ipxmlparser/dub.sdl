@@ -1,0 +1,9 @@
+name "ipxmlparser"
+description "Parses XML specifications"
+copyright ""
+authors "IP 2016"
+license "BSL-1.0"
+
+targetType "library"
+targetPath "build"
+

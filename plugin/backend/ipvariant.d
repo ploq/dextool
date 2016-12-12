@@ -1,9 +1,9 @@
 // Written in the D programming language.
 /**
-Date: 2016, Joakim Brännström
+Date: 2016, Team Death Knight 
 License: MPL-2, Mozilla Public License 2.0
-Author: Joakim Brännström (joakim.brannstrom@gmx.com)
-Variant of C++ test double.
+Author: Team Death Knight (nonexistent@none.com)
+Cpp generator
 */
 module plugin.backend.ipvariant;
 
@@ -15,6 +15,7 @@ import dsrcgen.cpp : CppModule, CppHModule;
 
 import application.types;
 import cpptooling.analyzer.clang.ast : Visitor;
+import sutenvironment.sutenvironment;
 
 /** Control various aspectes of the analyze and generation like what nodes to
  * process.
@@ -61,6 +62,7 @@ import cpptooling.analyzer.clang.ast : Visitor;
         FileName gmock;
         FileName pre_incl;
         FileName post_incl;
+        FileName xml_interface;
     }
 
     /// Source files used to generate the stub.
@@ -101,6 +103,9 @@ import cpptooling.analyzer.clang.ast : Visitor;
 
     /// Custom header to prepend generated files with.
     CustomHeader getCustomHeader();
+
+    SUTEnvironment getSut();
+
 }
 
 /// Data produced by the generator like files.
@@ -171,10 +176,10 @@ struct Generator {
     auto process(ref CppRoot root, ref Container container) {
         import cpptooling.data.symbol.types : USRType;
 
-        auto fl = rawFilter(root, ctrl, products, (USRType usr) => container.find!LocationTag(usr));
-        logger.trace("Filtered:\n", fl.toString());
+        //auto fl = rawFilter(root, ctrl, products, (USRType usr) => container.find!LocationTag(usr));
+        //logger.trace("Filtered:\n", fl.toString());
 
-        auto tr = translate(fl, container, ctrl, params);
+        auto tr = translate(root, container, ctrl, params);
         logger.trace("Translated to implementation:\n", tr.toString());
 
         auto modules = Modules.make();
@@ -337,7 +342,7 @@ final class CppVisitor(RootT, ControllerT, ProductT) : Visitor {
         ///TODO add metadata to the class if it is a definition or declaration
 
         mixin(mixinNodeLog!());
-        logger.info("class: ", v.cursor.spelling);
+        
 
         if (v.cursor.isDefinition) {
             auto visitor = scoped!ClassVisitor(v, ns_stack, container, indent + 1);
@@ -364,7 +369,6 @@ final class CppVisitor(RootT, ControllerT, ProductT) : Visitor {
 
         // fill the namespace with content from the analyse
         v.accept(ns_visitor);
-
         root.put(ns_visitor.root);
     }
 
@@ -447,7 +451,7 @@ CppT rawFilter(CppT, LookupT)(CppT input, Controller ctrl, Products prod, Lookup
     import std.algorithm : each, filter, map, filter;
     import std.range : tee;
     import application.types : FileName;
-    import cpptooling.data.representation : StorageClass;
+    import cpptooling.data.representation : StorageClass, CppNs, CppNsStack;
     import cpptooling.generator.utility : filterAnyLocation;
     import cpptooling.utility : dedup;
 
@@ -455,7 +459,7 @@ CppT rawFilter(CppT, LookupT)(CppT input, Controller ctrl, Products prod, Lookup
     static if (is(CppT == CppRoot)) {
         auto filtered = CppRoot.make;
     } else static if (is(CppT == CppNamespace)) {
-        auto filtered = CppNamespace.make(input.name);
+        auto filtered = input.dup; //CppNamespace.make(input.name);
         assert(!input.isAnonymous);
         assert(input.name.length > 0);
     } else {
@@ -476,6 +480,7 @@ CppT rawFilter(CppT, LookupT)(CppT input, Controller ctrl, Products prod, Lookup
             .tee!(a => prod.putLocation(FileName(a.location.file), LocationType.Leaf))
             .each!(a => filtered.put(a.value));
         // dfmt on
+
     }
 
     // Assuming that namespaces are never duplicated at this stage.
@@ -501,8 +506,8 @@ CppT rawFilter(CppT, LookupT)(CppT input, Controller ctrl, Products prod, Lookup
             // the class shall be further processed
             .each!(a => filtered.put(a.value));
     }
-    // dfmt on
-
+    // dfmt oni
+    
     return filtered;
 }
 
@@ -516,6 +521,7 @@ CppRoot translate(CppRoot root, ref Container container, Controller ctrl, Parame
         .map!(a => translate(a, container, ctrl, params))
         .filter!(a => !a.isNull)
         .each!(a => r.put(a.get));
+
 
     root.classRange
         .map!(a => mergeClassInherit(a, container))
@@ -531,53 +537,23 @@ CppRoot translate(CppRoot root, ref Container container, Controller ctrl, Parame
  */
 Nullable!CppNamespace translate(CppNamespace input, ref Container container,
         Controller ctrl, Parameters params) {
-    import std.algorithm : map, filter, each;
-    import std.array : empty;
+    import std.algorithm : map, filter, each, uniq;
+    import std.array : empty, array;
     import cpptooling.data.representation : CppNs;
     import cpptooling.generator.adapter : makeAdapter, makeSingleton;
     import cpptooling.generator.func : makeFuncInterface;
     import cpptooling.generator.gmock : makeGmock;
 
-    static auto makeGmockInNs(CppClass c, Parameters params) {
-        import cpptooling.data.representation : CppNs;
 
-        auto ns = CppNamespace.make(CppNs(cast(string) params.getMainNs));
-        ns.setKind(NamespaceType.TestDouble);
-        ns.put(makeGmock!ClassType(c));
-        return ns;
-    }
-
-    auto ns = CppNamespace.make(input.name);
-
-    if (!input.funcRange.empty) {
-        ns.put(makeSingleton!NamespaceType(params.getMainNs, params.getMainInterface));
-        input.funcRange.each!(a => ns.put(a));
-
-        auto td_ns = CppNamespace.make(CppNs(cast(string) params.getMainNs));
-        td_ns.setKind(NamespaceType.TestDouble);
-
-        auto i_free_func = makeFuncInterface(input.funcRange, params.getMainInterface);
-        td_ns.put(i_free_func);
-        td_ns.put(makeAdapter!(MainInterface, ClassType)(params.getMainInterface));
-
-        if (ctrl.doGoogleMock) {
-            td_ns.put(makeGmock!ClassType(i_free_func));
-        }
-
-        ns.put(td_ns);
-    }
-
+    auto ns = input.dup;
     //dfmt off
-    input.namespaceRange()
+    input.namespaceRange
         .map!(a => translate(a, container, ctrl, params))
         .filter!(a => !a.isNull)
         .each!(a => ns.put(a.get));
-
+    
     input.classRange
-        .map!(a => mergeClassInherit(a, container))
-        // can happen that the result is a class with no methods, thus in state Unknown
-        .filter!(a => a.isVirtual)
-        .each!(a => ns.put(makeGmockInNs(a, params)));
+        .each!(a => ns.put(a));
     // dfmt on
 
     Nullable!CppNamespace rval;
@@ -604,6 +580,8 @@ in {
 }
 body {
     import std.algorithm : each, filter;
+    import std.array;
+    import std.typecons;
     import cpptooling.data.symbol.types : USRType;
     import cpptooling.generator.func : generateFuncImpl;
     import cpptooling.generator.gmock : generateGmock;
@@ -612,8 +590,10 @@ body {
     import cpptooling.analyzer.type;
 
     generateIncludes(ctrl, params, modules.hdr);
-    writeln("Inside generate");
-
+    
+    modules.hdr.include("testingenvironment.hpp");
+    modules.hdr.include("portenvironment.hpp");
+    
     static void gmockGlobal(T)(T r, CppModule gmock, Parameters params) {
         foreach (a; r.filter!(a => cast(ClassType) a.kind == ClassType.Gmock)) {
             generateGmock(a, gmock, params);
@@ -623,120 +603,188 @@ body {
     // recursive to handle nested namespaces.
     // the singleton ns must be the first code generate or the impl can't
     // use the instance.
-    static void eachNs(LookupT)(CppNamespace ns, Parameters params,
-            Generator.Modules modules, CppModule impl_singleton, LookupT lookup) {
+    @trusted static void eachNs(LookupT)(CppNamespace ns, Parameters params,
+            Generator.Modules modules, CppModule impl_singleton, LookupT lookup, ref CppModule[string] classes) {
+        import std.variant;
+        import std.algorithm : canFind, map, joiner;
+	    
+        string currnsrp;	
+        string currns = ns.fullyQualifiedName;
 
+        
+	    bool isReqOrPro = ns.resideInNs[$-1] == "Requirer" ||  ns.resideInNs[$-1] == "Provider";
+        if (isReqOrPro) {
+            currnsrp = join(ns.resideInNs[0..$-1], "::");
+        } else {
+            currnsrp = currns;
+        }
+        
+        SUTEnv sut = params.getSut.GetSUTFromNamespace(currnsrp);
         auto inner = modules;
         CppModule inner_impl_singleton;
-        final switch (cast(NamespaceType) ns.kind) with (NamespaceType) {
-        case Normal:
-            //TODO how to do this with meta-programming?
-            inner.hdr = modules.hdr.namespace(ns.name);
-            inner.hdr.suppressIndent(1);
-            inner.impl = modules.impl.namespace(ns.name);
-            inner.impl.suppressIndent(1);
-            inner.gmock = modules.gmock.namespace(ns.name);
-            inner.gmock.suppressIndent(1);
-            inner_impl_singleton = inner.impl.base;
-            inner_impl_singleton.suppressIndent(1);
-            break;
-        case TestDoubleSingleton:
-            import cpptooling.generator.adapter : generateSingleton;
-
-            generateSingleton(ns, impl_singleton);
-            break;
-        case TestDouble:
-            generateNsTestDoubleHdr(ns, params, modules.hdr, modules.gmock, lookup);
-            generateNsTestDoubleImpl(ns, modules.impl);
-            break;
-        }
-
-        foreach (a; ns.funcRange) {
-            generateFuncImpl(a, inner.impl);
-        }
-
-        foreach (a; ns.classRange) {
-            //a.dumpMethods(10, "jisdf");
-            foreach (b; a.methodPublicRange) { 
-                () @trusted {
-                    auto cppm = b.peek!(CppMethod);
-                    if (cppm !is null) {
-                        with (inner.impl.func_body(cppm.returnType.toStringDecl, a.name ~ "::" ~ getName(b), "")) {
-                            if (cppm.returnType.toStringDecl == "void") {
-                                stmt(E("iptest->thisisatest")(E("ppop, PPAPS")));
-                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                            } else {
-                                stmt(E("iptest->thisisatest")(E("ppop, PssssssS")));
-                                return_(E("iptest->" ~ getName(b))(E("llll")));
-                            }
-                        }                        
-                    }
-                }();                
+	    
+        if(sut.valid) {
+		    final switch(cast(NamespaceType) ns.kind) with (NamespaceType) {
+	             case Normal:
+                         inner.hdr = modules.hdr.namespace(ns.name);
+                         //inner.hdr.suppressIndent(1);
+                         inner.impl = modules.impl.namespace(ns.name);
+                         break;
+                     case TestDoubleSingleton:
+                         break;
+                     case TestDouble:
+                         break;
+            }
+	    }
+        
+        if (sut.valid && isReqOrPro)
+        {
+            foreach(a; ns.classRange) {
+                string class_name = a.name[2..$];
+                string fqn_class = ns.fullyQualifiedName ~ "::"  ~ class_name;
+                foreach (b; a.methodPublicRange) {
+                    if (!(fqn_class in classes)) {
+                        classes[fqn_class] = 
+                            generateClass(inner, class_name, cast(string[])ns.resideInNs[0..$-1], ns.resideInNs[$-1].payload, sut);
+                    } 
+                    
+                    b.visit!((const CppMethod a) => generateCppMeth(a, classes[fqn_class], class_name, ns.fullyQualifiedName, sut),
+                        (const CppMethodOp a) => writeln(""),
+                        (const CppCtor a) => generateCtor(a, inner),
+                        (const CppDtor a) => generateDtor(a, inner));
+                }
             }
         }
+  
         foreach (a; ns.namespaceRange) { 
-            eachNs(a, params, inner, inner_impl_singleton, lookup);
+            eachNs(a, params, inner, inner_impl_singleton, lookup, classes);
         }
     }
 
-    gmockGlobal(r.classRange, modules.gmock, params);
-    // no singleton in global namespace thus null
+    CppModule[string] classes;
     foreach (a; r.namespaceRange()) {
-        eachNs(a, params, modules, null, (USRType usr) => container.find!LocationTag(usr));
+        eachNs(a, params, modules, null, (USRType usr) => container.find!LocationTag(usr), classes);
     }
 }
 
-void generateClassHdr(LookupT)(CppClass c, CppModule hdr, CppModule gmock,
-        Parameters params, LookupT lookup) {
-    import cpptooling.generator.classes : generateHdr;
-    import cpptooling.generator.gmock : generateGmock;
+@trusted string[] getDataItems(SUTEnv sut) {
+    import std.algorithm : map, joiner, each; 
+    import std.array;
 
-    final switch (cast(ClassType) c.kind()) {
-    case ClassType.Normal:
-    case ClassType.Adapter:
-        generateHdr(c, hdr, No.locationAsComment, lookup);
-        break;
-    case ClassType.Gmock:
-        generateGmock(c, gmock, params);
-        break;
-    }
+    return sut.iface.interfaces.array.map!(a => map!(b => b.name)(a.ditems.array)).joiner.array;
 }
 
-void generateClassImpl(CppClass c, CppModule impl) {
-    import cpptooling.generator.adapter : generateImplAdapter = generateImpl;
 
-    final switch (cast(ClassType) c.kind()) {
-    case ClassType.Normal:
-        break;
-    case ClassType.Adapter:
-        generateImplAdapter(c, impl);
-        break;
-    case ClassType.Gmock:
-        break;
+@trusted CppModule generateClass(Generator.Modules inner, string class_name, string[] ns, string type, SUTEnv sut) {
+    //Some assumptions are made. Does all interfaces start with I_? Does all providers and requirers end with Requirer or Provider?
+    import std.array;
+    import std.string : toLower, indexOf; 
+    import std.algorithm : endsWith;
+    
+    string base_class; 
+    string fqn_ns = ns.join("::"); 
+    
+    auto inner_class = inner.hdr.class_(class_name ~ "_Impl", "public I_" ~ class_name); 
+    if (class_name.endsWith("Requirer") || class_name.endsWith("Provider")) {
+        base_class = "I_" ~ class_name[0..class_name.indexOf(type)-1];
+    } else {
+        base_class = "";
     }
+
+    with (inner_class) {
+        with(private_) {
+            foreach(ciface; sut.iface.interfaces) {
+                stmt(E(fqn_ns ~ "::" ~ ciface.name ~ "T " ~ toLower(ciface.name)));
+            }
+            if(class_name.endsWith("Requirer") || class_name.endsWith("Provider")) {
+                stmt(E(base_class ~ "* port"));
+            } else {
+                stmt(E("RandomGenerator* randomGenerator"));
+            }
+        }
+        with(public_) {
+            with (func_body("", class_name ~ "_Impl")) { //Generate constructor
+                if (!(class_name.endsWith("Requirer") || class_name.endsWith("Provider"))) {
+                    stmt(E("randomGenerator") = E(`&TestingEnvironment::createRandomGenerator("`~ type  ~`")`));
+                }
+            }
+
+            if ((class_name.endsWith("Requirer") || class_name.endsWith("Provider"))) {
+                with (func_body("", class_name ~ "_Impl", base_class ~ "* p")) {
+                    stmt(E("port") = E("p"));
+                }
+            }
+	    
+            with (func_body("", "~" ~ class_name ~"_Impl")) { //Generate destructor
+             	    
+            }
+            if (!(class_name.endsWith("Requirer") || class_name.endsWith("Provider"))) {
+
+                with(func_body("void", "Regenerate")) {
+                    foreach(ciface; sut.iface.interfaces) {
+                        foreach(ditem; ciface.ditems) {
+                            //Add ranges here, non existent in current xml parser?
+                         
+                            stmt(E(toLower(ciface.name) ~ "." ~ ditem.name) =    
+                                    E(`randomGenerator->generate("` ~
+                                        type ~ ` ` ~ ciface.name ~ ` ` ~ ditem.name ~ `")`));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return inner_class;
 }
 
-void generateNsTestDoubleHdr(LookupT)(CppNamespace ns, Parameters params,
-        CppModule hdr, CppModule gmock, LookupT lookup) {
-    import std.algorithm : each;
+void generateCtor(const CppCtor a, Generator.Modules inner) {
+    import std.array : split;
+    
+    with (inner.impl.ctor_body(a.name)) {
+    }                        
+}   
 
-    auto cpp_ns = hdr.namespace(ns.name);
-    cpp_ns.suppressIndent(1);
-    hdr.sep(2);
-
-    foreach (a; ns.classRange()) {
-        generateClassHdr(a, cpp_ns, gmock, params, lookup);
-    }
+void generateDtor(const CppDtor a, Generator.Modules inner) {
+    import std.array : split;
+    
+    with (inner.impl.dtor_body(a.name[1..$])) {
+    }                        
 }
 
-void generateNsTestDoubleImpl(CppNamespace ns, CppModule impl) {
-    import std.algorithm : each;
 
-    auto cpp_ns = impl.namespace(ns.name);
-    cpp_ns.suppressIndent(1);
-    impl.sep(2);
+//Should probably return a class for implementation
+@trusted void generateCppMeth(const CppMethod a, CppModule inner, string class_name, string nsname, SUTEnv sut) {
+    //Get_Port, does it always exist?
+    import std.string;
+    import std.array;
+    import std.algorithm.searching : canFind;
+    import cpptooling.analyzer.type;
 
-    ns.classRange().each!((a) { generateClassImpl(a, cpp_ns); });
+    auto ditems = getDataItems(sut);
+    auto cppm_type = (cast(string)(a.name)).split("_")[0];
+    auto cppm_ditem = (cast(string)(a.name)).split("_")[$-1];  
+    
+
+    if(cppm_type  == "Put") {
+	//Put something in something
+    }
+
+    with(inner.func_body(a.returnType.toStringDecl, a.name)) {
+
+        if(cppm_type == "Get" && ditems.array.canFind(cppm_ditem)) {
+            auto cppm_ret_type = (cast(string)(a.name)).split("_")[$-2];
+        
+            return_(toLower(cppm_ret_type) ~ "." ~ cppm_ditem);
+        }
+
+        else if (a.name == "Get_Port") {
+            return_("*port");
+        }
+
+        else if(cppm_type == "Get") {
+    		return_(toLower(cppm_ditem));
+	    }
+    }
 }
 
 CppClass mergeClassInherit(ref CppClass class_, ref Container container) {

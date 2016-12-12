@@ -391,7 +391,7 @@ string toString(CompileCommandSearch search) @safe pure {
  *  - Remove excess white space.
  *  - Convert all filenames to absolute path.
  */
-auto parseFlag(CompileCommand cmd) @safe pure {
+string[] parseFlag(CompileCommand cmd) @safe pure {
     static auto filterPair(T)(ref T r, CompileCommand.AbsoluteDirectory workdir) {
         enum State {
             Keep,
@@ -477,6 +477,29 @@ auto parseFlag(CompileCommand cmd) @safe pure {
     // dfmt on
 
     return filterPair(pass1, cmd.directory);
+}
+
+string[] getHeaderFiles(CompileCommandDB compile_db)
+{
+    import std.algorithm: canFind, filter, each;
+    import std.range : chain;
+    import std.file : dirEntries, SpanMode;
+    import std.array : appender;
+
+    auto rval = appender!(string[])();
+    auto directories = new string[0];
+//    fromFile(CompileDbFile(compile_db), app);
+    foreach (cmd ; compile_db)
+    {
+         auto flags = parseFlag(cmd);
+         flags.filter!(a => a != "-I" && !directories.canFind(a))
+            .each!(dir => (dirEntries(dir, "*_factory.{h,hpp}", SpanMode.depth))
+                .each!(file => rval.put(file)));
+        
+        directories ~= flags;
+    }
+
+    return rval.data;
 }
 
 @("Should be cflags with all unnecessary flags removed")

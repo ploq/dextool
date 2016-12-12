@@ -1361,12 +1361,26 @@ const:
         return CppNamespace(CppNsStack([name]));
     }
 
+
     this(const CppNsStack stack) pure nothrow {
         if (stack.length > 0) {
             this.name_ = stack[$ - 1];
         }
         this.stack = CppNsStack(stack.dup);
     }
+
+    this(CppNs name, CppNsStack stack, CppClass[] classes, CFunction[] funcs, CppNamespace[] namespaces, CxGlobalVariable[] globals) {
+	    this.name_ = name;
+        this.stack = stack;
+        /*this.classes = classes;
+        this.funcs = funcs;
+        this.globals = globals;*/
+	    //this.stack = CppNsStack(stack.dup);
+    } 
+
+    CppNamespace dup() {
+	    return CppNamespace(name_, stack, classes, funcs, namespaces, globals); 
+   }
 
     void toString(Writer, Char)(scope Writer w, FormatSpec!Char fmt) const {
         import std.algorithm : map, joiner;
@@ -1400,6 +1414,7 @@ const:
 
     void put(CppNamespace ns) pure nothrow {
         namespaces ~= ns;
+
     }
 
     void put(CxGlobalVariable g) pure nothrow {
@@ -1464,7 +1479,7 @@ const:
      *
      * Example of FQN for C could be A::B::C.
      */
-    auto fullyQualifiedName() pure {
+    auto fullyQualifiedName() pure{
         //TODO optimize by only calculating once.
 
         import std.array : array;
