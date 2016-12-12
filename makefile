@@ -10,7 +10,7 @@ SRC := $(shell find source/application -name "*.d") \
 	$(shell find docopt/source -name "*.d") \
 	$(shell find dsrcgen/source -name "*.d")
 
-INCLUDE_PATHS := -Isource -Iclang -Ilibclang -Idsrcgen/source -Idocopt/source -Jclang/resources -Jresources
+INCLUDE_PATHS := -Isource -Iclang -Ilibclang -Idsrcgen/source -Idocopt/source -Iipxmlparser/source -Jclang/resources -Jresources
 VERSION_FLAGS := -version=Have_dextool -version=Have_docopt
 COMMON_FLAGS := -dip25 -w $(INCLUDE_PATHS) $(VERSION_FLAGS)
 DEBUG_FLAGS := -g
