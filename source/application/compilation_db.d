@@ -485,14 +485,14 @@ string[] getHeaderFiles(CompileCommandDB compile_db)
     import std.range : chain;
     import std.file : dirEntries, SpanMode;
     import std.array : appender;
+    import std.stdio;
 
     auto rval = appender!(string[])();
     auto directories = new string[0];
-//    fromFile(CompileDbFile(compile_db), app);
     foreach (cmd ; compile_db)
     {
          auto flags = parseFlag(cmd);
-         flags.filter!(a => a != "-I" && !directories.canFind(a))
+         flags.filter!(a => a[0] != '-' && !directories.canFind(a))
             .each!(dir => (dirEntries(dir, "*_factory.{h,hpp}", SpanMode.depth))
                 .each!(file => rval.put(file)));
         
